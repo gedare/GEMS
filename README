@@ -36,3 +36,6 @@ gems-patches
 scripts
   Scripts to help populate the GEMS environment.
 
+support
+  Extra files, mainly to help setup a GEMS RTEMS workspace.
+

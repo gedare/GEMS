@@ -1,0 +1,226 @@
+# Assembled from the Serengeti machine. Uses a serial console output,
+# graphical output is not supported. The firmware version requires
+# HelenOS to be compiled with "Preserve A.OUT header in isofs.b" and
+# "External ramdisk" options set to "No".
+
+if not defined create_network {$create_network = "yes"}
+
+$disk_size = 8513945600
+
+###
+
+if not defined hostid        {$hostid        = 0x80804a6c}
+if not defined freq_mhz      {$freq_mhz      = 75}
+if not defined mac_address   {$mac_address   = "10:10:10:10:10:24"}
+if not defined disk_size     {$disk_size     = 2128486400}
+if not defined rtc_time      {$rtc_time      = "2002-06-02 17:00:00 UTC"}
+if not defined num_cpus      {$num_cpus      = 1}
+if not defined megs_per_cpu  {$megs_per_cpu  = 256}
+if not defined cpu_class     {$cpu_class     = "ultrasparc-iii"}
+
+###
+
+add-directory "%simics%/targets/serengeti/images/"
+
+import-pci-components
+import-std-components
+import-sun-components
+import-serengeti-components
+
+if $cpu_class == "ultrasparc-iii-plus" {
+    $create_function = "create-serengeti-us-iii-plus-cpu-board"
+} else if $cpu_class == "ultrasparc-iii" {
+    $create_function = "create-serengeti-us-iii-cpu-board"
+} else if $cpu_class == "ultrasparc-iv" {
+    $create_function = "create-serengeti-us-iv-cpu-board"
+} else if $cpu_class == "ultrasparc-iv-plus" {
+    $create_function = "create-serengeti-us-iv-plus-cpu-board"
+} else {
+    echo "Unknown cpu_class" + $cpu_class
+    exit 1
+}
+
+$system = (create-serengeti-6800-chassis hostid = $hostid
+                                         mac_address = $mac_address
+                                         rtc_time = $rtc_time)
+$board = 0
+$cpus_left = $num_cpus
+while $cpus_left > 0 {
+    $cpus = (min 4 $cpus_left)
+    $cpubrd[$board] = ($create_function num_cpus = $cpus
+                                        cpu_frequency = $freq_mhz
+                                        memory_megs = ($megs_per_cpu * $cpus))
+    $system.connect ("cpu-slot" + $board) $cpubrd[$board]
+    $board += 1
+    $cpus_left -= 4
+}
+unset cpus
+
+$pciboard = (create-serengeti-pci8-board)
+
+$pci_hme = (create-sun-pci-hme mac_address = $mac_address)
+$pci_glm = (create-pci-sym53c875)
+$scsi_bus = (create-std-scsi-bus)
+$scsi_disk = (create-std-scsi-disk scsi_id = 0 size = $disk_size)
+$scsi_cdrom = (create-std-scsi-cdrom scsi_id = 6)
+$console = (create-std-text-console)
+
+###
+
+$system.connect io-slot6 $pciboard
+$pciboard.connect pci-slot0 $pci_hme
+$pciboard.connect pci-slot5 $pci_glm
+$scsi_bus.connect $pci_glm
+$scsi_bus.connect $scsi_disk
+$scsi_bus.connect $scsi_cdrom
+$system.connect $console
+
+$machine_defined = 1
+
+instantiate-components
+
+$eth_comp = $pci_hme
+$eth_cnt = ""
+
+if $create_network == "yes" {
+    if not $eth_link {
+        $eth_link = (new-std-ethernet-link)
+    }
+    $eth_link.connect $eth_comp $eth_cnt
+    if not $service_node {
+        $service_node = (new-std-service-node)
+        local $cnt = ($service_node.add-connector 10.10.0.1)
+        $service_node.connect $cnt $eth_link
+    }
+}
+
+unset eth_comp eth_cnt
+
+# this script is to be run from the root HelenOS directory
+$cdrom_path = "REPLACEDBYSED534ISOPATH"
+($scsi_cdrom.get-component-object cd).insert (new-file-cdrom $cdrom_path)
+$system.set-prom-env boot-command "boot /ssm@0,0/pci@19,700000/scsi@2/disk@6,0:f"
+$system.set-prom-env auto-boot? true 
+
+
+new-symtable name = gicasymtable
+gicasymtable.load-symbols file = REPLACEDBYSED534SYMBOLS/REPLACEDBYSED534TESTGROUP/REPLACEDBYSED534TESTNAME.exe
+gicasymtable.source-path "../../../../../../rtems-diff>REPLACEDBYSED534SOURCEPATH"
+new-context name = gicacontext
+gicacontext.symtable symtable = gicasymtable 
+cpu0.set-context context = gicacontext
+
+
+#  trace module - intantiate and use
+#load-module trace
+#new-tracer 
+#@conf.trace0.trace_exceptions = 0
+#@conf.trace0.trace_data = 0
+#@conf.trace0.trace_instructions = 0
+#@conf.trace0.displayLinenumbers = 1
+#@conf.trace0.set_ftracesymbol_file = "/home/eugen/work/rtemssparc64/rtems/boot/debug/rtems/REPLACEDBYSED534TESTGROUP/REPLACEDBYSED534TESTNAME.fun.nm"
+#@conf.trace0.set_ftrace_file = "/home/eugen/work/rtemssparc64/rtems/boot/debug/rtems/REPLACEDBYSED534TESTGROUP/REPLACEDBYSED534TESTNAME.trace.c"
+
+#@conf.trace0.threadSkip = "0 UI1 IDLE"
+#@conf.trace0.threadSkip = "0 IDLE"
+#trace0.start traceaddress (sym boot_card)
+##trace0.start traceaddress 100
+#trace0.start
+##@conf.trace0.trace_print_stack = 1
+##@conf.trace0.trace_print_threads = 1
+##@conf.trace0.trace_print_containerstatistics = 1
+
+
+script-branch {
+        local $con = ($console.get-component-object con)
+        $con.wait-for-string "boot: "
+        $con.input "REPLACEDBYSED534TESTNAME\n"
+        }
+
+script-branch {
+	local $con = ($console.get-component-object con)
+	$con.wait-for-string "START_TOKEN"
+	$con.capture-start REPLACEDBYSED534TESTNAME.txt
+#	cpu0.cycle-break 1
+	
+#	instruction-fetch-mode instruction-fetch-trace
+#	istc-disable
+#	dstc-disable
+#	cpu-switch-time 1
+#	c
+}   
+
+#@conf.con0.break_string = "START_TOKEN"
+#@conf.con0.break_string = "END_TOKEN"
+
+script-branch {
+	local $con = ($console.get-component-object con)
+	$con.wait-for-string "END_TOKEN"
+	$con.capture-stop
+#	ruby0.dump-stats filename = REPLACEDBYSED534TESTNAME.ruby
+#	opal0.stats
+	quit 0
+}
+
+#@def ctrl_ConsoleHAP(user_arg, trigger_obj, break_string):
+#    if break_string == "START_TOKEN":
+#        print "%s" % (break_string)
+#        SIM_break_simulation("broken")
+#        run_command("instruction-fetch-mode instruction-fetch-trace")
+#        run_command("istc-disable")
+#        run_command("dstc-disable")
+#        run_command("cpu-switch-time 1")
+##        run_command("cpu0_0.cycle-break 1")
+#        run_command("load-module ruby")
+#        #conf.ruby0.setparam.g_NUM_PROCESSORS = 1
+#	#conf.ruby0.setparam.g_MEMORY_SIZE_BYTES = 4294967296
+#	#conf.ruby0.init
+#	run_command("c")
+##	SIM_continue(0)
+#    elif break_string == "END_TOKEN":
+#    	print "%s" % (break_string)
+#        SIM_break_simulation("broken")
+#@SIM_hap_add_callback("Xterm_Break_String",
+#                            ctrl_ConsoleHAP, None)
+#
+        
+script-branch {
+	local $con = ($console.get-component-object con)
+	$con.wait-for-string "Exception handlers interrupted"
+	$con.capture-stop
+	quit 0
+}
+
+
+
+
+break-exception number = 52  #Mem_Address_Not_Aligned
+break-exception number = 16  #Illegal_Instruction
+#trace-exception -all
+
+#break 0x4000
+#break (sym Init)
+#break (sym fwrite)
+#break (sym __errno)
+#break (sym crc32file)
+#break (sym halted)
+c
+	
+#	instruction-fetch-mode instruction-fetch-trace
+#	istc-disable
+#	dstc-disable
+#	cpu-switch-time 1
+#	load-module ruby
+	
+#	load-module opal
+	
+#	ruby0.setparam g_NUM_PROCESSORS 1
+	#ruby0.setparam g_MEMORY_SIZE_BYTES 4294967296
+#	ruby0.setparam g_MEMORY_SIZE_BYTES 2147483648
+#	ruby0.init
+	
+#	opal0.init
+#	opal0.sim-start "REPLACEDBYSED534TESTNAME.opal"
+	
+#	opal0.sim-step 100000000
+#c

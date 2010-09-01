@@ -8,7 +8,7 @@
 #
 
 # Check for parameters.
-if [[ $# -eq 0 ]]
+if [[ $# -ne 1 ]]
 then
   echo "Error - parameters missing"
   echo "Syntax : $0 simics_install"
