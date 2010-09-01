@@ -1,0 +1,4 @@
+../protocols/MOSI_SMP_bcast-msg.sm
+../protocols/MOSI_SMP_bcast-cache.sm
+../protocols/MOSI_SMP_bcast_m-dir.sm
+../protocols/standard_SMP-protocol.sm

@@ -9,5 +9,16 @@ project.
 The following is a brief description of the subdirectories in this
 repository:
 
-gems-2.1.1 - generic modifications to the vanilla gems distribution.
+archive
+  GEMS releases and other useful archived files.
+
+gems-2.1.1
+  The vanilla gems distribution for release 2.1.1.
+
+gems-2.1.1-generic
+  Generic modifications made to gems that are useful for multiple projects.
+
+gems-patches
+  Patches derived from various projects. These patches should
+  be named to indicate which version of gems they were generated against.
 

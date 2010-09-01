@@ -1,0 +1,34 @@
+Regression tester
+-----------------
+
+todo:
+  - Note: the thread.py is a file from python 2.2 that can be removed once
+    python 2.2 is the default python install.
+  - speedup the regression by multi-tasking (make -j, two tester run in
+    parallel, etc)
+
+Testing the regression tester:
+  - CVS checkout failure - CHECKED
+  - SLICC build error - CHECKED
+  - Error in a .sm file - CHECKED
+
+  - Ruby random tester:
+    - compilation error - CHECKED
+    - linker error - CHECKED
+    - assert failure - CHECKED
+    - ERROR_MSG() - CHECKED
+    - exit(1) - CHECKED
+    - Fails to display "Success" on last line - CHECKED
+    - memory access error (detected by ValGrind) - CHECKED
+    - memory leak (detected by ValGrind) - CHECKED
+
+  - Ruby module 
+    - compilation error - CHECKED
+    - dynamic link error (detected by simics) - CHECKED
+    - missing module error - CHECKED
+
+  - Checkpoints
+    - missing .check file - CHECKED
+    - image file missing - CHECKED
+
+  - Watchdog timer (if timeout)

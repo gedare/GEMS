@@ -1,0 +1,200 @@
+         4e0:  80 a2 a0 10         cmp          %o2, 0x10
+         4e4:  18 40 00 15         bgu,pn       %icc,0x538
+         4e8:  82 10 00 08         mov          %o0, %g1
+         4ec:  96 12 00 09         or           %o0, %o1, %o3
+         4f0:  80 90 00 0a         tst          %o2
+         4f4:  02 40 00 0a         be,pn        %icc,0x51c
+         4f8:  96 12 c0 0a         or           %o3, %o2, %o3
+         4fc:  80 8a e0 03         btst         0x3, %o3
+         500:  02 48 00 08         be,pt        %icc,0x520
+         504:  9a 22 00 09         sub          %o0, %o1, %o5
+         508:  94 a2 a0 01         subcc        %o2, 0x1, %o2
+         50c:  d8 0a 40 00         ldub         [%o1], %o4
+         510:  d8 2a 40 0d         stb          %o4, [%o1 + %o5]
+         514:  18 4f ff fd         bgu,pt       %icc,0x508
+         518:  92 02 60 01         add          %o1, 0x1, %o1
+         51c:  81 c3 e0 08         retl         
+         520:  94 a2 a0 04         subcc        %o2, 0x4, %o2
+         524:  d8 02 40 00         ld           [%o1], %o4
+         528:  d8 22 40 0d         st           %o4, [%o1 + %o5]
+         52c:  18 4f ff fd         bgu,pt       %icc,0x520
+         530:  92 02 60 04         add          %o1, 0x4, %o1
+         534:  81 c3 e0 08         retl         
+         538:  9a 20 00 08         neg          %o0, %o5
+         53c:  96 20 00 09         neg          %o1, %o3
+         540:  9a 8b 60 07         andcc        %o5, 0x7, %o5
+         544:  96 0a e0 07         and          %o3, 0x7, %o3
+         548:  02 48 00 09         be,pt        %icc,0x56c
+         54c:  96 23 40 0b         sub          %o5, %o3, %o3
+         550:  94 22 80 0d         sub          %o2, %o5, %o2
+         554:  d8 0a 40 00         ldub         [%o1], %o4
+         558:  9a a3 60 01         subcc        %o5, 0x1, %o5
+         55c:  92 02 60 01         add          %o1, 0x1, %o1
+         560:  d8 2a 00 00         stb          %o4, [%o0]
+         564:  18 4f ff fc         bgu,pt       %icc,0x554
+         568:  90 02 20 01         add          %o0, 0x1, %o0
+         56c:  c3 6a 60 08         prefetch     [%o1 + 0x8], #one_read
+         570:  99 41 80 00         rd           %fprs, %o4
+         574:  92 02 60 08         add          %o1, 0x8, %o1
+         578:  1b 04 8d 15         sethi        %hi(0x12345400), %o5
+         57c:  9a 13 66 7f         or           %o5, 0x67f, %o5
+         580:  c3 6a 60 40         prefetch     [%o1 + 0x40], #one_read
+         584:  98 8b 20 04         andcc        %o4, 0x4, %o4
+         588:  22 48 00 02         be,a,pt      %icc,0x590
+         58c:  8d 80 20 04         mov          0x4, %fprs
+         590:  80 a2 a0 ff         cmp          %o2, 0xff
+         594:  81 b3 43 20         bmask        %o5, %g0, %g0
+         598:  9a 10 3f f8         mov          -0x8, %o5
+         59c:  93 b2 43 00         alignaddr    %o1, %g0, %o1
+         5a0:  9b 7a cc 00         movrlz       %o3, %g0, %o5
+         5a4:  9a 03 40 0a         add          %o5, %o2, %o5
+         5a8:  9a 03 40 0b         add          %o5, %o3, %o5
+         5ac:  08 48 00 04         bleu,pt      %icc,0x5bc
+         5b0:  9a 2b 60 07         andn         %o5, 0x7, %o5
+         5b4:  9a 20 00 08         neg          %o0, %o5
+         5b8:  9a 0b 60 3f         and          %o5, 0x3f, %o5
+         5bc:  2e ca c0 08         brgez,a,pt   %o3, 0x5dc
+         5c0:  c1 1a 7f f8         ldd          [%o1 - 0x8], %f0
+         5c4:  92 02 40 0b         add          %o1, %o3, %o1
+         5c8:  c5 9a 5a 00         ldda         [%o1] 0xd0, %f2
+         5cc:  92 02 60 01         add          %o1, 0x1, %o1
+         5d0:  80 8a 60 07         btst         0x7, %o1
+         5d4:  12 4f ff fd         bne,pt       %icc,0x5c8
+         5d8:  81 b0 09 82         bshuffle     %f0, %f2, %f0
+         5dc:  80 90 00 0d         tst          %o5
+         5e0:  02 48 00 1a         be,pt        %icc,0x648
+         5e4:  94 22 80 0d         sub          %o2, %o5, %o2
+         5e8:  c5 1a 40 00         ldd          [%o1], %f2
+         5ec:  9a a3 60 08         subcc        %o5, 0x8, %o5
+         5f0:  02 40 00 0e         be,pn        %icc,0x628
+         5f4:  92 02 60 08         add          %o1, 0x8, %o1
+         5f8:  89 b0 09 02         faligndata   %f0, %f2, %f4
+         5fc:  c1 1a 40 00         ldd          [%o1], %f0
+         600:  9a a3 60 08         subcc        %o5, 0x8, %o5
+         604:  92 02 60 10         add          %o1, 0x10, %o1
+         608:  c9 3a 00 00         std          %f4, [%o0]
+         60c:  02 40 00 0c         be,pn        %icc,0x63c
+         610:  8d b0 89 00         faligndata   %f2, %f0, %f6
+         614:  c5 1a 7f f8         ldd          [%o1 - 0x8], %f2
+         618:  9a a3 60 08         subcc        %o5, 0x8, %o5
+         61c:  cd 3a 20 08         std          %f6, [%o0 + 0x8]
+         620:  12 4f ff f6         bne,pt       %icc,0x5f8
+         624:  90 02 20 10         add          %o0, 0x10, %o0
+         628:  89 b0 09 02         faligndata   %f0, %f2, %f4
+         62c:  81 a0 00 42         fmovd        %f2, %f0
+         630:  c9 3a 00 00         std          %f4, [%o0]
+         634:  10 80 00 05         ba           0x648
+         638:  90 02 20 08         add          %o0, 0x8, %o0
+         63c:  cd 3a 20 08         std          %f6, [%o0 + 0x8]
+         640:  92 22 60 08         sub          %o1, 0x8, %o1
+         644:  90 02 20 10         add          %o0, 0x10, %o0
+         648:  80 a2 a0 40         cmp          %o2, 0x40
+         64c:  18 48 00 1d         bgu,pt       %icc,0x6c0
+         650:  9a 8a e0 07         andcc        %o3, 0x7, %o5
+         654:  02 48 00 0a         be,pt        %icc,0x67c
+         658:  96 23 60 08         sub          %o5, 0x8, %o3
+         65c:  80 a2 a0 08         cmp          %o2, 0x8
+         660:  26 48 00 0b         bl,a,pt      %icc,0x68c
+         664:  92 02 40 0b         add          %o1, %o3, %o1
+         668:  9a a3 60 01         subcc        %o5, 0x1, %o5
+         66c:  c5 9a 5a 00         ldda         [%o1] 0xd0, %f2
+         670:  92 02 60 01         add          %o1, 0x1, %o1
+         674:  18 4f ff fd         bgu,pt       %icc,0x668
+         678:  81 b0 09 82         bshuffle     %f0, %f2, %f0
+         67c:  94 a2 a0 08         subcc        %o2, 0x8, %o2
+         680:  c1 3a 00 00         std          %f0, [%o0]
+         684:  02 48 00 08         be,pt        %icc,0x6a4
+         688:  90 02 20 08         add          %o0, 0x8, %o0
+         68c:  d6 0a 40 00         ldub         [%o1], %o3
+         690:  94 a2 a0 01         subcc        %o2, 0x1, %o2
+         694:  92 02 60 01         add          %o1, 0x1, %o1
+         698:  d6 2a 00 00         stb          %o3, [%o0]
+         69c:  18 4f ff fc         bgu,pt       %icc,0x68c
+         6a0:  90 02 20 01         add          %o0, 0x1, %o0
+         6a4:  8d 83 00 00         mov          %o4, %fprs
+         6a8:  81 c3 e0 08         retl         
+         6ac:  90 10 00 01         mov          %g1, %o0
+         6b0:  00 00 00 00         illtrap      0x0
+         6b4:  00 00 00 00         illtrap      0x0
+         6b8:  00 00 00 00         illtrap      0x0
+         6bc:  00 00 00 00         illtrap      0x0
+         6c0:  c3 6a 60 40         prefetch     [%o1 + 0x40], #one_read
+         6c4:  c3 6a 60 80         prefetch     [%o1 + 0x80], #one_read
+         6c8:  c3 6a 60 c0         prefetch     [%o1 + 0xc0], #one_read
+         6cc:  c3 6a 61 00         prefetch     [%o1 + 0x100], #one_read
+         6d0:  c5 1a 40 00         ldd          [%o1], %f2
+         6d4:  c3 6a 61 40         prefetch     [%o1 + 0x140], #one_read
+         6d8:  c9 1a 60 08         ldd          [%o1 + 0x8], %f4
+         6dc:  c3 6a 61 80         prefetch     [%o1 + 0x180], #one_read
+         6e0:  83 b0 09 02         faligndata   %f0, %f2, %f32
+         6e4:  cd 1a 60 10         ldd          [%o1 + 0x10], %f6
+         6e8:  87 b0 89 04         faligndata   %f2, %f4, %f34
+         6ec:  d1 1a 60 18         ldd          [%o1 + 0x18], %f8
+         6f0:  8b b1 09 06         faligndata   %f4, %f6, %f36
+         6f4:  d5 1a 60 20         ldd          [%o1 + 0x20], %f10
+         6f8:  9a 10 3f f8         mov          -0x8, %o5
+         6fc:  8f b1 89 08         faligndata   %f6, %f8, %f38
+         700:  d9 1a 60 28         ldd          [%o1 + 0x28], %f12
+         704:  9b 7a cc 00         movrlz       %o3, %g0, %o5
+         708:  93 b2 09 0a         faligndata   %f8, %f10, %f40
+         70c:  dd 1a 60 30         ldd          [%o1 + 0x30], %f14
+         710:  97 b2 89 0c         faligndata   %f10, %f12, %f42
+         714:  c1 1a 60 38         ldd          [%o1 + 0x38], %f0
+         718:  94 22 a0 40         sub          %o2, 0x40, %o2
+         71c:  92 02 60 40         add          %o1, 0x40, %o1
+         720:  c5 1a 40 00         ldd          [%o1], %f2
+         724:  9b b3 09 0e         faligndata   %f12, %f14, %f44
+         728:  c9 1a 60 08         ldd          [%o1 + 0x8], %f4
+         72c:  9f b3 89 00         faligndata   %f14, %f0, %f46
+         730:  c3 ba 1e 00         stda         %f32, [%o0] 0xf0
+         734:  cd 1a 60 10         ldd          [%o1 + 0x10], %f6
+         738:  83 b0 09 02         faligndata   %f0, %f2, %f32
+         73c:  90 02 20 40         add          %o0, 0x40, %o0
+         740:  d1 1a 60 18         ldd          [%o1 + 0x18], %f8
+         744:  87 b0 89 04         faligndata   %f2, %f4, %f34
+         748:  d5 1a 60 20         ldd          [%o1 + 0x20], %f10
+         74c:  8b b1 09 06         faligndata   %f4, %f6, %f36
+         750:  d9 1a 60 28         ldd          [%o1 + 0x28], %f12
+         754:  94 22 a0 40         sub          %o2, 0x40, %o2
+         758:  8f b1 89 08         faligndata   %f6, %f8, %f38
+         75c:  dd 1a 60 30         ldd          [%o1 + 0x30], %f14
+         760:  93 b2 09 0a         faligndata   %f8, %f10, %f40
+         764:  c1 1a 60 38         ldd          [%o1 + 0x38], %f0
+         768:  c3 6a 61 80         prefetch     [%o1 + 0x180], #one_read
+         76c:  97 b2 89 0c         faligndata   %f10, %f12, %f42
+         770:  80 a2 a0 48         cmp          %o2, 0x48
+         774:  18 4f ff eb         bgu,pt       %icc,0x720
+         778:  92 02 60 40         add          %o1, 0x40, %o1
+         77c:  9b b3 09 0e         faligndata   %f12, %f14, %f44
+         780:  9f b3 89 00         faligndata   %f14, %f0, %f46
+         784:  c3 ba 1e 00         stda         %f32, [%o0] 0xf0
+         788:  80 a2 a0 40         cmp          %o2, 0x40
+         78c:  12 48 00 04         bne,pt       %icc,0x79c
+         790:  90 02 20 40         add          %o0, 0x40, %o0
+         794:  22 ca c0 07         brz,a,pt     %o3, 0x7b0
+         798:  c5 1a 40 00         ldd          [%o1], %f2
+         79c:  9a 03 40 0a         add          %o5, %o2, %o5
+         7a0:  9a 03 40 0b         add          %o5, %o3, %o5
+         7a4:  81 43 e0 0a         membar       #StoreLoad|#StoreStore
+         7a8:  10 bf ff 8d         ba           0x5dc
+         7ac:  9a 2b 60 07         andn         %o5, 0x7, %o5
+         7b0:  c9 1a 60 08         ldd          [%o1 + 0x8], %f4
+         7b4:  cd 1a 60 10         ldd          [%o1 + 0x10], %f6
+         7b8:  83 b0 0e 80         fsrc1        %f0, %f32
+         7bc:  d1 1a 60 18         ldd          [%o1 + 0x18], %f8
+         7c0:  87 b0 8e 80         fsrc1        %f2, %f34
+         7c4:  d5 1a 60 20         ldd          [%o1 + 0x20], %f10
+         7c8:  8b b1 0e 80         fsrc1        %f4, %f36
+         7cc:  d9 1a 60 28         ldd          [%o1 + 0x28], %f12
+         7d0:  8f b1 8e 80         fsrc1        %f6, %f38
+         7d4:  dd 1a 60 30         ldd          [%o1 + 0x30], %f14
+         7d8:  93 b2 0e 80         fsrc1        %f8, %f40
+         7dc:  97 b2 8e 80         fsrc1        %f10, %f42
+         7e0:  9b b3 0e 80         fsrc1        %f12, %f44
+         7e4:  9f b3 8e 80         fsrc1        %f14, %f46
+         7e8:  c3 ba 1e 00         stda         %f32, [%o0] 0xf0
+         7ec:  81 43 e0 0a         membar       #StoreLoad|#StoreStore
+         7f0:  8d 83 20 00         wr           %o4, 0x0, %fprs
+         7f4:  81 c3 e0 08         retl         
+         7f8:  90 10 00 01         mov          %g1, %o0
+         7fc:  00 00 00 00         illtrap      0x0

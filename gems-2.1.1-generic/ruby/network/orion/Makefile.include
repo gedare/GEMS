@@ -1,0 +1,12 @@
+#Makefile.include for the orion
+ORION_VPATH := network/orion
+ORION_SRC_CPP = \
+	NetworkPower.C \
+	power_arbiter.C \
+	power_array.C \
+	power_bus.C \
+	power_crossbar.C \
+	power_ll.C \
+ 	power_router_init.C \
+	power_static.C \
+	power_utils.C \

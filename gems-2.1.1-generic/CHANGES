@@ -1,0 +1,21 @@
+
+
+GEMS Release 1.0,  2/27/2005
+--------------------------------
+* Initial release of GEMS
+
+
+GEMS Release 1.1,  6/04/2005
+--------------------------------
+* Simics 2.2.x support
+* Added SMP token coherence protocol (MOESI_SMP_token)
+* Added files for the ISCA 2005 tutorial
+   - MI_example protocol
+   - DemoPrefetcher.[Ch] and MOESI_CMP_tokenDEMO-L2cache.sm
+
+* Significant performance increase for Ruby due to an optimized 
+  implementation of Set (OptBigSet.C).  When running the random
+  tester, simulation time can be 50% faster!  
+
+* Other minor issues related to warnings 
+

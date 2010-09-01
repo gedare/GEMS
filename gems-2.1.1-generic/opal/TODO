@@ -1,0 +1,104 @@
+
+Topic:  Opal "to do" list
+Author: Carl Mauer
+Date:   4/17/2003
+
+This working document tracks changes, improvements, features, and requests
+for opal.
+
+TODO:
+
+Shorten the statistics that opal reports
+
+For each memory reference, Call ruby at retirement to verify value loaded
+	  e.g. inforce a more realistic memory model
+	This is stalled because of how contented atomics (IM_D) go
+	straight from M -> I, and the second call would only see "invalid".
+	Opal would live-lock in this case.
+
+Remove/reduce global variable usage in opal
+
+Semi-finished feature: more realistic execution
+	I tried to extract functional execution to operate on a data value
+	(with out contacting the somewhat magical register file). This
+	feature means that some functions work in sparc/exec.C, but we
+	still execute all functions through dx.C.
+
+	This re-design would mean that the in-order processor model (ix.C)
+	would be eliminated. However, as it isn't complete there is some
+	redundancy between dx.i and exec.C.
+
+Validation
+	define comprehensive tests for micro-architectural validation
+	micro-benchmark timing comparison (apples to apples?)
+	improve opal pipeline fidelity
+	write document describing?
+
+New Features
+	Make opal be SMT-like.
+
+Instruction set abstraction
+	merge static and dynamic instruction descriptions in a meta file format
+	back port to Alpha?
+	port to x86?
+
+Micro-architectural pipeline improvements
+	Remove wait lists
+	validate that timing is order independent, as it concerns event wakeups
+	clean up frontend multi-cycle fetch with new pipeline abstraction
+
+Opal presentation
+	Sample of out-of-order effects
+	run-time configuration
+	save/restore of microarchitectural state
+	visualization of pipeline effects
+	MP opal
+	Tracing (Instructions, Memory Operations)
+	Branch Traces
+	which files / functionality exist in code
+	resurrect PIPELINE_VIS (visualization code)
+
+Opal documentation
+	Technical reference? or talk about ruby and opal
+	branch predictors
+	caches
+	reported statistics
+	retirement checking
+	register stalling
+	microbenchmarks
+	(internals) pseq, static/dynamic instructions
+
+(rewrite grammer to be left-recursive)
+
+Faster Tracing using:
+	Core_Periodic_Event? Core_Control_Register_Write?
+	set-pattern??
+
+Other clean-up
+	rename: simdist12 to simsimics or somesuch
+	abstract memory interface (ruby_cache) versus other caches
+
+Implement a in-order processor model suitable for functional-first
+	execution (acting as an oracle predictor)
+
+Modify how opal and ruby hook-up with each other:
+	This interface could be faster & more efficient on both sides of the table
+
+In-order processor oracle: add idealization section
+	This is inspired by Fields work on idealizing different parts of the processor to observe speedups. It is a basic assessment of what would have to change to idealize certain parts of the timing model.
+
+	Branch prediction (hard) -> (easier w/ functional-first)
+		-stall then predict at later time...
+	Idealize "fetch barriers"
+	ALU operations (hard)
+	data hits (hard)
+
+	This is all facilitated by a in-order function processor executing
+	instructions at fetch.
+
+	What is the cycle penalty for certain traps in your model?
+	How can this penalty be reduced?
+
+	Can you idealize traps easily?
+	--- squash and restart
+	--- place arbitrary instructions in the pipeline

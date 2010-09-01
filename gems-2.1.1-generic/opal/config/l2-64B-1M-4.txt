@@ -1,0 +1,7 @@
+
+// L2 unified cache
+L2_ASSOC: 4              // 4 way set associative
+L2_SET_BITS: 12          // 4096 sets
+L2_BLOCK_BITS: 6         // 64 byte cache line
+L2_MSHR_ENTRIES: 128
+L2_STREAM_BUFFERS: 0

@@ -1,0 +1,5 @@
+../protocols/MOESI_CMP_directory-msg.sm
+../protocols/MOESI_CMP_directory-L2cache.sm
+../protocols/MOESI_CMP_directory-L1cache.sm
+../protocols/MOESI_CMP_directory_m-dir.sm
+../protocols/standard_CMP-protocol.sm

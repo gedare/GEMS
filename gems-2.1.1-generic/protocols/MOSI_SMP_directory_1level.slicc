@@ -1,0 +1,4 @@
+../protocols/MOSI_SMP_directory_1level-msg.sm
+../protocols/MOSI_SMP_directory_1level-cache.sm
+../protocols/MOSI_SMP_directory_1level-dir.sm
+../protocols/standard_1level_SMP-protocol.sm

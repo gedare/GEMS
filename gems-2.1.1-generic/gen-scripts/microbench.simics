@@ -1,0 +1,16 @@
+@import time, sim_commands, string, sys, getpass, os
+@from cli import *
+@sys.path.append("../../../gen-scripts")
+@import mfacet
+@import workloads
+@import microbench
+@from text_console_common import *
+@from mod_xterm_console_commands import *
+
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+#@workloads.print_all_variables(env_dict)
+@microbench_dir = workloads.get_var(env_dict, "MICROBENCH_DIR")
+@benchmark = workloads.get_var(env_dict, "BENCHMARK")
+@print "BENCHMARK: %s" % benchmark
+@script = "../../../%s/%s/%s.simics" % (microbench_dir, benchmark, benchmark)
+@mfacet.run_sim_command("run-command-file %s" % script) 

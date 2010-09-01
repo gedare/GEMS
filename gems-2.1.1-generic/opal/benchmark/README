@@ -1,0 +1,57 @@
+
+This directory contains various microprocessor performance benchmarks.
+They time targeted micro-architectural features such as TLB miss
+handling, or dependent memory loads. This benchmark suite is not intended
+to compare one architectural implementation to another, it is meant to
+aid in the performance tuning of a micro-archtectural simulator with an
+actual implementation of the architecture.
+
+The timing of the micro-benchmarks is done using: "gettimeofday". I
+would prefer to integrate use of performance counters to time the run
+time cycles on a real machine.
+
+The benchmarks compile into separate executables. Their names and a short
+description are as follows:
+
+llistmb:
+   linked-list micro-benchmark: traverses a linked list, where
+	list elements are at least a number of bytes apart from each other
+        also, each access is guaranteed to be a non-unit stride apart.
+
+llist2mb:
+   linked-list microbenchmark where the linked lists are generated
+   in a binary tree (instead of linear). In this micro-benchmark a
+   stride based prefetching algorithm will not help -- e.g. the
+   linked list elements are "more dependent" than in llistmb.
+
+arraymb:
+   array micro-benchmark: traverses an array, where array elements
+	are a number of bytes apart from each other.
+
+printmb:
+   printf micro-benchmark: prints 64 lines of text.
+
+* ldstmb:
+   load-store queue micro-benchmark: tests forwarding from stores to
+   subsequent loads
+
+* savemb:
+   save/restore micro-benchmark: tests save/restore trap handling by
+   performing recursive calls which can't be handled by tail-recursion
+   (e.g. causes a ton of save / restore traps)
+
+tlbtest:
+   Translation Look-aside Buffer micro-benchmark: generates TLB misses
+   by traversing virtual memory in large strides.
+
+dp:
+   Classic implementation of the dining philosophers problem. Uses threads
+   bound to processors, which suspend and resume processing based on the
+   system clock. This program is meant to increase confidence that the
+   simulated OS's scheduler (and the simulated system clock) do not
+   introduce poor scheduling behavoir.
+
+decodemb:
+   Decode micro-benchmark: Tests all assembly operations in rapid-fire
+   succession. An excellent test of the sparc decoder, and execution
+   engine as well.

@@ -1,0 +1,77 @@
+@import microbench, workloads, mfacet
+
+###### Read simulation parameters
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@processors = int(workloads.get_var(env_dict, "PROCESSORS"))
+#                 0  1  2  3  4  5  6  7  8   9  10  11  12  13  14  15
+@ruby_proc_map = (1, 2, 2, 4, 4, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16, 16, 16)
+@if(processors <= 16):
+    ruby_procs = ruby_proc_map[processors]
+    proc_no = [0, 1, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+elif (processors <= 32):
+    ruby_procs = 32
+    proc_no = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+else:
+    processors = -1
+
+@print "running simics with %d processors" % ruby_procs
+#workloads.print_all_variables(env_dict)
+
+@transactions = int(workloads.get_var(env_dict, "TRANSACTIONS"))
+@dump_interval = int(workloads.get_var(env_dict, "DUMP_INTERVAL"))
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@results_dir = workloads.get_var(env_dict, "RESULTS_DIR")
+@filename_prefix = "%s/%s" % (results_dir, workloads.get_microbench_output_file_name_prefix(env_dict, 0))
+
+#@input_image = os.environ['IMAGE']
+@arg_str = workloads.get_var(env_dict, "MBENCH_ARG_STRING")
+
+#@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/golden-%dp.check"' % ruby_procs)
+#@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/microbenchmark/microbenchmark-%dp.check"' % ruby_procs)
+@mfacet.run_sim_command('read-configuration "/p/multifacet/projects/xact_memory/isca06_submission_results4/haris_asplos08/checkpoints/silver/simics-2.2.19/8p-1-1024-asplos_kernel/silver-8p-psrset.check"')
+
+@mfacet.run_sim_command('magic-break-enable')
+
+@sys.path.append("../../../gen-scripts")
+
+@hostpath = "/host/%s/../../../microbenchmarks/transactional/paging/" % os.getcwd()  
+
+@command_lines = [
+    "tcsh\n",
+    "mount /host\n",
+    "cp " + hostpath + "paging .\n",
+ 	  "./paging %s %s &\n" % (processors-1, transactions),
+    "umount /host\n"
+    ]
+
+@mfacet.console_commands(command_lines,"#")
+c
+
+@microbench.start_ruby(debug=0)
+
+## Check whether we are using Opal
+@opal = 0
+@if "opal" in mfacet.get_module_list():
+    #opal = 1
+    print "Opal loaded"
+else:
+    print "Opal NOT loaded"
+    
+if opal == 1:
+    opal_outfile = "%s.opal" % filename_prefix
+    microbench.start_opal(transactions, dump_interval, opal_outfile)
+else:
+    mfacet.setup_run_for_n_transactions(transactions, dump_interval)
+    mfacet.run_sim_command('c')
+    
+#@mfacet.run_sim_command('ruby0.dump-stats %s.stats' % filename_prefix)
+
+## Dump OPAL stats
+@if opal == 1:
+    mfacet.run_sim_command('opal0.listparam')
+    mfacet.run_sim_command('opal0.stats')
+    mfacet.run_sim_command('opal0.sim-stop')
+    
+#quit
+#-----------------
+

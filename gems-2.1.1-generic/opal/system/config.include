@@ -1,0 +1,194 @@
+//
+// Simultaneous-multithreading 
+// specifies number of logical processors per physical processor
+PARAM_UINT( CONFIG_LOGICAL_PER_PHY_PROC );  
+// specifies how many threads to fetch from in each cycle
+PARAM_UINT( CONFIG_FETCH_THREADS_PER_CYCLE );
+
+//
+// Processor "Width" (issue, decode, retire width)
+//
+
+// stages between fetch and decode
+PARAM_UINT( FETCH_STAGES );
+// stages between decode and earliest possible execution
+PARAM_UINT( DECODE_STAGES );
+// stages between finished execution and finally retire
+PARAM_UINT( RETIRE_STAGES );
+
+PARAM_UINT( MAX_FETCH );
+PARAM_UINT( MAX_DECODE );
+PARAM_UINT( MAX_DISPATCH );
+PARAM_UINT( MAX_EXECUTE );
+PARAM_UINT( MAX_RETIRE );
+
+/// The number of unchecked retires to allow, before stepping simics
+PARAM_UINT( PSEQ_MAX_UNCHECKED );
+
+//
+// Register file
+//
+
+// The number of physical integer registers = logical registers + some extra
+PARAM_UINT( CONFIG_IREG_PHYSICAL );
+
+/** The number of physical single precision floating point registers
+ *
+ *   NOTE: num physical FPREGS must be less than 256, 
+ *         so that 2 single registers can fit in one 16 bit quantity
+ */
+PARAM_UINT( CONFIG_FPREG_PHYSICAL );
+
+// The number of physical condition code registers
+PARAM_UINT( CONFIG_CCREG_PHYSICAL );
+/// The number control register sets which can be used to rename from.
+PARAM_UINT( CONFIG_NUM_CONTROL_SETS );
+
+//
+// # ALUs, ALU Latency
+//
+
+// A mapping that defines which ALU types should be used for each FU_ type
+PARAM_ARRAY( char, CONFIG_ALU_MAPPING, FU_NUM_FU_TYPES);
+// The number and latency of ALUs of each functional unit (fu_type_t)
+PARAM_ARRAY( char, CONFIG_NUM_ALUS, FU_NUM_FU_TYPES);
+PARAM_ARRAY( char, CONFIG_ALU_LATENCY, FU_NUM_FU_TYPES);
+
+//
+// Caches, Memory System
+//
+
+// Write Buffer
+PARAM_UINT( WRITE_BUFFER_SIZE );
+
+// L1 instruction cache
+PARAM_UINT( IL1_ASSOC );
+PARAM_UINT( IL1_SET_BITS );
+PARAM_UINT( IL1_BLOCK_BITS );
+PARAM_UINT( IL1_MSHR_ENTRIES );
+PARAM_UINT( IL1_STREAM_BUFFERS );
+PARAM_UINT( IL1_IDEAL );
+PARAM_UINT( IL1_NL_TYPE );
+PARAM_UINT( IL1_NL_LINES );
+PARAM_UINT( IL1_MSHR_QUEUE_SIZE );
+PARAM_UINT( IL1_MSHR_QUEUE_ISSUE_WIDTH );
+
+// L1 data cache
+PARAM_UINT( DL1_ASSOC );
+PARAM_UINT( DL1_SET_BITS );
+PARAM_UINT( DL1_BLOCK_BITS );
+PARAM_UINT( DL1_MSHR_ENTRIES );
+PARAM_UINT( DL1_STREAM_BUFFERS );
+PARAM_UINT( DL1_IDEAL );
+
+// L2 unified cache
+PARAM_UINT( L2_ASSOC );
+PARAM_UINT( L2_SET_BITS );
+PARAM_UINT( L2_BLOCK_BITS );
+PARAM_UINT( L2_MSHR_ENTRIES );
+PARAM_UINT( L2_STREAM_BUFFERS );
+PARAM_UINT( L2_LATENCY );
+PARAM_UINT( L2_IDEAL );
+
+// Memory Latency
+PARAM_UINT( MEMORY_DRAM_LATENCY );
+PARAM_UINT( MEMORY_OUTSTANDING_REQUESTS );
+PARAM_UINT( MEMOP_STALE_DATA );
+PARAM_UINT( L1_FILL_BUS_CYCLES );
+PARAM_UINT( L2_FILL_BUS_CYCLES );
+/* if you're using ruby (external cache simulator) this defines the
+ * clock frequency of ruby versus opal. must be > 0.
+ * 1 => same frequency, 2 => 1/2 frequency, etc.
+ */
+PARAM_UINT( RUBY_CLOCK_DIVISOR );
+
+// supported TLB sizes
+PARAM_UINT( TLB_NUM_ENTRIES );
+PARAM_UINT( TLB_NUM_PAGE_SIZES );
+PARAM_ARRAY( uint32, TLB_PAGE_SIZES, 4 );
+PARAM_UINT( TLB_IS_IDEAL );
+
+//
+// Front-end (Fetch and Branch Prediction)
+//
+
+/// I$ access cycle
+PARAM_UINT( ICACHE_CYCLE );
+/// fetch policies
+PARAM_UINT( FETCH_PASS_CACHE_LINE );
+PARAM_UINT( FETCH_PASS_TAKEN_BRANCH );
+
+// Branch predictor parameters
+PARAM_STRING( BRANCHPRED_TYPE );
+PARAM_UINT( BRANCHPRED_PHT_BITS );
+PARAM_UINT( BRANCHPRED_EXCEPTION_BITS );
+PARAM_UINT( BRANCHPRED_TAG_BITS );
+PARAM_UINT( BRANCHPRED_MISPRED_PENALTY );
+PARAM_UINT( BRANCHPRED_USE_GLOBAL );
+
+// PARAM( bool,   BRANCHPRED_HISTORY_FILTER );
+// PARAM_STRING( BRANCHPRED_IGNORE_FILE );
+// PARAM_STRING( BRANCHPRED_CONFIDENT_FILE );
+// PARAM_STRING( BRANCHPRED_FREQUENT_FILE );
+
+// Load replay penalty
+PARAM_UINT( LOAD_REPLAY_PENALTY );
+
+// Turns on/off StoreSet predictor
+PARAM_UINT( STORESET_PREDICTOR );
+
+PARAM_UINT( CAS_TABLE_BITS );
+PARAM_UINT( CAS_EXCEPT_BITS );
+PARAM_UINT( CAS_EXCEPT_SHIFT );
+PARAM_UINT( RAS_BITS );
+PARAM_UINT( RAS_EXCEPTION_TABLE_BITS );
+
+/// iwindow_t: number of outstanding instructions in the instruction window
+PARAM( IWINDOW_ROB_SIZE );
+PARAM( IWINDOW_WIN_SIZE );
+PARAM( RESERVED_ROB_ENTRIES );
+
+// statistics profiling options
+PARAM_UINT( STAT_EXPENSIVE_PROFILE );
+
+// MLP statistics controls
+PARAM( CHAIN_IDEAL_WINDOW );
+PARAM( CHAIN_IDEAL_BRANCH_PRED );
+PARAM( CHAIN_ST_LD_FORWARDING );
+PARAM( CHAIN_MP_MODE );
+
+//
+// WATTCH power analysis
+//
+PARAM( WATTCH_POWER );
+PARAM( PREFETCHER_POWER );
+PARAM( COMPRESSION_POWER );
+PARAM_UINT( L1_BANKS );
+PARAM( L1I_PF_STREAMS );
+PARAM( L1D_PF_STREAMS );
+PARAM( UNIT_PF_FILTERSIZE );
+PARAM( NONUNIT_PF_FILTERSIZE );
+PARAM( L1_L2_STARTUP_PFS );
+
+//
+// Generated values: do not set!
+//
+
+/** Note: the ld/st queue (memop.C) filters requests to the memory
+ *  sub-system based on the L1 data cache line size. (DL1_BLOCK_BITS)
+ */
+PARAM_ULONG( MEMOP_BLOCK_MASK );
+PARAM_UINT( IL1_NUM_SETS );
+PARAM_UINT( DL1_NUM_SETS );
+
+/// Generated Branch Predictor Values
+PARAM_UINT( CAS_TABLE_SIZE );
+PARAM_UINT( CAS_TABLE_MASK );
+PARAM_UINT( CAS_EXCEPT_SIZE );
+PARAM_UINT( CAS_EXCEPT_MASK );
+
+PARAM_UINT( PERFECT_ICACHE );
+PARAM_UINT( RETIREMENT_CACHE_ACCESS );
+
+PARAM_UINT( RANDOM_SEED );
+

@@ -1,0 +1,59 @@
+@import microbench, workloads, mfacet
+
+###### Read simulation parameters
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@processors = int(workloads.get_var(env_dict, "PROCESSORS"))
+#                 0  1  2  3  4  5  6  7  8   9  10  11  12  13  14  15
+@ruby_proc_map = (1, 2, 2, 4, 4, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16, 16, 16)
+@if(processors <= 16):
+    ruby_procs = ruby_proc_map[processors]
+    proc_no = [0, 1, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+elif (processors <= 32):
+    ruby_procs = 32
+    proc_no = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+else:
+    processors = -1
+
+@print "running simics with %d processors" % ruby_procs
+
+@lock_type = workloads.get_var(env_dict, "LOCK_TYPE")
+@transactions = int(workloads.get_var(env_dict, "TRANSACTIONS"))
+@dump_interval = int(workloads.get_var(env_dict, "DUMP_INTERVAL"))
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@visualizer = int(workloads.get_var(env_dict, "XACT_VISUALIZER"))
+@results_dir = workloads.get_var(env_dict, "RESULTS_DIR")
+@filename_prefix = "%s/%s" % (results_dir, workloads.get_microbench_output_file_name_prefix(env_dict, 0))
+
+@arg_str = workloads.get_var(env_dict, "MBENCH_ARG_STRING")
+
+@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/microbenchmark/microbenchmark-%dp.check"' % ruby_procs)
+@mfacet.run_sim_command('magic-break-enable')
+
+@sys.path.append("../../../gen-scripts")
+
+@hostpath = "/host" + os.getcwd() + "/../../../microbenchmarks/transactional/prioqueue/"
+
+@command_lines = [
+    "bash\n",
+    "mount /host\n",
+    "cp " + hostpath + "prioqueue_%s prioqueue\n" % lock_type,
+    "cp " + hostpath + "zipf.out zipf.out\n",
+    "umount /host\n",
+    "./prioqueue %d %d < zipf.out\n" % (processors-1, transactions)
+    ]
+
+@mfacet.console_commands(command_lines,"#")
+c
+@microbench.start_ruby(debug=0)
+    
+@if visualizer == 1:    
+  mfacet.run_sim_command('ruby0.xact-visualizer-file %s.visual' % filename_prefix)
+
+@mfacet.setup_run_for_n_transactions(transactions, dump_interval)
+@mfacet.run_sim_command('c')
+
+@mfacet.run_sim_command('ruby0.dump-stats %s.stats' % filename_prefix)
+
+quit
+#-----------------
+

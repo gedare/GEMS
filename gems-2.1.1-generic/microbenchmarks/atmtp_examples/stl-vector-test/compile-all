@@ -1,0 +1,10 @@
+#!/bin/csh
+
+set path=($path /pkg/gnu/bin)
+
+gmake COMPMODE=NOTM            TARGET=stl-vectorFull.noTM.oneLock  clean all
+gmake COMPMODE=NOTM RWLOCKS=1  TARGET=stl-vectorFull.noTM.rwLock   clean all
+gmake COMPMODE=HTM             TARGET=stl-vectorFull.htm.oneLock   clean all
+gmake COMPMODE=HTM  RWLOCKS=1  TARGET=stl-vectorFull.htm.rwLock    clean all
+
+gmake clean

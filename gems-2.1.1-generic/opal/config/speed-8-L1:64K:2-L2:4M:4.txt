@@ -1,0 +1,58 @@
+
+// processor issue, decode, retire width
+PSEQ_MAX_UNCHECKED: 1
+FETCH_STAGES: 1
+DECODE_STAGES: 1
+MAX_FETCH: 8
+MAX_DECODE: 8
+MAX_EXECUTE: 8
+MAX_RETIRE: 8
+#include ./config/register-standard.txt
+
+CONFIG_NUM_ALUS: (
+  127, // FU_NONE,                 // inst does not use a functional unit
+    8, // FU_INTALU,               // integer ALU
+    8, // FU_INTMULT,              // integer multiplier
+    8, // FU_INTDIV,               // integer divider
+    8, // FU_FLOATADD,             // floating point adder/subtractor
+    8, // FU_FLOATCMP,             // floating point comparator
+    8, // FU_FLOATCVT,             // floating point<->integer converter
+    8, // FU_FLOATMULT,            // floating point multiplier
+    8, // FU_FLOATDIV,             // floating point divider
+    8, // FU_FLOATSQRT,            // floating point square root
+    8, // FU_RDPORT,               // memory read port
+    8  // FU_WRPORT,               // memory write port
+)
+
+CONFIG_ALU_LATENCY: (
+    1, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    1, // FU_INTMULT,              // integer multiplier
+    1, // FU_INTDIV,               // integer divider
+    1, // FU_FLOATADD,             // floating point adder/subtractor
+    1, // FU_FLOATCMP,             // floating point comparator
+    1, // FU_FLOATCVT,             // floating point<->integer converter
+    1, // FU_FLOATMULT,            // floating point multiplier
+    1, // FU_FLOATDIV,             // floating point divider
+    1, // FU_FLOATSQRT,            // floating point square root
+    1, // FU_RDPORT,               // memory read port
+    1  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+CONFIG_NUM_CONTROL_SETS: 32
+
+#include ./config/l1-64B-64K-2.txt
+#include ./config/l2-64B-4M-4.txt
+// Memory latency
+RUBY_CLOCK_DIVISOR: 1
+L2_LATENCY: 4
+MEMORY_DRAM_LATENCY: 20
+L1_FILL_BUS_CYCLES: 1
+L2_FILL_BUS_CYCLES: 1
+NUM_I_PREFETCH: 6
+#include ./config/yags-12:10.txt
+#include ./config/ras-standard.txt
+#include ./config/indirect-standard.txt
+
+IWINDOW_WIN_SIZE: 8
+PSEQ_SLIDING_WINSIZE: 64

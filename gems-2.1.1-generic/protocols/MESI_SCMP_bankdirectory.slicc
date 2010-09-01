@@ -1,0 +1,6 @@
+../protocols/MESI_SCMP_bankdirectory-msg.sm
+../protocols/MESI_SCMP_bankdirectory-L2cache.sm
+../protocols/MESI_SCMP_bankdirectory-L1cache.sm
+../protocols/MESI_SCMP_bankdirectory-mem.sm
+../protocols/standard_CMP-protocol.sm
+
