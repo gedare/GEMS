@@ -1,0 +1,13 @@
+gems
+
+This repository is for modifications made to the Multifacet GEMS 
+software for our research lab.  For project-specific modifications, 
+please copy the gems-2.1.1 folder or extract a vanilla gems distribution 
+and give it a meaningful project name, e.g. gems-containers for a containers
+project.
+
+The following is a brief description of the subdirectories in this
+repository:
+
+gems-2.1.1 - generic modifications to the vanilla gems distribution.
+
