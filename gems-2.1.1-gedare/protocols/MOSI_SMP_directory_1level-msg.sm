@@ -1,0 +1,99 @@
+
+/*
+    Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    http://www.cs.wisc.edu/gems/
+
+    --------------------------------------------------------------------
+
+    This file is part of the SLICC (Specification Language for
+    Implementing Cache Coherence), a component of the Multifacet GEMS
+    (General Execution-driven Multiprocessor Simulator) software
+    toolset originally developed at the University of Wisconsin-Madison.
+                                                                                
+    SLICC was originally developed by Milo Martin with substantial
+    contributions from Daniel Sorin.
+
+    Substantial further development of Multifacet GEMS at the
+    University of Wisconsin was performed by Alaa Alameldeen, Brad
+    Beckmann, Jayaram Bobba, Ross Dickson, Dan Gibson, Pacia Harper,
+    Derek Hower, Milo Martin, Michael Marty, Carl Mauer, Michelle Moravan,
+    Kevin Moore, Manoj Plakal, Daniel Sorin, Haris Volos, Min Xu, and Luke Yen.
+
+    --------------------------------------------------------------------
+
+    If your use of this software contributes to a published paper, we
+    request that you (1) cite our summary paper that appears on our
+    website (http://www.cs.wisc.edu/gems/) and (2) e-mail a citation
+    for your published paper to gems@cs.wisc.edu.
+
+    If you redistribute derivatives of this software, we request that
+    you notify us and either (1) ask people to register with us at our
+    website (http://www.cs.wisc.edu/gems/) or (2) collect registration
+    information and periodically send it to us.
+
+    --------------------------------------------------------------------
+
+    Multifacet GEMS is free software; you can redistribute it and/or
+    modify it under the terms of version 2 of the GNU General Public
+    License as published by the Free Software Foundation.
+
+    Multifacet GEMS is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the Multifacet GEMS; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA
+
+    The GNU General Public License is contained in the file LICENSE.
+
+### END HEADER ###
+*/
+/*
+ * $Id: MOSI_directory-msg.sm 1.9 04/08/09 16:11:38-05:00 mikem@maya.cs.wisc.edu $
+ *
+ */
+
+// CoherenceRequestType
+enumeration(CoherenceRequestType, desc="...") {
+  GETX,      desc="Get eXclusive";
+  GETS,      desc="Get Shared";
+  GET_INSTR, desc="Get Instruction";
+  PUTX,      desc="Put eXclusive";
+  INV,       desc="INValidate";
+  WB_ACK,    desc="Write Back ACKnowledgment";
+}
+
+// CoherenceResponseType
+enumeration(CoherenceResponseType, desc="...") {
+  ACK,       desc="ACKnowledgment";
+  NACK,      desc="Negative ACKnowledgment";
+  DATA,      desc="Data";
+}
+
+// RequestMsg
+structure(RequestMsg, desc="...", interface="NetworkMessage") {
+  Address Address,             desc="Physical address for this request";
+  CoherenceRequestType Type,   desc="Type of request (GetS, GetX, PutX, etc)";
+  MachineID Requestor,            desc="Node who initiated the request";
+  NetDest Destination,             desc="Multicast destination mask";
+  DataBlock DataBlk,           desc="Data for the cache line (if PUTX)";
+  int NumPendingAcks,          desc="Number of acks to wait for"; // Needed for forwarded responses only
+  MessageSizeType MessageSize, desc="size category of the message";
+}
+
+// ResponseMsg
+structure(ResponseMsg, desc="...", interface="NetworkMessage") {
+  Address Address,             desc="Physical address for this request";
+  CoherenceResponseType Type,  desc="Type of response (Ack, Data, etc)";
+  MachineID Sender,               desc="Node who sent the data";
+  MachineType SenderMachine,   desc="What component sent the data";
+  NetDest Destination,             desc="Node to whom the data is sent";
+  MachineType DestMachine,     desc="What component receives the data";
+  DataBlock DataBlk,           desc="data for the cache line";
+  int NumPendingAcks,          desc="Number of acks to wait for";
+  MessageSizeType MessageSize, desc="size category of the message";
+}

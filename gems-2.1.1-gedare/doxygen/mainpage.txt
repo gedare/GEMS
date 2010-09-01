@@ -1,0 +1,45 @@
+/** \mainpage
+ *
+ *  This is an automatically generated reference manual for GEMS Ruby.
+ *
+ *  For more "user maunual" type documentation, see the public \htmlonly <a href="http://www.cs.wisc.edu/gems/doc/wiki/moin.cgi">GEMS wiki</a> \endhtmlonly 
+ *   
+ *
+ *   \htmlonly <hr/> 
+    Copyright (C) 1999-2007 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    <a href="http://www.cs.wisc.edu/gems/">http://www.cs.wisc.edu/gems/</a>
+ 
+    <hr/> <p> If your use of this software contributes to a published
+    paper, we request that you <ol><li> Cite our summary paper that
+    appears on our website (<a href="http://www.cs.wisc.edu/gems/">
+    http://www.cs.wisc.edu/gems/ </a>) and </li><li> e-mail a citation
+    for your published paper to <a href="mailto:gems@cs.wisc.edu">
+    gems@cs.wisc.edu </a>.</li></ol> </p>
+ 
+    <p> If you redistribute derivatives of this software, we request
+    that you notify us and either <ol><li> Ask people to register with
+    us at our website (<a href="http://www.cs.wisc.edu/gems/">
+    http://www.cs.wisc.edu/gems/ </a>) or </li><li> Collect
+    registration information and periodically send it to
+    us. </li></ol> </p>
+ 
+    <hr/> <p> Multifacet GEMS is free software; you can redistribute
+    it and/or modify it under the terms of version 2 of the GNU
+    General Public License as published by the Free Software
+    Foundation.  </p>
+ 
+    <p> Multifacet GEMS is distributed in the hope that it will be
+    useful, but WITHOUT ANY WARRANTY; without even the implied
+    warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the GNU General Public License for more details.  </p>
+ 
+    <p> You should have received a copy of the GNU General Public
+    License along with the Multifacet GEMS; if not, write to the Free
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA </p>
+  
+    <p> The GNU General Public License is contained in the file
+    LICENSE.  </p> \endhtmlonly
+ *
+ */

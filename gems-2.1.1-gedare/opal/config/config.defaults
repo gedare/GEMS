@@ -1,0 +1,229 @@
+//
+// Simultaneous-multithreading 
+// specifies number of logical processors per physical processor
+CONFIG_LOGICAL_PER_PHY_PROC:  1
+// specifies how many threads to fetch from in each cycle
+CONFIG_FETCH_THREADS_PER_CYCLE:  2
+
+//
+// Processor "Width" (issue, decode, retire width)
+//
+PSEQ_MAX_UNCHECKED: 1
+FETCH_STAGES:  1
+DECODE_STAGES: 1
+RETIRE_STAGES: 1
+MAX_FETCH: 4
+MAX_DECODE: 4
+MAX_DISPATCH: 4
+MAX_EXECUTE: 4
+MAX_RETIRE: 4
+
+//
+// Register file
+//
+// physical = 160 (logical)*CONFIG_LOGICAL_PER_PHY_PROC + 64 (rename)
+CONFIG_IREG_PHYSICAL: 0 
+// physical = 64 (logical)*CONFIG_LOGICAL_PER_PHY_PROC + 128 (== 64 double precision)
+// note: must be < 64K 
+CONFIG_FPREG_PHYSICAL: 0 
+// physical = 5 (logical)*CONFIG_LOGICAL_PER_PHY_PROC + 64
+CONFIG_CCREG_PHYSICAL: 0 
+// number of control register sets
+CONFIG_NUM_CONTROL_SETS: 64
+
+//
+// # ALUs, ALU Latency
+//
+
+CONFIG_ALU_MAPPING: (
+    0, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    1, // FU_INTMULT,              // integer multiplier
+    2, // FU_INTDIV,               // integer divider
+    3, // FU_BRANCH,               // compare / branch units
+    4, // FU_FLOATADD,             // floating point adder/subtractor
+    4, // FU_FLOATCMP,             // floating point comparator
+    4, // FU_FLOATCVT,             // floating point<->integer converter
+    5, // FU_FLOATMULT,            // floating point multiplier
+    6, // FU_FLOATDIV,             // floating point divider
+    6, // FU_FLOATSQRT,            // floating point square root
+    7, // FU_RDPORT,               // memory read port
+    8  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+
+CONFIG_NUM_ALUS: (
+  127, // inst does not use a functional unit
+    4, // integer ALU (fused multiply/add)
+    2, // integer divisor
+    2, // compare branch units
+    4, // FP ALU
+    2, // FP multiply
+    2, // FP divisor / square-root
+    10, // load unit (memory read)
+    10, // store unit (memory write)
+    0,
+    0,
+    0,
+    0
+)
+
+CONFIG_ALU_LATENCY: (
+    1, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    4, // FU_INTMULT,              // integer multiplier
+   20, // FU_INTDIV,               // integer divider
+    1, // FU_BRANCH,               // compare / branch units
+    2, // FU_FLOATADD,             // floating point adder/subtractor
+    2, // FU_FLOATCMP,             // floating point comparator
+    2, // FU_FLOATCVT,             // floating point<->integer converter
+    4, // FU_FLOATMULT,            // floating point multiplier
+   12, // FU_FLOATDIV,             // floating point divider
+   24, // FU_FLOATSQRT,            // floating point square root
+    1, // FU_RDPORT,               // memory read port
+    1  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+
+//
+// Caches, Memory System
+//
+
+// Write Buffer
+WRITE_BUFFER_SIZE: 0 
+
+// L1 inst cache
+IL1_IDEAL: 0              // 1 -> ideal I cache
+IL1_ASSOC: 2              // direct mapped
+IL1_SET_BITS: 8           // 256 sets
+IL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+IL1_MSHR_ENTRIES: 256
+IL1_STREAM_BUFFERS: 0
+IL1_NL_TYPE: 0            // default no next line prefetcher
+IL1_NL_LINES: 0
+ICACHE_CYCLE: 1           // selects multi-cycle fetch if > 1
+FETCH_PASS_CACHE_LINE: 1  // properties of fetch, only affect simple FE
+FETCH_PASS_TAKEN_BRANCH: 1
+IL1_MSHR_QUEUE_SIZE: 32   // size of prefetch queue
+IL1_MSHR_QUEUE_ISSUE_WIDTH: 2 // issue speed of the prefetch queue
+
+// L1 data cache
+DL1_IDEAL: 0              // 1 -> ideal D cache
+DL1_ASSOC: 2              // direct mapped
+DL1_SET_BITS: 8           // 256 sets
+DL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+DL1_MSHR_ENTRIES: 256
+DL1_STREAM_BUFFERS: 0
+
+// L2 unified cache
+L2_IDEAL: 0              // 1 -> ideal L2 cache
+L2_ASSOC: 4             // 4 way set associative
+L2_SET_BITS: 13          // 4096 sets
+L2_BLOCK_BITS: 6         // 64 byte cache line
+L2_MSHR_ENTRIES: 128
+L2_STREAM_BUFFERS: 0
+
+// supported TLB sizes
+TLB_NUM_ENTRIES: 64
+TLB_NUM_PAGE_SIZES: 4
+TLB_PAGE_SIZES: (8192, 65536, 524288, 4194304)
+TLB_IS_IDEAL: 0
+
+// Memory latency
+RUBY_CLOCK_DIVISOR: 1
+L2_LATENCY: 6
+MEMORY_DRAM_LATENCY: 80
+MEMORY_OUTSTANDING_REQUESTS: 128
+MEMOP_STALE_DATA: 0
+L1_FILL_BUS_CYCLES: 1
+L2_FILL_BUS_CYCLES: 11
+
+//
+// Front-end (Fetch and Branch Prediction)
+//
+
+// branch misprediction penalty
+BRANCHPRED_MISPRED_PENALTY: 1
+
+// Load replay penalty
+LOAD_REPLAY_PENALTY: 10
+
+// Turns on/off StoreSet predictor
+STORESET_PREDICTOR: 1
+
+// YAGS parameters
+BRANCHPRED_TYPE: YAGS 
+BRANCHPRED_PHT_BITS: 20
+BRANCHPRED_EXCEPTION_BITS: 15
+BRANCHPRED_TAG_BITS: 15
+
+// RAS parameters
+RAS_BITS: 6                  // return address stack
+RAS_EXCEPTION_TABLE_BITS: 6  // a simple exception table of the RAS
+
+// cascaded indirect branch predictor parameters
+CAS_TABLE_BITS: 12
+CAS_EXCEPT_BITS: 12
+CAS_EXCEPT_SHIFT: 1
+
+// idealized gshare parameters (1 to use global history)
+BRANCHPRED_USE_GLOBAL: 0
+
+//
+// Instruction window, Re-order buffer sizes
+//
+
+IWINDOW_ROB_SIZE: 64
+IWINDOW_WIN_SIZE: 32
+RESERVED_ROB_ENTRIES: 4
+
+//
+// Statistics gathering functions
+//
+STAT_EXPENSIVE_PROFILE: 0
+
+//
+// MLP statistics controls
+//
+
+CHAIN_IDEAL_WINDOW: 0
+CHAIN_IDEAL_BRANCH_PRED: 0
+CHAIN_ST_LD_FORWARDING: 1
+CHAIN_MP_MODE: 1
+
+//
+// WATTCH power analysis
+//
+WATTCH_POWER: 0
+PREFETCHER_POWER: 1
+COMPRESSION_POWER: 0
+//Used to simulate clock-gating of L1 banks
+L1_BANKS: 2
+// Used by the prefetcher
+L1I_PF_STREAMS: 8
+L1D_PF_STREAMS: 8
+UNIT_PF_FILTERSIZE: 32
+NONUNIT_PF_FILTERSIZE: 32
+L1_L2_STARTUP_PFS: 6
+
+//
+// Generated values: These values are changed by the code
+//                   They are set here (to zero) only to avoid warnings.
+//
+
+MEMOP_BLOCK_MASK: 0
+IL1_NUM_SETS: 0
+DL1_NUM_SETS: 0
+CAS_TABLE_SIZE: 0
+CAS_TABLE_MASK: 0
+CAS_EXCEPT_SIZE: 0
+CAS_EXCEPT_MASK: 0
+
+// Simulate a perfect L1-ICache?
+PERFECT_ICACHE: 0
+
+// Enables check for correct cache-line permissions at retirement
+// We should leave this off since Ruby sometimes calls Opal back without obtaining correct permissions (due to serialization of simulation steps )
+RETIREMENT_CACHE_ACCESS: 1
+
+RANDOM_SEED: 0

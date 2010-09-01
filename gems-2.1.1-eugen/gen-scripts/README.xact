@@ -1,0 +1,166 @@
+Please read README.gen-scripts first.  This file gives directions on
+how to modify those directions to generate scripts for nested
+transactional workloads.
+
+#########################################################
+##                                                     ##
+##                MICROBENCHMARKS                      ##
+##                                                     ##
+#########################################################
+
+#########################################################
+##                 microbench.py                       ##
+#########################################################
+
+In the start_ruby function definition, ensure that the following
+parameters are set after load-module ruby:
+  mfacet.run_sim_command("ruby0.setparam_str REMOVE_SINGLE_CYCLE_DCACHE_FAST_PATH true")
+  mfacet.run_sim_command("ruby0.setparam_str PROFILE_EXCEPTIONS true")
+  mfacet.run_sim_command("ruby0.setparam_str PROFILE_XACT true")
+  mfacet.run_sim_command("ruby0.setparam_str XACT_MEMORY true")
+  mfacet.run_sim_command("ruby0.setparam XACT_MAX_DEPTH 1");
+  mfacet.run_sim_command("ruby0.setparam g_DEADLOCK_THRESHOLD 20000000")
+  mfacet.run_sim_command("ruby0.setparam RETRY_LATENCY 10")
+  mfacet.run_sim_command("ruby0.setparam g_MEMORY_SIZE_BYTES 8589934592")
+
+  # 16 kB 4-way L1 cache
+  mfacet.run_sim_command("ruby0.setparam L1_CACHE_ASSOC %d" % 4)
+  mfacet.run_sim_command("ruby0.setparam L1_CACHE_NUM_SETS_BITS %d" % 6)
+  mfacet.run_sim_command("ruby0.setparam SEQUENCER_TO_CONTROLLER_LATENCY %d" % 1) # L1 hit time
+
+  # 4 MB 4-way L2 cache
+  mfacet.run_sim_command("ruby0.setparam L2_CACHE_ASSOC %d" % 4)
+  mfacet.run_sim_command("ruby0.setparam L1_CACHE_NUM_SETS_BITS %d" % 14)
+
+  # interconnection network parameters
+  mfacet.run_sim_command("ruby0.setparam NETWORK_LINK_LATENCY %d" % 14)
+
+#########################################################
+##              gen-xact-scripts.py                    ##
+#########################################################
+
+Set results_dir to be the path, relative to the parent of gen-scripts,
+where you want your per-benchmark results directories and generated
+scripts to be placed.
+
+Modify microbench_dir to be the path, relative to the parent of
+gen-scripts, where your per-benchmark code directories are located.
+
+Append all protocols you wish to generate scripts for to
+xact_protocols.  This file does not address how to also run base
+protocols.
+
+Append to xact_max_depth_list all levels of explicit hardware nesting
+support desired.  Note that all benchmarks with greater levels of
+closed nesting will still function, via subsuming.  However, no open
+transactions may be called beyond the given depth for any given test
+run.  A nesting level of 1 is the same as flattening.
+
+Append all desired numbers of processors to processor_list.  It is
+recommended that you use binding when writing your microbenchmarks,
+which means that you may use a maximum number of processors of 1 less
+than the number of processors in your checkpoint.  Thus, if you are
+using a 32 processor checkpoint, you should use 31 processors as a
+maximum.  This is the convention for the argument to your benchmark;
+the number in processor_list will be directly fed to your benchmark.
+
+Historically, we have only ever used 10000 for bandwidth_list.
+
+To microbenchmark_list, append the name of the directory containing
+each microbenchmark that you wish to run.  This directory must be
+located in microbench_dir.  The second two arguments are typically 1,
+1, which means that only one transaction (not a transactional memory
+transaction, but the type that governs the length of the workload run)
+is used, and statistics are dumped "every" transaction, or once after
+this single transaction runs.
+
+Since we are not running any non-transactional workloads,
+lock_type_list should contain only "TM".
+
+If your benchmarks require any arguments, add them to the list of
+workloads.set_var, below the comment ## microbenchmark specific
+arguments.  Add an if statement to your benchmark, and make up a new
+unique name to list in caps, followed by the argument.  Also add your
+variable to g_env_list in workloads.py.
+
+If you wish to iterate over many different arguments, you will have to
+create a list and add another level of depth to this set of nested for
+loops.  Look at processor_list for an example.  Also note that you
+will need to modify the naming convention for the generated scripts to
+incorporate this, otherwise all of your versions will be generated
+under the same name.
+
+#########################################################
+##                    .simics                          ##
+#########################################################
+
+You must create a .simics file in your microbenchmark directory.  This
+file must have the same name as your directory, with a .simics
+extension.  See $GEMS/microbenchmarks/transactional/deque/deque.simics
+for an example.
+
+You must include the command @env_dict = workloads.prepare_env_dictionary(simics = 1)
+to access the parameters you set in gen-xact-scripts.py.  You will
+need "PROCESSORS", "RESULTS_DIR", and all microbenchmark-specific
+parameters.  Use the workloads.get_var
+function to put these in local variables.  Use the string.atoi
+function to convert them to integers, if need be.
+
+Create a filename prefix with the command @filename_prefix = "%s/%s" %
+(results_dir,
+workloads.get_microbench_output_file_name_prefix(env_dict),0).  This
+will create a directory with the name of your microbenchmark directory
+within your results directory.  Your microbenchmark output will
+include the workload, number of processors, opal configuration,
+protocol, transaction maximum depth, and bandwidth.  If you wish to
+add others, you should modify workloads.py
+get_microbench_output_file_name_prefix.
+
+Currently we hardcode the checkpoint configuration read to use a bound
+processor checkpoint, which runs the microbenchmarks more quickly.
+However, this only exists for 32 processors, and is not checked into
+bk.  You can copy it from Michelle's tree: cp
+/p/multifacet/projects/nested_xact/logtm_research/simics/home/checkpoints-u3/*bound*
+$GEMS/simics/home/checkpoints-u3/
+
+Make sure @hostpath matches the path to your microbenchmark, and that
+@command_lines copies the correct executable, and includes all of the
+parameters your microbenchmark requires.
+
+The commented out section is required if you want to use less than 32
+processors.
+
+You must include the @start_ruby() and
+@setup_run_for_n_transactions(1) commands.  The argument to
+@setup_run_for_n_transactions should match the second argument you
+provided when adding your microbenchmark to the list in
+gen_xact_scripts.
+
+To create outfile, I recommend you add to @filename_prefix the details
+of this run: the arguments to your microbenchmark, and a datestamp.
+Use ruby0.dump-stats to dump the output of your run to your outfile,
+and quit to exit simics.
+
+#########################################################
+##                    Running                          ##
+#########################################################
+
+cd $GEMS/ruby
+make clean
+
+For each of the protocols you wish to test:
+make -j 2 PROTOCOL=<foo> DESTINATION=<foo>
+
+From gen-scripts:
+
+./gen-xact-scripts
+cd ../results/xact-scripts
+
+You can run any of the single scripts directly, to verify their
+functionality.  Note that you must do this on the machine for which
+you've compiled ruby.
+./<foo>sh
+
+Or you can use condor to streamline the process. Note that you cannot
+do this from any of the interactive s machines.
+condor_submit <foo>.condor

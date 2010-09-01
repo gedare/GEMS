@@ -1,0 +1,92 @@
+
+/*
+    Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    http://www.cs.wisc.edu/gems/
+
+    --------------------------------------------------------------------
+
+    This file is part of the SLICC (Specification Language for
+    Implementing Cache Coherence), a component of the Multifacet GEMS
+    (General Execution-driven Multiprocessor Simulator) software
+    toolset originally developed at the University of Wisconsin-Madison.
+                                                                                
+    SLICC was originally developed by Milo Martin with substantial
+    contributions from Daniel Sorin.
+
+    Substantial further development of Multifacet GEMS at the
+    University of Wisconsin was performed by Alaa Alameldeen, Brad
+    Beckmann, Jayaram Bobba, Ross Dickson, Dan Gibson, Pacia Harper,
+    Derek Hower, Milo Martin, Michael Marty, Carl Mauer, Michelle Moravan,
+    Kevin Moore, Manoj Plakal, Daniel Sorin, Haris Volos, Min Xu, and Luke Yen.
+
+    --------------------------------------------------------------------
+
+    If your use of this software contributes to a published paper, we
+    request that you (1) cite our summary paper that appears on our
+    website (http://www.cs.wisc.edu/gems/) and (2) e-mail a citation
+    for your published paper to gems@cs.wisc.edu.
+
+    If you redistribute derivatives of this software, we request that
+    you notify us and either (1) ask people to register with us at our
+    website (http://www.cs.wisc.edu/gems/) or (2) collect registration
+    information and periodically send it to us.
+
+    --------------------------------------------------------------------
+
+    Multifacet GEMS is free software; you can redistribute it and/or
+    modify it under the terms of version 2 of the GNU General Public
+    License as published by the Free Software Foundation.
+
+    Multifacet GEMS is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the Multifacet GEMS; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA
+
+    The GNU General Public License is contained in the file LICENSE.
+
+### END HEADER ###
+*/
+/*
+ * $Id$
+ *
+ */
+
+// MemoryRequestType used in MemoryMsg
+
+enumeration(MemoryRequestType, desc="...") {
+
+  // Southbound request: from directory to memory cache
+  // or directory to memory or memory cache to memory
+  MEMORY_READ,     desc="Read request to memory";
+  MEMORY_WB,       desc="Write back data to memory";
+
+  // response from memory to directory
+  // (These are currently unused!)
+  MEMORY_DATA, desc="Data read from memory";
+  MEMORY_ACK,  desc="Write to memory acknowledgement";
+}
+
+
+// Message to and from Memory Control
+
+structure(MemoryMsg, desc="...", interface="Message") {
+  Address Address,              desc="Physical address for this request";
+  MemoryRequestType Type,       desc="Type of memory request (MEMORY_READ or MEMORY_WB)";
+  MachineID Sender,             desc="What component sent the data";
+  MachineID OriginalRequestorMachId, desc="What component originally requested";
+  DataBlock DataBlk,            desc="Data to writeback";
+  MessageSizeType MessageSize,  desc="size category of the message";
+  // Not all fields used by all protocols:
+  PrefetchBit Prefetch,         desc="Is this a prefetch request";
+  bool ReadX,                   desc="Exclusive";
+  int Acks,                     desc="How many acks to expect";
+
+
+}
+

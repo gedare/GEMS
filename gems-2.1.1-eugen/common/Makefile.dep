@@ -1,0 +1,35 @@
+tags:
+	etags $(patsubst %,%/*.[Cchyl],$(subst :, ,$(VPATH)))
+
+# Include dependency files generated from rules specified
+# above. Forces GNU make to re-build dependencies to complete this
+# Makefile (like an implicit "make depend").
+
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),clean_slicc)
+ifneq ($(MAKECMDGOALS),module)
+ifneq ($(MAKECMDGOALS),movemodule)
+ifneq ($(MAKECMDGOALS),removemodule)
+ifneq ($(MAKECMDGOALS),tester)
+ifneq ($(MAKECMDGOALS),tags)
+ifneq ($(MAKECMDGOALS),all)
+ifneq ($(MAKECMDGOALS),)
+ifneq ($(MAKECMDGOALS),$(GENERATED_DIR)/generated)
+
+# include all the dependence files
+-include $(GENERATED_DIR)/generated
+ifdef GENERATED_DEP
+-include $(GENERATED_DEP)
+endif
+-include $(DEP)
+
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif

@@ -1,0 +1,8 @@
+This directory contains micro-benchmarks to stress opal's two
+level cache implementation. These u-benchmarks will be used
+with simics/opal simulation. And the simulated cache status
+should match the expected results given long enough time of
+simulation.
+
+The script "ubenchmark.simics" and "ubenchmark.py" are for creating
+simics checkpoint base on the ubenchmark's binary file.

@@ -1,0 +1,13 @@
+
+# Define the Simics version variable in this file
+# Valid values are:
+# 2.2.X (for Simics 2.0.X and 2.2.X)
+# 3.0
+
+# SIMICS_VERSION := 2.2.X
+SIMICS_VERSION := 3.0
+
+# Whether to use SPARC or x86 specific code paths
+#  Comment out to compile for x86
+TARGET_MACHINE_TYPE = SPARC
+

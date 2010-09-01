@@ -1,0 +1,4 @@
+// cascaded indirect branch predictor parameters
+CAS_TABLE_BITS: 4
+CAS_EXCEPT_BITS: 4
+CAS_EXCEPT_SHIFT: 1

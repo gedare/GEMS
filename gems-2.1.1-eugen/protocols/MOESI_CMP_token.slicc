@@ -1,0 +1,5 @@
+../protocols/MOESI_CMP_token-msg.sm
+../protocols/MOESI_CMP_token-L1cache.sm
+../protocols/MOESI_CMP_token-L2cache.sm
+../protocols/MOESI_CMP_token-dir.sm
+../protocols/standard_CMP-protocol.sm

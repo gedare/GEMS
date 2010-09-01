@@ -1,0 +1,193 @@
+
+/*
+    Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    http://www.cs.wisc.edu/gems/
+
+    --------------------------------------------------------------------
+
+    This file is part of the SLICC (Specification Language for
+    Implementing Cache Coherence), a component of the Multifacet GEMS
+    (General Execution-driven Multiprocessor Simulator) software
+    toolset originally developed at the University of Wisconsin-Madison.
+                                                                                
+    SLICC was originally developed by Milo Martin with substantial
+    contributions from Daniel Sorin.
+
+    Substantial further development of Multifacet GEMS at the
+    University of Wisconsin was performed by Alaa Alameldeen, Brad
+    Beckmann, Jayaram Bobba, Ross Dickson, Dan Gibson, Pacia Harper,
+    Derek Hower, Milo Martin, Michael Marty, Carl Mauer, Michelle Moravan,
+    Kevin Moore, Manoj Plakal, Daniel Sorin, Haris Volos, Min Xu, and Luke Yen.
+
+    --------------------------------------------------------------------
+
+    If your use of this software contributes to a published paper, we
+    request that you (1) cite our summary paper that appears on our
+    website (http://www.cs.wisc.edu/gems/) and (2) e-mail a citation
+    for your published paper to gems@cs.wisc.edu.
+
+    If you redistribute derivatives of this software, we request that
+    you notify us and either (1) ask people to register with us at our
+    website (http://www.cs.wisc.edu/gems/) or (2) collect registration
+    information and periodically send it to us.
+
+    --------------------------------------------------------------------
+
+    Multifacet GEMS is free software; you can redistribute it and/or
+    modify it under the terms of version 2 of the GNU General Public
+    License as published by the Free Software Foundation.
+
+    Multifacet GEMS is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the Multifacet GEMS; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA
+
+    The GNU General Public License is contained in the file LICENSE.
+
+### END HEADER ###
+*/
+// External Types
+
+external_type(DataBlock, desc="..."){
+  void clear();
+}
+
+external_type(MessageBuffer, buffer="yes", inport="yes", outport="yes");
+
+external_type(OutPort, primitive="yes");
+
+external_type(InPort, primitive="yes") {
+  bool isReady();    
+  void dequeue();
+  int dequeue_getDelayCycles();
+  void recycle();
+  bool isEmpty();
+}
+
+external_type(NodeID, default="0");
+external_type(MachineID);
+
+external_type(StoreBuffer);
+
+
+external_type(Set, non_obj="yes") {
+  void setSize(int);
+  void add(NodeID);
+  void addSet(Set);
+  void remove(NodeID);
+  void removeSet(Set);
+  void broadcast();
+  void addRandom();
+  void clear();
+  int count();
+  bool isElement(NodeID);
+  bool isEqual(Set);
+  bool isSuperset(Set);
+  bool intersectionIsEmpty(Set);
+  NodeID smallestElement();
+}
+
+external_type(NetDest, non_obj="yes") {
+  void setSize(int);
+  void setSize(int, int);
+  void add(NodeID);
+  void add(MachineID);
+  void addSet(Set);
+  void addNetDest(NetDest);
+  void setNetDest(MachineType, Set);
+  void remove(NodeID);
+  void remove(MachineID);
+  void removeSet(Set);
+  void removeNetDest(NetDest);
+  void broadcast();
+  void broadcast(MachineType);
+  void addRandom();
+  void clear();
+  Set toSet();
+  int count();
+  bool isElement(NodeID);
+  bool isElement(MachineID);
+  bool isSuperset(Set);
+  bool isSuperset(NetDest);
+  bool isEmpty();
+  bool intersectionIsEmpty(Set);
+  bool intersectionIsEmpty(NetDest);
+  MachineID smallestElement(MachineType);
+}
+
+external_type(PersistentTable) {
+  void persistentRequestLock(Address, MachineID, AccessType);
+  void persistentRequestUnlock(Address, MachineID);
+  bool okToIssueStarving(Address);
+  MachineID findSmallest(Address);
+  AccessType typeOfSmallest(Address);
+  void markEntries(Address);
+  bool isLocked(Address);
+  int countStarvingForAddress(Address);
+  int countReadStarvingForAddress(Address);
+}
+
+external_type(NodePersistentTable) {
+  void persistentRequestLock(Address, NodeID, AccessType);
+  void persistentRequestUnlock(Address, NodeID);
+  bool okToIssueStarving(Address);
+  NodeID findSmallest(Address);
+  AccessType typeOfSmallest(Address);
+  void markEntries(Address);
+  bool isLocked(Address);
+  int countStarvingForAddress(Address);
+  int countReadStarvingForAddress(Address);
+}
+
+external_type(Sequencer) {
+  void readCallback(Address, DataBlock, GenericMachineType, PrefetchBit, int);
+  void writeCallback(Address, DataBlock, GenericMachineType, PrefetchBit, int);
+  void readCallback(Address, DataBlock, GenericMachineType, PrefetchBit);
+  void writeCallback(Address, DataBlock, GenericMachineType, PrefetchBit);
+  void readCallback(Address, DataBlock);
+  void writeCallback(Address, DataBlock);
+  void readCallback(Address);
+  void writeCallback(Address);
+  void readCallbackAbort(Address, int);
+  void writeCallbackAbort(Address, int);
+  void readConflictCallback(Address);
+  void writeConflictCallback(Address);
+  void xactCallback(Address);
+  void updateCurrentVersion();
+  void updateLastCommittedVersion();
+  void systemRecovery();
+  void systemRestart();
+  void checkCoherence(Address);
+  void profileNack(Address, int, int, uint64);
+  void resetRequestTime(Address, int);
+  bool isReadAborted(Address, int);
+  bool isWriteAborted(Address, int);
+}
+
+external_type(TimerTable, inport="yes") {
+  bool isReady();
+  Address readyAddress();
+  void set(Address, int);
+  void unset(Address);
+  bool isSet(Address);
+}
+
+external_type(GenericBloomFilter) {
+
+  void clear(int);
+  void increment(Address, int);
+  void decrement(Address, int);
+  void set(Address, int);
+  void unset(Address, int);
+
+  bool isSet(Address, int);
+  int getCount(Address, int);
+}
+
+

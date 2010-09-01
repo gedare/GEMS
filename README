@@ -18,6 +18,14 @@ doc
 gems-2.1.1
   The vanilla gems distribution for release 2.1.1.
 
+gems-2.1.1-eugen
+  For temporary changes and tests made by eugen. This should be considered
+  a highly unstable directory.
+
+gems-2.1.1-gedare
+  For temporary changes and tests made by gedare. This should be considered
+  a highly unstable directory.
+
 gems-2.1.1-generic
   Generic modifications made to gems that are useful for multiple projects.
 

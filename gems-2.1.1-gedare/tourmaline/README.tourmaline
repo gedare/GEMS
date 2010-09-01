@@ -1,0 +1,306 @@
+*********************************************************************
+* GEMS Tourmaline Transactional Memory Acceleration Module          *
+*                                                                   *
+* Authors: Dan Gibson                                               *
+* Creation Date: 2 November 2005                                    *
+* Last Modification: 11 November 2005                               *
+* Revision History:                                                 *
+* gibson 2 November 2005: Initial version.                          *
+* gibson 9 November 2005: Tourmaline now includes config system     *
+*                         using attrparse (like Ruby/Opal)          *
+*                         Now uses configurable transaction         *
+*                         controllers, extended from the base class *
+*                         Added profiler & stat-related commands    *
+*                         Now requires "init" command               *
+*                         Fixed typo in title                       *
+* gibson 10 November 2005: Added "cookbook" for making new          *
+*                          transaction controllers                  *
+* gibson 11 November 2005: Added explanation of installing/removing *
+*                          timing/snoop models                      *
+*********************************************************************
+
+The Tourmaline module is used to rapidly execute transaction memory
+programs (using the "magic" instructions ) *correctly*, though 
+without cache timing information of any sort. Tourmaline is a
+module separate from Ruby and Opal, that may be loaded to enable
+transactional memory programs to be run within Simics at near-Simics
+execution speeds.
+
+Tourmaline installs a callback for each "magic" instruction. When 
+transactions begin or end, the transaction controller is invoked 
+to determine the appropriate action. TransactionController is the
+generic base class from which instantiable transaction controllers
+are derived. The choice of which transaction controller to use is
+made at runtime, via the tourmaline.defaults file.
+
+Tourmaline currently impelmented only one transaction controller, 
+"Serializer". When a processors transaction nesting level transitions
+from zero to one, Serializer disables all other processors using the 
+SIM_disable_processor API call. Processors are re-enabled when the
+transaction nesting level returns to zero. Thus, transactions are
+serialized, but atomicity is guaranteed, and execution time overhead
+is very small. In the common case (non-magic calls), Serializer in
+no way affects runtimes.
+
+Tourmaline is intended to be used for debugging of transactional
+memory applications. Additionally, Tourmaline can be used to 
+bring-up new transactional workloads (much) faster than can be done
+using Ruby.
+
+*********************************************************************
+* Compilation Instructions                                          *
+*********************************************************************
+
+Tourmaline's compile syntax is very similar to that of Ruby and Opal.
+A required argument to "make" is the DESTINATION= definition, which
+determine where the Tourmaline module will be installed. Otherwise,
+compilation is identical to other modules.
+
+You must do the following in in your simics/src/extensions directory
+to use Tourmaline:
+
+mkdir tourmaline
+cd tourmaline
+ln -s ../../../../tourmaline/simics/commands.h
+ln -s ../../../../tourmaline/module/commands.py
+ln -s ../../../../tourmaline/module/Makefile
+ln -s ../../../../tourmaline/module/tourmaline.c
+
+You must also add the following line to 
+simics/config/modules.list-local:
+
+tourmaline | API_2.0 | v9
+
+*********************************************************************
+* Loading Instructions                                              *
+*********************************************************************
+
+Once Tourmaline is compiled, it can be loaded just as any other 
+Simics module, using "load-module tourmaline". The only prerequisite
+to this command is "magic-break-enable", without which Tourmaline 
+will not function correctly.
+
+Tourmaline currently supports the following commands:
+clear-stats
+dump-stats
+init
+
+Note: "init" must now be called before exeuction begins.
+
+*********************************************************************
+* Structure of the Module                                           *
+*********************************************************************
+
+Current file tree:
+
+tourmaline/
+  init.C
+  init.h
+  Makefile
+  README.tourmaline
+  common/
+    Tourmaline_Global.C
+    Tourmaline_Global.h
+    Histogram.C
+    Histogram.h
+  config/
+    config.include
+    tourmaline.defaults
+    TourmalineConfig.C
+    TourmalineConfig.h
+  module/
+    commands.py
+    Makefile
+    tourmaline.c
+  profiler/
+    Profiler.C
+    Profiler.h
+  simics/
+    commands.C
+    commands.h
+    interface.C
+    interface.h
+    simics_api_dummy.c
+  transcon/
+    TransactionControl.C
+    TransactionControl.h
+    TransactionControlTypes.h
+    Serializer.C
+    Serializer.h
+
+***init.[Ch]:
+Performs bootstrapping and startup operations of the Tourmaline 
+module. Mostly empty at the moment, but may grow in future versions.
+
+***Makefile:
+Root Makefile for the module, based HEAVILY on Ruby's Makefile.
+
+***README.tourmaline:
+Recursive definition: goto line 1
+
+***Tourmaline_Global.[Ch]:
+Global include / source file for Tourmaline, modeled after Ruby's 
+Global.[Ch]
+
+***Histogram.[Ch]:
+Used by the profiler for capture/dumping of statistics. Identical
+to Ruby's Histrogram class, except for includes.
+
+***config.include
+Defines runtime parameters for Tourmaline module. Semantically 
+identical to Ruby's config.include & Opal's config.include.
+
+***tourmaline.defaults
+Defines default values for runtime paramters. Semantically identical
+to Ruby's rubyconfig.defaults & Opal's config.defaults.
+
+***TourmalineConfig.[Ch]
+Provides object-oriented access to runtime paramters. Semantically
+identical to RubyConfig.[Ch]
+
+***commands.py:
+Command list for Tourmaline. 
+
+***module/Makefile:
+Module Makefile for tourmaline. Made from Ruby's via search-and-
+replace.
+
+***tourmaline.c:
+The lowest-level Simics module code for Tourmaline. Contains 
+all code necessary to make Tourmaline a memory snooping module,
+but does not actually enable snooping (because not snooping is
+much, much faster.) Snooping can be enabled through interface.[Ch].
+
+***Profiler.[Ch]
+Statistic gathering/dumping code. Semantically similar to Ruby's
+Profiler.[Ch]
+
+***commands.[Ch]
+A level of indirection between tourmaline.c and the rest of the
+module, which allows C-code to hook into the C++-based Tourmaline
+module.
+
+***interface.[Ch]
+A level of indirection for Simics API calls. Should the API change,
+changes to these files should suffice to ensure compatibility.
+
+***simics_api_dummy.c
+A dummy Simics API for the template closure step of the Makefile.
+Probably not needed in (this version of) Tourmaline.
+
+***TransactionControl.[Ch]
+Base class for all TransactionController objects.
+
+***TransactionControlTypes.h
+Enumeration of controller types.
+
+***Serializer.[Ch]
+The Serializer is a transaction controller that serializes 
+transactions by only allowing a single transaction to run at a time. 
+
+*********************************************************************
+* Call Stack of Typical Execution                                   *
+*********************************************************************
+(note, in this section, time increases with line number!)
+
+tourmaline.c:init_local()               // "load-module tourmaline"
+
+commands.C:magic_instruction_callback()      // magic instruction
+  [TransactionController]::beginTransaction()  // begin transaction
+
+commands.C:magic_instruction_callback()      // magic instruction
+  [TransactionController]::endTransaction()    // end transaction
+
+*********************************************************************
+* Transaction Controller Cookbook                                   *
+*********************************************************************
+
+Perform the following steps to make a new transaction controller:
+1) Copy Skeleton.h and Skeleton.C to new files in transcon/
+   These will become the header and source files for the new 
+   transaction controller, change the class name to something else.
+2) Edit TransactionControllerTypes.h, and add the following:
+   A) A Transaction_Controller_XXX, entry to the 
+      TransactionControllerType enum.
+   B) A one-word name for your controller to the names array--this
+      name will correspond to the value used in the configuration 
+      file.
+   C) A description of the controller in the description array.
+3) Edit TransactionControler.C, specifically the 
+   allocateTransactionController() function, and add a case statement
+   for your transaction controller.
+4) Add your new .C file to the Makefile's SRC_CPP list.
+
+
+*********************************************************************
+* Timing and Snoop Models                                           *
+*********************************************************************
+
+Like Ruby, Tourmaline can observe memory requests. However, for 
+performance reasons, this feature can be enabled or disabled at 
+runtime by the Tourmlaine module (via SIMICS_ API calls, see 
+interface.h). It is possible for Tourmaline to observe memory 
+references only when at least one processor is in a transaction, 
+for instance. The simulation will be *much* faster when Tourmaline
+is not observing memory references.
+
+There are two modes by which Tourmaline can interact with Simics'
+memory system: the "Timing Model" and the "Snoop Model". The 
+differences between the two are outlined briefly, below.
+
+* Timing Model:
+  When the timing model is installed, the current transaction 
+  controller's makeRequest() function will be called when any
+  processor initiates a memory request. This call occurs logically
+  BEFORE the request is satisfied. No changes can be made to the
+  request, though (if the request is a store) data to be written
+  may be examined.
+
+* Snoop Model:
+  When the snoop model is installed, the current transaction 
+  controller's finishRequest() function will be called when any 
+  processor completes a memory request. This call occurs logically 
+  AFTER the request has been completed, but the result has not yet 
+  been delivered to the requesting processor. It is possible to 
+  change the value returned by loads by calling setData() on the 
+  MemoryAccess object passed to the finishRequest() function.
+
+The two interfaces are not mutually exclusive; both can be installed
+at the same time. See GenericController.C for examples on how to
+install and use the timing model. Use of the snoop model is 
+analagous.
+
+When installing and/or uninstalling the models, the Tourmaline/Simics
+interface (in interface.[Ch]) may change the cpu-switch-time to 
+improve performance. When a model is installed, the switch time is
+set to 1, but when both models are uninstalled, the switch time is
+increased to 1000 to speed simulation. There may be some lag in 
+changes to the cpu-switch-time, which may cause per-cpu burstiness
+observed memory references when a model is installed. This burstiness
+can be eliminated by removing this optimization from interface.C.
+
+*********************************************************************
+* Why is the module named "Tourmaline"?                             *
+*********************************************************************
+
+I realize the name "Tourmaline" is somewhat more complex than "Ruby"
+or "Opal". I chose "Tourmaline" because:
+ * It is the name of a gem (ala GEMS)
+ * TourMAline is a Transactional Memory Accelerator. The word 
+   TourMAline contains the letters T, M, and A, in that order. This
+   was the only gem I found (via google) that had this property, 
+   except for "Chrome Tourmaline", "Red Tourmaline", etc.
+
+After typing it a few times, Tourmaline becomes just as familiar as
+"Ruby" or "Opal".
+
+Pronunciation is another matter entirely. Probably due to my early 
+exposure to the rural west, I am partial to:
+  TORE - ma - leen
+Though dictionaries tend to give somthing like:
+  toor - ma - linn     OR     tour - ma - linn
+
+I think TMA would be an acceptible shorthand, in any case. (Not to be
+confused with target-motion-analysis, for those of you interested in
+sensor networks).
+

@@ -1,0 +1,9 @@
+
+// Used as parameter to srand
+PARAM( g_RANDOM_SEED );
+
+// Specifies which Transaction Controller to use
+PARAM_STRING( SPECIFIED_TRANSACTION_CONTROLLER );
+
+// Set automatically to SIMICS_number_processors on init
+PARAM( g_NUMBER_OF_PROCESSORS );

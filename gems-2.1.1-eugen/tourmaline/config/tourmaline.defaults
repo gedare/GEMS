@@ -1,0 +1,11 @@
+
+// Specifies random seed. Note: if(g_RANDOM_SEED == 0) srand(time(NULL)) 
+g_RANDOM_SEED: 1
+
+// Set automatically to SIMICS_number_processors() on init
+g_NUMBER_OF_PROCESSORS: 0
+
+// Must be one of the following:
+// Serializer
+// Generic
+SPECIFIED_TRANSACTION_CONTROLLER: Serializer

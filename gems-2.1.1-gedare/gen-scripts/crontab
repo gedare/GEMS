@@ -1,0 +1,12 @@
+# install by running "crontab crontab; crontab -l; stashticket"
+# Or, put stashticket in your .cshrc.local to avoid running it once a while
+#  Crontab Syntax:
+#  *     *     *     *     *  command to be executed
+#  -     -     -     -     -
+#  |     |     |     |     |
+#  |     |     |     |     +----- day of week (0 - 6) (Sunday=0)
+#  |     |     |     +------- month (1 - 12)
+#  |     |     +--------- day of month (1 - 31)
+#  |     +----------- hour (0 - 23)
+#  +------------- min (0 - 59)
+20 21 * * *  /s/std/bin/runauth /p/multifacet/scripts/regress-start.sh

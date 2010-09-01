@@ -1,0 +1,275 @@
+
+/*
+    Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    http://www.cs.wisc.edu/gems/
+
+    --------------------------------------------------------------------
+
+    This file is part of the SLICC (Specification Language for
+    Implementing Cache Coherence), a component of the Multifacet GEMS
+    (General Execution-driven Multiprocessor Simulator) software
+    toolset originally developed at the University of Wisconsin-Madison.
+                                                                                
+    SLICC was originally developed by Milo Martin with substantial
+    contributions from Daniel Sorin.
+
+    Substantial further development of Multifacet GEMS at the
+    University of Wisconsin was performed by Alaa Alameldeen, Brad
+    Beckmann, Ross Dickson, Pacia Harper, Milo Martin, Michael Marty,
+    Carl Mauer, Kevin Moore, Manoj Plakal, Daniel Sorin, Min Xu, and
+    Luke Yen.
+
+    --------------------------------------------------------------------
+
+    If your use of this software contributes to a published paper, we
+    request that you (1) cite our summary paper that appears on our
+    website (http://www.cs.wisc.edu/gems/) and (2) e-mail a citation
+    for your published paper to gems@cs.wisc.edu.
+
+    If you redistribute derivatives of this software, we request that
+    you notify us and either (1) ask people to register with us at our
+    website (http://www.cs.wisc.edu/gems/) or (2) collect registration
+    information and periodically send it to us.
+
+    --------------------------------------------------------------------
+
+    Multifacet GEMS is free software; you can redistribute it and/or
+    modify it under the terms of version 2 of the GNU General Public
+    License as published by the Free Software Foundation.
+
+    Multifacet GEMS is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the Multifacet GEMS; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA
+
+    The GNU General Public License is contained in the file LICENSE.
+
+### END HEADER ###
+*/
+/*
+ * $Id: MOESI_CMP_token-dir.sm 1.6 05/01/19 15:48:35-06:00 mikem@royal16.cs.wisc.edu $
+ */
+
+// This file is copied from Yasuko Watanabe's prefetch / memory protocol
+// Copied here by aep 12/14/07
+
+
+machine(Directory, "MESI_SCMP_bankdirectory protocol") {
+
+  MessageBuffer requestToDir, network="From", virtual_network="2", ordered="false";
+  MessageBuffer responseToDir, network="From", virtual_network="3", ordered="false";
+  MessageBuffer responseFromDir, network="To", virtual_network="3", ordered="false";
+
+  // STATES
+  enumeration(State, desc="Directory states", default="Directory_State_I") {
+    // Base states
+    I, desc="Owner";
+  }
+
+  // Events
+  enumeration(Event, desc="Directory events") {
+    Fetch, desc="A memory fetch arrives";
+    Data, desc="writeback data arrives";
+    Memory_Data, desc="Fetched data from memory arrives";
+    Memory_Ack, desc="Writeback Ack from memory arrives";
+  }
+
+  // TYPES
+
+  // DirectoryEntry
+  structure(Entry, desc="...") {
+    DataBlock DataBlk,             desc="data for the block";
+  }
+
+  external_type(DirectoryMemory) {
+    Entry lookup(Address);
+    bool isPresent(Address);
+  }
+
+  // to simulate detailed DRAM
+  external_type(MemoryControl, inport="yes", outport="yes") {
+    
+  }
+
+
+  // ** OBJECTS **
+
+  DirectoryMemory directory, constructor_hack="i";
+  MemoryControl memBuffer, constructor_hack="i";
+
+  State getState(Address addr) {
+    return State:I;
+  }
+  
+  void setState(Address addr, State state) {
+  }
+
+  bool isGETRequest(CoherenceRequestType type) {
+    return (type == CoherenceRequestType:GETS) || 
+      (type == CoherenceRequestType:GET_INSTR) ||
+      (type == CoherenceRequestType:GETX);
+  }
+
+  
+  // ** OUT_PORTS **
+  out_port(responseNetwork_out, ResponseMsg, responseFromDir);
+  out_port(memQueue_out, MemoryMsg, memBuffer);
+  
+  // ** IN_PORTS **
+
+  in_port(requestNetwork_in, RequestMsg, requestToDir) {
+    if (requestNetwork_in.isReady()) {
+      peek(requestNetwork_in, RequestMsg) {
+        assert(in_msg.Destination.isElement(machineID));
+        if (isGETRequest(in_msg.Type)) {
+          trigger(Event:Fetch, in_msg.Address);
+        } else {
+          DEBUG_EXPR(in_msg);
+          error("Invalid message");
+        }
+      }
+    }
+  }
+
+  in_port(responseNetwork_in, ResponseMsg, responseToDir) {
+    if (responseNetwork_in.isReady()) {
+      peek(responseNetwork_in, ResponseMsg) {
+        assert(in_msg.Destination.isElement(machineID));
+        if (in_msg.Type == CoherenceResponseType:MEMORY_DATA) {
+          trigger(Event:Data, in_msg.Address);
+        } else {
+          DEBUG_EXPR(in_msg.Type);
+          error("Invalid message");
+        }
+      }
+    }
+  }
+
+  // off-chip memory request/response is done
+  in_port(memQueue_in, MemoryMsg, memBuffer) {
+    if (memQueue_in.isReady()) {
+      peek(memQueue_in, MemoryMsg) {
+        if (in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          trigger(Event:Memory_Data, in_msg.Address);
+        } else if (in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          trigger(Event:Memory_Ack, in_msg.Address);
+        } else {
+          DEBUG_EXPR(in_msg.Type);
+          error("Invalid message");
+        }
+      }
+    }
+  }
+  
+
+
+  // Actions
+  action(a_sendAck, "a", desc="Send ack to L2") {
+    peek(memQueue_in, MemoryMsg) {
+      enqueue(responseNetwork_out, ResponseMsg, latency="1") {
+        out_msg.Address := address;
+        out_msg.Type := CoherenceResponseType:MEMORY_ACK;
+        out_msg.Sender := machineID;
+        out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+        out_msg.MessageSize := MessageSizeType:Response_Control;
+      }
+    }
+  }
+
+  action(d_sendData, "d", desc="Send data to requestor") {
+    peek(memQueue_in, MemoryMsg) {
+      enqueue(responseNetwork_out, ResponseMsg, latency="1") {
+        out_msg.Address := address;
+        out_msg.Type := CoherenceResponseType:MEMORY_DATA;
+        out_msg.Sender := machineID;
+        out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+        out_msg.DataBlk := in_msg.DataBlk;
+        out_msg.Dirty := false;
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+      }
+    }
+  }
+
+  action(j_popIncomingRequestQueue, "j", desc="Pop incoming request queue") {
+    requestNetwork_in.dequeue();
+  }
+
+  action(k_popIncomingResponseQueue, "k", desc="Pop incoming request queue") {
+    responseNetwork_in.dequeue();
+  }
+
+  action(l_popMemQueue, "q", desc="Pop off-chip request queue") {
+    memQueue_in.dequeue();
+  }
+
+  action(qf_queueMemoryFetchRequest, "qf", desc="Queue off-chip fetch request") {
+    peek(requestNetwork_in, RequestMsg) {
+      enqueue(memQueue_out, MemoryMsg, latency="1") {
+        out_msg.Address := address;
+        out_msg.Type := MemoryRequestType:MEMORY_READ;
+        out_msg.Sender := machineID;
+        out_msg.OriginalRequestorMachId := in_msg.Requestor;
+        out_msg.MessageSize := in_msg.MessageSize;
+        out_msg.Prefetch := in_msg.Prefetch;
+        out_msg.DataBlk := directory[in_msg.Address].DataBlk;
+        
+        DEBUG_EXPR(out_msg);
+      }
+    }
+  }
+  
+  action(qw_queueMemoryWBRequest, "qw", desc="Queue off-chip writeback request") {
+    peek(responseNetwork_in, ResponseMsg) {
+      enqueue(memQueue_out, MemoryMsg, latency="1") {
+        out_msg.Address := address;
+        out_msg.Type := MemoryRequestType:MEMORY_WB;
+        out_msg.Sender := machineID;
+        out_msg.OriginalRequestorMachId := in_msg.Sender;
+        out_msg.DataBlk := in_msg.DataBlk;
+        out_msg.MessageSize := in_msg.MessageSize;
+        //out_msg.Prefetch := in_msg.Prefetch;
+        
+        DEBUG_EXPR(out_msg);
+      }
+    }
+  }
+  
+  action(m_writeDataToMemory, "m", desc="Write dirty writeback to memory") {
+    peek(responseNetwork_in, ResponseMsg) {
+      directory[in_msg.Address].DataBlk := in_msg.DataBlk;
+      DEBUG_EXPR(in_msg.Address);
+      DEBUG_EXPR(in_msg.DataBlk);
+    }
+  }    
+  
+  // TRANSITIONS
+  
+  transition(I, Fetch) {
+    //d_sendData;
+    qf_queueMemoryFetchRequest;
+    j_popIncomingRequestQueue;
+  }
+  
+  transition(I, Data) {
+    m_writeDataToMemory;
+    //a_sendAck;
+    qw_queueMemoryWBRequest;
+    k_popIncomingResponseQueue;
+  }
+
+  transition(I, Memory_Data) {
+    d_sendData;
+    l_popMemQueue;
+  }
+
+  transition(I, Memory_Ack) {
+    a_sendAck;
+    l_popMemQueue;
+  }
+}

@@ -1,0 +1,12 @@
+#Makefile.include for the garnet network
+GARNET_VPATH := network/garnet-flexible-pipeline
+GARNET_SRC_CPP = \
+	GarnetNetwork.C \
+	NetworkInterface.C \
+	NetworkLink.C \
+	Router.C \
+	flit.C \
+	flitBuffer.C \
+	InVcState.C \
+	OutVcState.C \
+	VCarbiter.C \

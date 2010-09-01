@@ -1,0 +1,5 @@
+
+CC          = /s/std/bin/gcc
+OPTFLAGS   = -O3 -Wa,-xarch=v8plusa -DSIMICS
+CFLAGS      = $(OPTFLAGS) $(INC)
+LDFLAGS    = -lpthread
