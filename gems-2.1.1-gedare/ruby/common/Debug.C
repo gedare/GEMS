@@ -66,6 +66,7 @@
 #include "Debug.h"
 #include "EventQueue.h"
 
+#include "string.h"
 class Debug;
 extern Debug* g_debug_ptr;
 std::ostream * debug_cout_ptr;

@@ -1,0 +1,69 @@
+This howto describes building the GEMS simulator and getting RTEMS to 
+run with GEMS.  
+
+It assumes that Simics is already installed on this machine, 
+that a copy of the RTEMS sources is on your machine (with 
+appropriate patches or modifications), and that the 
+sparc64-rtems4.11 tools are installed and in your path.
+
+First, select or create a copy of the gems-2.1.1 folder. This howto will 
+use the gems-2.1.1-gedare folder.
+
+Enter gems-2.1.1-gedare
+ $> cd gems-2.1.1-gedare
+
+Compile GEMS and create the basic GEMS Simics workspace by using the 
+setup-gems.sh script. It takes as argument the directory at which Simics
+is installed. Make sure to use an absolute path.
+ $> ../scripts/setup-gems.sh ${HOME}/work/simics/simics-3.0.31
+
+This script should finish with the following output in your terminal:
+  echo "Finished."
+  Finished.
+And Opal and Ruby should have been built successfully.  If there are errors
+while running this script, be sure that the Simics install point is correct,
+and also that all of the pre-requisite tools have been installed.  See 
+doc/GEMS-Ubuntu.pdf for some hints on which tools you may need.
+
+The next step is to setup scripts to help build and run RTEMS on GEMS. 
+Enter the GEMS Simics workspace and run the setup-rtems-workspace.sh 
+script, which takes as argument the top-level directory of this repository
+(which you are currently in) and the directory of the RTEMS source code. 
+Make sure to use absolute paths.
+ $> cd simics
+ $> ../../scripts/setup-rtems-workspace.sh ~/work/simics/gems/ \
+    ~/work/rtems/rtems/
+
+If the setup-rtems-workspace.sh script does not produce output, then 
+it successfully completed its job.
+
+Now it is time to build RTEMS.  
+ $> cd build-sparc64/
+ $> cd rtems/
+ $> ./bootstrap
+ $> cd ..
+ $> ./build-b-usiiicvs.sh
+The build-b-usiiicvs.sh script will by default only configure and build the 
+RTEMS testsuites/samples. To build all of the tests, comment the current
+configure line and uncomment the appropriate line you need.
+
+Finally, create the image.iso file that is read by Simics in order to 
+boot RTEMS for the sparc64.
+ $> cd boot
+ $> ./build-usiii.sh
+If you built all of the RTEMS testsuite tests, it can take a long time to 
+put all of the tests into an image.iso. So the build-usiii.sh is set to 
+'short-circuit' the packaging. If more tests are needed, we suggest 
+selecting the tests you need and placing them before the short-circuit.
+
+The image.iso file is hard-linked to the workspace that was set up for RTEMS.
+Return to that directory, and you should be able to run RTEMS applications 
+on Simics Serengeti machine with or without GEMS.
+ $> cd ../../
+ $> ./quicktest-gems.sh samples hello
+ $> ./quicktest-usiii.sh samples hello
+
+The helper scripts generate a temp.simics file, which you can modify 
+to suit your needs.
+
+This concludes the howto.

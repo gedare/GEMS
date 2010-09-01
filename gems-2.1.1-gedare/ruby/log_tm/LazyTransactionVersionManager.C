@@ -280,8 +280,9 @@ void LazyTransactionVersionManager::issueWriteRequests(int thread){
       should_escape = true;
     }
 
-    CacheMsg storeMsg(Address(request_address),
-                      Address(request_address),
+    Address ad(request_address);
+    CacheMsg storeMsg(ad,
+                      ad,
                       CacheRequestType_ST_XACT,    
                       SIMICS_get_program_counter(getLogicalProcID(thread)),
                       AccessModeType_UserMode,

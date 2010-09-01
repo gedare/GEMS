@@ -59,6 +59,7 @@
 
 #include "mshr.h"
 #include "scheduler.h"
+#include "confio.h"
 
 /*------------------------------------------------------------------------*/
 /* Macro declarations                                                     */
@@ -472,5 +473,73 @@ protected:
 /*------------------------------------------------------------------------*/
 /* Global functions                                                       */
 /*------------------------------------------------------------------------*/
+
+/* workaround see: https://lists.cs.wisc.edu/archive/gems-users/2009-March/msg00116.shtml */
+//**************************************************************************
+template <class BlockType>
+int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
+{
+  int rc;
+
+  rc = conf->register_attribute( name,
+                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
+                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
+  return rc;
+}
+
+//**************************************************************************
+template <class BlockType>
+void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
+  /* used when we want the execution of a particular load or store to
+   * be prefetched perfectly.
+   */
+  uint32 index = Set(a);
+  pa_t ba = BlockAddress(a);
+  ASSERT(index < n_sets);
+  STAT_INC(reads);
+
+  /* search all sets until we find a match */
+  BlockType *set = &cache[index * m_assoc];
+  int replace_set = 0;
+  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+    if (hit) { 
+      STAT_INC(read_hit);
+      return;
+    } 
+    if (set[i].last_access < set[replace_set].last_access) {
+      replace_set = i;
+    }
+  }
+
+  /* write new block into the cache */
+  STAT_INC(read_miss);
+  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+  set[replace_set].last_access = m_eventQueue->getCycle();
+}
+
+//**************************************************************************
+template <class BlockType>
+void generic_cache_template<BlockType>::Warmup(pa_t a) {
+
+  uint32 index = Set(a);
+  pa_t ba = BlockAddress(a);
+  ASSERT(index < n_sets);
+
+  /* search all sets until we find a match */
+  BlockType *set = &cache[index * m_assoc];
+  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+    if (hit) { 
+      return;
+    }
+  }
+  int replace_set = random() % m_assoc;
+  /* write new block into the cache */
+  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+}
+
+
+
 
 #endif  /* _CACHE_H_ */

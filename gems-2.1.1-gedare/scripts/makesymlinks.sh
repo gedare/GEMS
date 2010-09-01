@@ -22,7 +22,7 @@ cd ../..
 # in your Simics 3 install
 echo "Making symlink for import directory..."
 #ln -s /simics-3.0.11/import import
-ln -s /p/multifacet/projects/simics/simics-3.0.11/import import
+ln -s ${SIMICS_INSTALL}/import import
 
 echo "Making symlinks for modules..."
 cd modules

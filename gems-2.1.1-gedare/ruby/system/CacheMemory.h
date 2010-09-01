@@ -78,6 +78,7 @@
 #include "PseudoLRUPolicy.h"
 #include "LRUPolicy.h"
 #include <vector>
+#include "string.h"
 
 template<class ENTRY>
 class CacheMemory {
