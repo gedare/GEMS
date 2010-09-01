@@ -33,3 +33,6 @@ gems-patches
   Patches derived from various projects. These patches should
   be named to indicate which version of gems they were generated against.
 
+scripts
+  Scripts to help populate the GEMS environment.
+
