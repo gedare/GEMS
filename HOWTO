@@ -1,9 +1,9 @@
 This howto describes building the GEMS simulator and getting RTEMS to 
 run with GEMS.  
 
-It assumes that Simics is already installed on this machine, 
-that a copy of the RTEMS sources is on your machine (with 
-appropriate patches or modifications), and that the 
+It assumes that Simics is already installed on this machine with an 
+appropriate license, that a copy of the RTEMS sources is on this machine 
+(with appropriate patches or modifications), and that the 
 sparc64-rtems4.11 tools are installed and in your path.
 
 First, select or create a copy of the gems-2.1.1 folder. This howto will 
