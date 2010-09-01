@@ -1,0 +1,4 @@
+run:  "parallel <numprocs> <iterations>"
+
+NOTE: There is a line in parallel.C that must be changed depending on if we're running on
+ironsides or on Simics.  

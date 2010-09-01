@@ -1,0 +1,4 @@
+../protocols/MOESI_SMP_token-msg.sm
+../protocols/MOESI_SMP_token-cache.sm
+../protocols/MOESI_SMP_token-dir.sm
+../protocols/standard_SMP-protocol.sm

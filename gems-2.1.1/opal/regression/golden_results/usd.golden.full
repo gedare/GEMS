@@ -1,0 +1,63 @@
+sim-simics-api: V 0.5: initializing simics API simulator
+simdist12: warning: unimplemented simics API system/simdist12.C:563
+simdist12: warning: unimplemented simics API system/simdist12.C:569
+simdist12: warning: unimplemented simics API system/simdist12.C:569
+simdist12: warning: unimplemented simics API system/simdist12.C:569
+simdist12: warning: unimplemented simics API system/simdist12.C:569
+simdist12: warning: unimplemented simics API system/simdist12.C:622
+simdist12: warning: unimplemented simics API system/simdist12.C:555
+error: unable to register queue interface
+hfa_init_local done:
+simdist12: warning: unimplemented simics API system/simdist12.C:516
+Ln constructor: block size: 64B, 4x assoc, 4096 sets.  1048576B total
+Ln constructor: block size: 64B, 1x assoc, 256 sets.  16384B total
+Ln constructor: block size: 64B, 1x assoc, 256 sets.  16384B total
+0x32600005 = 845152261
+00 11001 001100 00000 0 00000000 00101
+opcode = bpne (0x32600005)
+
+0xc8586028 = 3361234984
+11 00100 001011 00001 1 00000001 01000
+opcode = ldx (0xc8586028)
+
+0xc0726028 = 3228721192
+11 00000 001110 01001 1 00000001 01000
+opcode = stx (0xc0726028)
+
+0x81c3e008 = 2177097736
+10 00000 111000 01111 1 00000000 01000
+opcode = jmpl (0x81c3e008)
+
+0x90102000 = 2416975872
+10 01000 000010 00000 1 00000000 00000
+opcode = mov (0x90102000)
+
+0x80a12000 = 2158043136
+10 00000 010100 00100 1 00000000 00000
+opcode = cmp (0x80a12000)
+
+0x2600005 = 39845893
+00 00001 001100 00000 0 00000000 00101
+opcode = bpe (0x2600005)
+
+0x90100001 = 2416967681
+10 01000 000010 00000 0 00000000 00001
+opcode = mov (0x90100001)
+
+0x55ed8f0 = 90102000
+00 00010 101011 11011 0 11000111 10000
+opcode = fbplg (0x55ed8f0)
+
+0x1f16fc5 = 32600005
+00 00000 111110 00101 1 01111110 00101
+### statici::decodeFails. line:1157. inst=0x1f16fc5
+ 0000 0001 1111 0001:0110 1111 1100 0101
+opcode = mop (0x1f16fc5)
+
+0x1f16fc5 = 32600005
+00 00000 111110 00101 1 01111110 00101
+### statici::decodeFails. line:1157. inst=0x1f16fc5
+ 0000 0001 1111 0001:0110 1111 1100 0101
+opcode = mop (0x1f16fc5)
+
+high fidelity architecture code uninstalled.

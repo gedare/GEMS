@@ -1,0 +1,117 @@
+
+/*
+    Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    http://www.cs.wisc.edu/gems/
+
+    --------------------------------------------------------------------
+
+    This file is part of the SLICC (Specification Language for
+    Implementing Cache Coherence), a component of the Multifacet GEMS
+    (General Execution-driven Multiprocessor Simulator) software
+    toolset originally developed at the University of Wisconsin-Madison.
+                                                                                
+    SLICC was originally developed by Milo Martin with substantial
+    contributions from Daniel Sorin.
+
+    Substantial further development of Multifacet GEMS at the
+    University of Wisconsin was performed by Alaa Alameldeen, Brad
+    Beckmann, Jayaram Bobba, Ross Dickson, Dan Gibson, Pacia Harper,
+    Derek Hower, Milo Martin, Michael Marty, Carl Mauer, Michelle Moravan,
+    Kevin Moore, Manoj Plakal, Daniel Sorin, Haris Volos, Min Xu, and Luke Yen.
+
+    --------------------------------------------------------------------
+
+    If your use of this software contributes to a published paper, we
+    request that you (1) cite our summary paper that appears on our
+    website (http://www.cs.wisc.edu/gems/) and (2) e-mail a citation
+    for your published paper to gems@cs.wisc.edu.
+
+    If you redistribute derivatives of this software, we request that
+    you notify us and either (1) ask people to register with us at our
+    website (http://www.cs.wisc.edu/gems/) or (2) collect registration
+    information and periodically send it to us.
+
+    --------------------------------------------------------------------
+
+    Multifacet GEMS is free software; you can redistribute it and/or
+    modify it under the terms of version 2 of the GNU General Public
+    License as published by the Free Software Foundation.
+
+    Multifacet GEMS is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the Multifacet GEMS; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA
+
+    The GNU General Public License is contained in the file LICENSE.
+
+### END HEADER ###
+*/
+/*
+ * $Id: MOESI_SMP_directory-msg.sm 1.8 05/01/19 15:48:36-06:00 mikem@royal16.cs.wisc.edu $
+ *
+ */
+
+// CoherenceRequestType
+enumeration(CoherenceRequestType, desc="...") {
+  GETX,      desc="Get eXclusive";
+  GETS,      desc="Get Shared";
+  PUTX,      desc="Put eXclusive";
+  PUTO,      desc="Put Owned";
+  WB_ACK,    desc="Writeback ack";
+  WB_NACK,   desc="Writeback neg. ack";
+  INV,       desc="Invalidation";
+  FWD,      desc="Generic FWD";
+}
+
+// CoherenceResponseType
+enumeration(CoherenceResponseType, desc="...") {
+  ACK,               desc="ACKnowledgment, responder doesn't have a copy";
+  DATA,              desc="Data";
+  DATA_EXCLUSIVE_CLEAN, desc="Data, no other processor has a copy, data is clean";
+  DATA_EXCLUSIVE_DIRTY, desc="Data, no other processor has a copy, data is dirty";
+  UNBLOCK,           desc="Unblock";
+  UNBLOCK_EXCLUSIVE, desc="Unblock, we're in E/M";
+  WRITEBACK_CLEAN,   desc="Clean writeback (no data)";
+  WRITEBACK_DIRTY,   desc="Dirty writeback (contains data)";
+  WRITEBACK,         desc="Generic writeback (contains data)";
+}
+
+// TriggerType
+enumeration(TriggerType, desc="...") {
+  ALL_ACKS,            desc="See corresponding event";
+}
+
+// TriggerMsg
+structure(TriggerMsg, desc="...", interface="Message") {
+  Address Address,             desc="Physical address for this request";
+  TriggerType Type,            desc="Type of trigger";
+}
+
+// RequestMsg (and also forwarded requests)
+structure(RequestMsg, desc="...", interface="NetworkMessage") {
+  Address Address,             desc="Physical address for this request";
+  CoherenceRequestType Type,   desc="Type of request (GetS, GetX, PutX, etc)";
+  MachineID Requestor,            desc="Node who initiated the request";
+  NetDest Destination,             desc="Multicast destination mask";
+  int Acks,                    desc="How many acks to expect";
+  DataBlock DataBlk,           desc="data for the cache line";
+  MessageSizeType MessageSize, desc="size category of the message";
+}
+
+// ResponseMsg (and also unblock requests)
+structure(ResponseMsg, desc="...", interface="NetworkMessage") {
+  Address Address,             desc="Physical address for this request";
+  CoherenceResponseType Type,  desc="Type of response (Ack, Data, etc)";
+  MachineID Sender,               desc="Node who sent the data";
+  NetDest Destination,             desc="Node to whom the data is sent";
+  DataBlock DataBlk,           desc="data for the cache line";
+  bool Dirty,                  desc="Is the data dirty (different than memory)?";
+  int Acks,                    desc="How many acks to expect";
+  MessageSizeType MessageSize, desc="size category of the message";
+}

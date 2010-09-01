@@ -1,0 +1,10 @@
+
+// physical = 160 (logical) + 512 (rename)
+CONFIG_IREG_PHYSICAL: 672
+
+// physical = 64 (logical) + 191
+// note: must be < 256
+CONFIG_FPREG_PHYSICAL: 255
+
+// physical = 5 (logical) + 512
+CONFIG_CCREG_PHYSICAL: 512

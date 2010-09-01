@@ -1,0 +1,93 @@
+
+Multifacet,
+
+I will be giving a short presentation at this weeks meeting concerning
+the out-of-order processor / SimIcs integration progress. (For the new
+multifacites: I'm working to integrate an O-o-O processor model in SimIcs 
+to make our simulations even more realistic).
+
+I want to describe my software design plans at 10K feet in this
+e-mail, so we have time discuss some critical interfaces, and lay
+out a some open issues at the meeting.
+
+The design can best be summarized by a picture:
+
+          +------------+	 +------------+
+	  |  O-o-O     |  <--->  |  Ruby      |
+          +------------+	 +------------+
+		/\
+		||
+		\/
+          +------------+
+	  |  SimIcs    |
+          +------------+
+
+The out-of-order processor model calls SimIcs interfaces to read the
+state of the processor. When allowed to run, it simulates executing each
+instruction, modifying its own internal processor state. This is done
+using a future file, so that it (conceptually) always has a copy of
+the processors state which exactly matches SimIcs. SimIcs is used as a
+retirement engine. When an instruction is retired, SimIcs is stepped
+forward one instruction, and the "current file" is updated.
+
+If any inconsistency occurs between the Out-of-order simulator and
+SimIcs, we roll back to the SimIcs's state and begin
+re-executing. This could happen because an exception has occurred
+(although we may detect/handle some of these), or because the O-o-O
+simulator has encountered something it can't correctly deal with (like
+reads to I/O space, taking a trap, or just a bug).
+
+Only the Out-of-Order simulator calls the Ruby memory hierarchy in this
+scheme. SimIcs's calls to the memory hierarchy used to check the correct
+execution of each instruction (in the O-o-O processor model).
+
+Out-of-Order Design Fundamentals
+------------ ------ -----------
+
+The out-of-order simulator will be pulling code from two current
+research projects: Craig Zilles SMT processor, and Eric Schnarr's
+FastSim2.  Craig has a SMT, contention modeling, out-of-order
+processor which implements a timing model inside of SimpleScalar (for
+the alpha IS). Eric brings the power of "Facile", and a Sparc V9
+instruction set decoder to the table. FastSim can (correctly) perform
+decode the decoding for Sparc V9 (not including VIS).
+
+My work has centered on getting the "critical path" activities of decoding, 
+executing, and retiring instructions to work.
+
+Just a basic O-o-O Simulator
+---- - ----- ----- ---------
+
+Craig's out-of-order processor simulator consists of: a prefetch unit,
+a branch predictor (branch target buffer), a "static" decoder, a
+"dynamic" decoder, current processor state (incl. integer/fp/control
+register files), a sequencer (i.e. main()), a scheduler
+(i.e. reservation station), a buffer of in-flight instructions, a cache
+hierarchy, and a data TLB. The typical hardware structures in an out-of-order
+processor are classes in Craig's implementation.
+
+Craig's simulator performs decoding in two phases. The first "static"
+decode is a classic decoding of the opcode, source, and destination
+registers.  The second "dynamic" decode creates a structure for a
+specific in-flight instruction (its state, statistics, registers, and
+location).
+
+Status
+------
+
+I have a project which builds a SimIcs module, which incorporates a
+FastSim decoder (written in Facile). The SimIcs module can read the
+processor state, the program counter, and the memory address (which
+the PC points to) from SimIcs.
+
+The FastSim decoder contains a switch statement with a menomic for each
+of the V9 instructions (in Facile). It can fill fields of a (primitive)
+structure, based on the menomic. (The semantic meanings of all the V9
+instruction still need to be implemented).
+
+SimIcs is willing to print a disassembled instruction for the PC,
+which is consistent with FastSim's decoding, and my manual
+decoding of the instruction. Yea!
+
+Carl
+

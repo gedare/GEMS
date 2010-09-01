@@ -1,0 +1,123 @@
+
+
+The "gen-scripts" directory contains a set of python files
+designed to faciliate performing memory system experiments
+with ruby and opal.  The output of gen-scripts is a set of
+.sh scripts, each of which runs a single instance of simics
+with ruby and possibly opal configured with a certain set
+of input parameters.  Gen-scripts should also serve as a 
+base for configuring inputs to a batch processing system
+or grid engine.
+
+#########################################################
+##                                                     ##
+##                 workloads.py                        ##
+##                                                     ##
+#########################################################
+
+To use gen-scripts, first edit "workloads.py."  Workloads.py
+sets up the list of workloads.  The array "workload_list"
+should contain a list of 6-tuples with the following fields.
+
+Checkpoint Path: Specifies the relative path starting from
+your root checkpoint directory to the simics checkpoint file
+for this workload.
+
+Workload Name: An identifier for this workload.
+
+Transactions: The number of transactions to run.  This
+specifies the amount of "work" to be done in each run and
+roughly determines the length of the simulations.  Increasing
+the number of transactions will improve the fidelity, but 
+increase the runtime of your simulation.
+
+Dump Interval: The interval at which ruby reports the
+completion of transactions.
+
+Memory: The approximate memory required by this simulation.
+This setting has no effect on ruby, but is useful for
+steering simulations to appropriate hosts in a grid
+environment.
+
+Cache Warmup File: Ruby can dump the contents of the cache 
+to a "cache warmup file" for a given workload that allows 
+subsequent runs to immediately simulate a warm cache.
+
+Examples from workloads.py:
+
+##   checkpoint path     |  workload name | trans | dump_int | memory(MB) | cache warmup file
+runs = [
+    ("barnes/barnes-16k",          "barnes_16k",        1,   1, 500, None),
+    ("ocean/ocean-514",            "ocean_514",         1,   1, 500, None),
+    ("jbb/jbb_warm",               "jbb",          100000,1000,1000, None),
+    ("ecperf/ecperf",              "ecperf",            4,   1,1000, None),
+    ("oltp/oltp_warm",             "oltp",           1000,  10,1000, None),
+    ("apache/apache_warm",         "apache",        10000, 100,1000, None),
+    ("zeus/zeus_warm",             "zeus",          10000, 100,1000, None),
+    ]
+
+# all comm. checkpoint sets use the "_warm" checkpoints
+# these checkpoints will also load the warmup cache files (.caches.gz)
+warm_runs = [
+    ("jbb/jbb_warm",             "jbb",          100000, 1000, 1900, "yes"),
+    ("oltp/oltp_warm",           "oltp",           1000,   10, 1900, "yes"),
+    ("apache/apache_warm",       "apache",         1000,   10, 1900, "yes"),
+    ("zeus/zeus_warm",           "zeus",           1000,   10, 1900, "yes"),
+    ]
+
+workload_list = []
+workload_list += runs
+
+
+#########################################################
+##                                                     ##
+##                 gen-scripts.py                      ##
+##                                                     ##
+#########################################################
+
+Gen-scripts uses the workload information from workloads.py
+and creates a set of script files for each workload.  The
+main loop of the program creates a separate script file for
+every combination of workload, processor count, processor
+(opal) configuration, coherence protocol and bandwidth
+setting.
+
+Modules List: The list of ruby modules.  Each module
+should be compiled into a separate simics "home" directory.
+The destination directory for both ruby and opal can be
+set with the "DESTINATION=<module name>" flag during
+compilation.
+
+# [module name, mcast predictor]
+modules_list = []
+modules_list.append("MOSI_bcast_2level")
+
+Processor List: The list of processor counts.  A separate
+set of scripts will be created for each processor count.
+
+processor_list = []
+#processor_list.append(1)
+#processor_list.append(2)
+#processor_list.append(4)
+#processor_list.append(8)
+processor_list.append(16)
+
+
+Bandwidth List: The list of settings for end-point bandwidth.
+
+bandwidth_list = []
+#bandwidth_list.append(400)
+#bandwidth_list.append(1600)
+#bandwidth_list.append(6400)
+bandwidth_list.append(10000)
+
+Opal Config List: A list of name, configuration file pairs
+for each processor (opal) configuration.
+
+opal_config_file_list = []
+opal_config_file_list.append(["default", None]) # use the default config
+#opal_config_file_list.append(["iwin-4",   "issue_window/iwin-4.cfg"])
+
+To run gen-scripts, simply execute gen-scripts.py:
+prompt> ./gen-scripts.py
+

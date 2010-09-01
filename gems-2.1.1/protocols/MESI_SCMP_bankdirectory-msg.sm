@@ -1,0 +1,137 @@
+
+/*
+    Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+    Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+    http://www.cs.wisc.edu/gems/
+
+    --------------------------------------------------------------------
+
+    This file is part of the SLICC (Specification Language for
+    Implementing Cache Coherence), a component of the Multifacet GEMS
+    (General Execution-driven Multiprocessor Simulator) software
+    toolset originally developed at the University of Wisconsin-Madison.
+                                                                                
+    SLICC was originally developed by Milo Martin with substantial
+    contributions from Daniel Sorin.
+
+    Substantial further development of Multifacet GEMS at the
+    University of Wisconsin was performed by Alaa Alameldeen, Brad
+    Beckmann, Ross Dickson, Pacia Harper, Milo Martin, Michael Marty,
+    Carl Mauer, Kevin Moore, Manoj Plakal, Daniel Sorin, Min Xu, and
+    Luke Yen.
+
+    --------------------------------------------------------------------
+
+    If your use of this software contributes to a published paper, we
+    request that you (1) cite our summary paper that appears on our
+    website (http://www.cs.wisc.edu/gems/) and (2) e-mail a citation
+    for your published paper to gems@cs.wisc.edu.
+
+    If you redistribute derivatives of this software, we request that
+    you notify us and either (1) ask people to register with us at our
+    website (http://www.cs.wisc.edu/gems/) or (2) collect registration
+    information and periodically send it to us.
+
+    --------------------------------------------------------------------
+
+    Multifacet GEMS is free software; you can redistribute it and/or
+    modify it under the terms of version 2 of the GNU General Public
+    License as published by the Free Software Foundation.
+
+    Multifacet GEMS is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the Multifacet GEMS; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307, USA
+
+    The GNU General Public License is contained in the file LICENSE.
+
+### END HEADER ###
+*/
+/*
+ * $Id: MSI_MOSI_CMP_directory-msg.sm 1.5 05/01/19 15:48:37-06:00 mikem@royal16.cs.wisc.edu $
+ *
+ */
+
+// CoherenceRequestType
+enumeration(CoherenceRequestType, desc="...") {
+  GETX,      desc="Get eXclusive";
+  UPGRADE,   desc="UPGRADE to exclusive";
+  GETS,      desc="Get Shared";
+  GET_INSTR, desc="Get Instruction";
+  INV,       desc="INValidate";
+  PUTX,      desc="replacement message";
+}
+
+// CoherenceResponseType
+enumeration(CoherenceResponseType, desc="...") {
+  MEMORY_ACK,  desc="Ack from memory controller";
+  DATA,      desc="Data";
+  DATA_EXCLUSIVE,      desc="Data";
+  MEMORY_DATA,    desc="Data";
+  ACK,            desc="Generic invalidate ack";
+  WB_ACK,            desc="writeback ack";
+  UNBLOCK,         desc="unblock";
+  EXCLUSIVE_UNBLOCK,         desc="exclusive unblock";
+}
+
+// RequestMsg
+structure(RequestMsg, desc="...", interface="NetworkMessage") {
+  Address Address,              desc="Physical address for this request";
+  CoherenceRequestType Type,    desc="Type of request (GetS, GetX, PutX, etc)";
+  AccessModeType AccessMode,    desc="user/supervisor access type";
+  MachineID Requestor      ,    desc="What component request";
+  NetDest Destination,          desc="What components receive the request, includes MachineType and num";
+  MessageSizeType MessageSize,  desc="size category of the message";
+  DataBlock DataBlk,            desc="Data for the cache line (if PUTX)";
+  bool Dirty, default="false",  desc="Dirty bit";
+  PrefetchBit Prefetch,         desc="Is this a prefetch request";
+}
+
+// ResponseMsg
+structure(ResponseMsg, desc="...", interface="NetworkMessage") {
+  Address Address,              desc="Physical address for this request";
+  CoherenceResponseType Type,   desc="Type of response (Ack, Data, etc)";
+  MachineID Sender,             desc="What component sent the data";
+  NetDest Destination,          desc="Node to whom the data is sent";
+  DataBlock DataBlk,            desc="Data for the cache line";
+  bool Dirty, default="false",  desc="Dirty bit";
+  int AckCount, default="0",  desc="number of acks in this message";
+  MessageSizeType MessageSize,  desc="size category of the message";
+}
+
+/*
+GenericRequestType convertToGenericType(CoherenceRequestType type) {
+  if(type == CoherenceRequestType:PUTX) {
+    return GenericRequestType:PUTX;
+  } else if(type == CoherenceRequestType:GETS) {
+    return GenericRequestType:GETS;
+  } else if(type == CoherenceRequestType:GET_INSTR) {
+    return GenericRequestType:GET_INSTR;
+  } else if(type == CoherenceRequestType:GETX) {
+    return GenericRequestType:GETX;
+  } else if(type == CoherenceRequestType:UPGRADE) {
+    return GenericRequestType:UPGRADE;
+  } else if(type == CoherenceRequestType:PUTS) {
+    return GenericRequestType:PUTS;
+  } else if(type == CoherenceRequestType:INV) {
+    return GenericRequestType:INV;
+  } else if(type == CoherenceRequestType:INV_S) {
+    return GenericRequestType:INV_S;
+  } else if(type == CoherenceRequestType:L1_DG) {
+    return GenericRequestType:DOWNGRADE;
+  } else if(type == CoherenceRequestType:WB_ACK) {
+    return GenericRequestType:WB_ACK;
+  } else if(type == CoherenceRequestType:EXE_ACK) {
+    return GenericRequestType:EXE_ACK;
+  } else {
+    DEBUG_EXPR(type);
+    error("invalid CoherenceRequestType");
+  }
+}
+*/
+

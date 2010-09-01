@@ -1,0 +1,22 @@
+
+
+1.  Opal store problem, discovered by Dan Sorin and his students
+
+P1 issues a Store, and the coherence engine will acquire the block in M state.  P2 can issue a load which steals coherence permission, however Opal has not yet retired P1's store.  P1 will eventually retire the store even though it has lost coherence permission, and P2 will have an old value.
+
+Dan's student, Tong, fixed this "by modifying store_inst_t::Execute() such that it only prefetches a block, but the actual write to cache happens only in the retire state.  In a nutshell, I moved the call to storeDataToCache() from Execute() to retireInstruction()"
+
+The coherence protocol can also minimize the problem by providing a lockout state to give the processor an opportunity to retire the store before relinquishing permission.  MOESI_CMP_token, MOESI_SMP_token, and MOESI_CMP_directory implement these M_W and MM_W states.
+
+2.  Opal decode logic problem, discoverd by Dan Sorin and his students
+
+"The decode logic can set lddfa and stdfa to have vanilla values greater than 64. This happens when these instructions have register operands with big identifier numbers (e.g., %f52). This causes ASSERT(vanilla < 64) in setVanilla() to fail. I fixed it by doing mod 64 on the vanilla value when calling setVanilla() in arf_container_t::allocateRegister(), arf_container_t::readDecodeMap(), and flat_container_t::copyDispatchRids()."
+
+3.  Reported by Albert Meixner <albert@cs.duke.edu>
+
+"In the current implementation all cache access requests from Opal to Ruby are a whole cache line, instead of the correct access size.
+
+ Also making the decoded instruction buffer static and thus sharing one among all nodes, instead of having one per node saves a whole lot of memory. "
+
+
+ 

@@ -1,0 +1,12 @@
+# simics script to create workload from golden check point
+# run this from your simics directory copied from the template
+
+# enable the magic_call break
+magic-break-enable
+sim_no_magic_breakpoint = 0
+
+read-conf "../../checkpoints/golden-1p-2G.check"
+source ../../../opal/benchmark/cache/ubenchmark.py
+c
+write-conf "/p/bodik/public/Students/xu/v2/checkpoints/nextline_prefetch.check"
+q

@@ -1,0 +1,18 @@
+#Makefile.include for the garnet detailed network
+GARNET_DETAIL_VPATH := network/garnet-fixed-pipeline
+GARNET_DETAIL_SRC_CPP = \
+	GarnetNetwork_d.C \
+	NetworkInterface_d.C \
+	NetworkLink_d.C \
+	Router_d.C \
+	InputUnit_d.C \
+	RoutingUnit_d.C \
+	VirtualChannel_d.C \
+	VCallocator_d.C \
+	SWallocator_d.C \
+	Switch_d.C \
+	OutputUnit_d.C \
+	flit_d.C \
+	flitBuffer_d.C \
+	OutVcState_d.C \
+

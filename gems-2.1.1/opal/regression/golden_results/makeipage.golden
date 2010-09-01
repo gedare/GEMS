@@ -1,0 +1,28 @@
+simdist12: V 0.1: initializing simics API simulator
+simdist12: warning: unimplemented simics API system/simdist12.C:520
+simdist12: warning: unimplemented simics API system/simdist12.C:526
+simdist12: warning: unimplemented simics API system/simdist12.C:526
+simdist12: warning: unimplemented simics API system/simdist12.C:526
+simdist12: warning: unimplemented simics API system/simdist12.C:578
+simdist12: warning: unimplemented simics API system/simdist12.C:512
+error: unable to register queue interface
+hfa_init_local done:
+    warning: BRANCHPRED_CONFIDENT_FILE is not set in configuration file.
+    warning: BRANCHPRED_FREQUENT_FILE is not set in configuration file.
+    warning: BRANCHPRED_HISTORY_FILTER is not set in configuration file.
+    warning: BRANCHPRED_IGNORE_FILE is not set in configuration file.
+    warning: BRANCHPRED_USE_GLOBAL is not set in configuration file.
+    warning: PSEQ_TIME_SKEW is not set in configuration file.
+simdist12: warning: unimplemented simics API system/simdist12.C:490
+Ln constructor: block size: 64B, 4x assoc, 4096 sets.  1048576B total
+Ln constructor: block size: 64B, 1x assoc, 256 sets.  16384B total
+Ln constructor: block size: 64B, 1x assoc, 256 sets.  16384B total
+tracefile_t: successfully opened for reading
+Initial primary context: 6213
+PC 0x21a10 NPC 0x21a14
+closing file ./gzip-tr
+totals for pid: 0
+Total count: 35. Recorded Stats: 35
+totals for pid: 6213
+Total count: 679. Recorded Stats: 679
+high fidelity architecture code uninstalled.

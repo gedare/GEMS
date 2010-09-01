@@ -1,0 +1,84 @@
+@import microbench, workloads, mfacet
+@from mfacet import *
+@from microbench import *
+
+###### Read simulation parameters
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@processors = int(workloads.get_var(env_dict, "PROCESSORS"))
+#                 0  1  2  3  4  5  6  7   8   9  10  11  12  13  14  15
+@ruby_proc_map = (1, 2, 4, 4, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16, 16, 16, 16)
+@if(processors <= 16):
+    ruby_procs = ruby_proc_map[processors]
+    proc_no = [0, 1, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+elif (processors <= 32):
+    ruby_procs = 32
+    proc_no = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+else:
+    processors = -1
+
+@print "running simics with %d processors" % ruby_procs
+
+@lock_type = workloads.get_var(env_dict, "LOCK_TYPE")
+@transactions = int(workloads.get_var(env_dict, "TRANSACTIONS"))
+@dump_interval = int(workloads.get_var(env_dict, "DUMP_INTERVAL"))
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@results_dir = workloads.get_var(env_dict, "RESULTS_DIR")
+@filename_prefix = "%s/%s" % (results_dir, workloads.get_microbench_output_file_name_prefix(env_dict, 0))
+@exe_name = "BTREE_%s" % lock_type
+#@num_freelists = int(workloads.get_var(env_dict, "NUM_FREELISTS"))
+@num_freelists = 31
+@exe_name = "BTREE_%s" % lock_type
+@if( lock_type == "TM"):
+    exe_name = "BTREE_%s_%d" % (lock_type, num_freelists)
+
+@print "BTree executable is %s" % exe_name
+
+@text_file_name = ""
+@update_pct_str = workloads.get_var(env_dict, "MBENCH_ARG_STRING")
+
+@preloads = 20000
+
+@visualizer = int(workloads.get_var(env_dict, "XACT_VISUALIZER"))
+
+###### print out local host name to help with troubleshooting
+@print "Local host name:", string.strip(os.popen("hostname").readline())
+  
+###### init simics with a checkpoint
+#@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/golden-%dp.check"' % ruby_procs)
+@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/microbenchmark/microbenchmark-%dp.check"' % ruby_procs)
+@mfacet.run_sim_command('magic-break-enable')
+@microbench_dir="/host/%s/../../../microbenchmarks/transactional" % os.getcwd()  
+
+@command_lines = [
+    #"bash\n",
+    #"mount /host\n",
+    "cp %s/btree/%s .\n" % (microbench_dir, exe_name),
+    "cp %s/btree/%s .\n" % (microbench_dir, text_file_name),
+    ]
+
+## Create Processor Sets
+#@for j in range(num_processors + 1):
+#    if(j != 0):
+#        print "j=%d, num_p=%d" % (j, num_processors)
+#        command_lines.append("psrset -c\n")
+#        print "psrset -c\n"
+#        command_lines.append("`psrset -a %d %d\n" % (j, proc_no[j]))
+#        print "psrset -a %d %d\n" % (j, proc_no[j])
+
+@command_lines.append("./%s %d %d %d %s %s\n" % (exe_name, (processors - 1), preloads, 1000000000, update_pct_str, text_file_name))
+@print command_lines
+@console_commands(command_lines,"#")
+c
+@start_ruby()
+
+@if visualizer == 1:    
+  mfacet.run_sim_command('ruby0.xact-visualizer-file %s.visual' % filename_prefix)
+@mfacet.setup_run_for_n_transactions(transactions, dump_interval)
+@mfacet.run_sim_command('c')
+    
+@mfacet.run_sim_command('ruby0.dump-stats "%s.stats"' % filename_prefix)
+
+quit
+#-----------------
+
+

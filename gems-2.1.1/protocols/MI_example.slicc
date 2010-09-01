@@ -1,0 +1,4 @@
+../protocols/MI_example-msg.sm
+../protocols/MI_example-cache.sm
+../protocols/MI_example-dir.sm
+../protocols/standard_1level_SMP-protocol.sm

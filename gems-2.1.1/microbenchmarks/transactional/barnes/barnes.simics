@@ -1,0 +1,83 @@
+@import microbench, workloads, mfacet
+
+###### Read simulation parameters
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@processors = int(workloads.get_var(env_dict, "PROCESSORS"))
+#@ruby_procs = processors
+#@ruby_procs = 32
+#                 0  1  2  3  4  5  6  7  8   9  10  11  12  13  14  15  16
+@ruby_proc_map = (1, 1, 2, 4, 4, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16, 16, 16)
+@if(processors <= 16):
+    ruby_procs = ruby_proc_map[processors]
+    proc_no = [0, 1, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+elif (processors <= 32):
+    ruby_procs = 32
+    proc_no = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+else:
+    processors = -1
+
+@lock_type = workloads.get_var(env_dict, "LOCK_TYPE")
+@transactions = int(workloads.get_var(env_dict, "TRANSACTIONS"))
+@dump_interval = int(workloads.get_var(env_dict, "DUMP_INTERVAL"))
+@env_dict = workloads.prepare_env_dictionary(simics = 1)
+@results_dir = workloads.get_var(env_dict, "RESULTS_DIR")
+@visualizer = int(workloads.get_var(env_dict, "XACT_VISUALIZER"))
+@filename_prefix = "%s/%s" % (results_dir, workloads.get_microbench_output_file_name_prefix(env_dict, 0))
+@arg_str = workloads.get_var(env_dict, "MBENCH_ARG_STRING")
+
+#@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/golden-%dp.check"' % ruby_procs)
+@mfacet.run_sim_command('read-configuration "../../checkpoints-u3/microbenchmark/microbenchmark-%dp.check"' % ruby_procs)
+#@microbench.setup_simics()
+c 1
+@mfacet.run_sim_command('magic-break-enable')
+@microbench_dir="/host/%s/../../../microbenchmarks/transactional/" % os.getcwd()  
+
+@mfacet.run_sim_command('magic-break-enable')
+@if(lock_type == 'Lock'):
+  hostpath = "/host" + os.getcwd() + "/../../../workloads/splash2/codes/apps/barnes/"
+elif(lock_type == 'Lock_MCS'):
+  hostpath = "/host" + os.getcwd() + "/../../../workloads/splash2/codes/apps/barnes/"
+elif(lock_type == 'TM'):
+  hostpath = "/host" + os.getcwd() + "/../../../workloads/splash2/codes/apps/barnes_trans/"
+
+@command_lines = [
+    "bash\n",
+    "mount /host\n",
+    "cp " + hostpath + "BARNES_%s ./BARNES\n" % lock_type,
+    "cat " + hostpath + "input | sed 's/BODIES/%s/' | sed 's/PROCESSORS/%d/' > ./input-run\n" % (arg_str, (processors - 1)),
+    "./BARNES < input-run\n"]
+
+@mfacet.console_commands(command_lines,"#")
+c
+
+@microbench.start_ruby(debug=0)
+
+## Check whether we are using Opal
+@opal = 0
+@if "opal" in mfacet.get_module_list():
+    opal = 1
+    print "Opal Not loaded"
+else:
+    print "Opal NOT loaded"
+    
+if opal == 1:
+    opal_outfile = "%s.opal" % filename_prefix
+    microbench.start_opal(transactions, dump_interval, opal_outfile)
+else:
+    if visualizer == 1:    
+      mfacet.run_sim_command('ruby0.xact-visualizer-file %s.visual' % filename_prefix)
+    mfacet.setup_run_for_n_transactions(transactions, dump_interval)
+    mfacet.run_sim_command('c')
+
+@mfacet.run_sim_command('ruby0.dump-stats %s.stats' % filename_prefix)
+
+## Dump OPAL stats
+@if opal == 1:
+    mfacet.run_sim_command('opal0.listparam')
+    mfacet.run_sim_command('opal0.stats')
+    mfacet.run_sim_command('opal0.sim-stop')
+    
+quit
+#-----------------
+
+

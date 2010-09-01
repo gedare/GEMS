@@ -1,0 +1,4 @@
+@sys.path.append("../../../gen-scripts")
+@import mfacet
+@mfacet.load_modules_and_run()
+quit

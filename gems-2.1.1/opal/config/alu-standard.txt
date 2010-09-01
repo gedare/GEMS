@@ -1,0 +1,35 @@
+
+CONFIG_NUM_ALUS: (
+  127, // inst does not use a functional unit
+    4, // integer ALU (fused multiply/add)
+    2, // integer divisor
+    4, // integer branch
+    4, // FP ALU
+    2, // FP multiply
+    2, // FP divisor / square-root
+    4, // load unit (memory read)
+    4, // store unit (memory write)
+    0,
+    0,
+    0,
+    0
+)
+
+CONFIG_ALU_LATENCY: (
+    1, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    4, // FU_INTMULT,              // integer multiplier
+   20, // FU_INTDIV,               // integer divider
+    1, // FU_BRANCH,               // branch
+    2, // FU_FLOATADD,             // floating point adder/subtractor
+    2, // FU_FLOATCMP,             // floating point comparator
+    2, // FU_FLOATCVT,             // floating point<->integer converter
+    4, // FU_FLOATMULT,            // floating point multiplier
+   12, // FU_FLOATDIV,             // floating point divider
+   24, // FU_FLOATSQRT,            // floating point square root
+    1, // FU_RDPORT,               // memory read port
+    1  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+
+CONFIG_NUM_CONTROL_SETS: 64

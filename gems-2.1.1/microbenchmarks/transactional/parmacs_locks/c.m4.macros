@@ -1,0 +1,1191 @@
+divert(-1)
+###################################
+###################################
+#############c.m4.full#############
+###################################
+###################################
+#
+#Subset of PARMACS macros implemented on top of either MacOS MP threads
+#or Posix threads. This subset enable to run the SMP benchmark series
+#SPLASH and SPLASH2 (http://www-flash.stanford.edu:80/apps/SPLASH).
+#It has been succesfully tested under MacOS 7.6,8.1,8.5, linux (with
+#linux pthreads library or glibc2 ), IRIX 6.4 and Solaris.
+#
+#Copyright (C) 1997-1998  Alexis VARTANIAN
+#
+#This package is free software; you can redistribute it and/or
+#modify it under the terms of the GNU Library General Public
+#License as published by the Free Software Foundation; either
+#version 2 of the License, or (at your option) any later version.
+#
+#This package is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#Library General Public License for more details.
+#
+#You should have received a copy of the GNU Library General Public
+#License along with this library; if not, write to the
+#Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+#Boston, MA  02111-1307, USA.
+#or go to http://www.gnu.org/copyleft/lgpl.html
+#
+#
+#the author may be reached at alex@lri.fr or
+#Alexis VARTANIAN, LRI
+#Bat 490, Paris-Sud University, 91405 Orsay, FRANCE
+
+
+#########################
+#global types definitions and variables
+#########################
+
+define(MAIN_ENV,`
+      	#ifndef __MAIN_ENV__
+       	#define __MAIN_ENV__
+	#define BEGINPARALL
+	#define ENDPARALL
+       	#include<pthread.h>
+	#include<sys/time.h>
+	#include<sched.h>
+	#include<stdlib.h>
+	#include<assert.h>
+
+	#ifdef BIND_THREADS
+	#include <sys/pset.h>		/* pset_bind() is defined here */
+	#endif /* BIND_THREADS */
+	#include <sys/types.h>
+	#include <sys/stat.h>
+	#include <fcntl.h>
+	#include <sys/mman.h>
+	#include <unistd.h>
+
+
+	#include <tas.h>
+	#include <tas_exp.h>
+
+	#include <mcs.h>
+	mcs_plain_qnode mcs_pqn[128];	/* max threads = 128 */
+
+	#include <clh.h>
+	clh_cc_qnode initial_clh_plain_qnode[4096];
+	clh_cc_qnode *clh_cqnp[128];	/* max threads = 128 */
+
+	#include <rh.h>
+
+	#include <hbo.h>
+	#include <hbo_gt.h>
+	#include <hbo_gt_fair.h>
+
+        #ifndef __MAIN_EENV__
+       	typedef struct sthlist{
+       		pthread_t* theThread;
+       		struct sthlist* Next;
+       	} thlist; 
+       	typedef thlist* pthlist;
+       	typedef struct sbar {
+       		int val;
+	        volatile int in_use;
+       		pthread_mutex_t lock;
+       		pthread_cond_t not_all;
+       	} bar;
+       	typedef struct spause {
+       		pthread_mutex_t lock;
+		#ifndef PTHREAD_LIGHT_PAUSE
+		int val;
+		#ifdef PTHREAD_MUTEX_PAUSE
+		pthread_mutex_t waitset;
+		pthread_mutex_t waitunset;
+		volatile int nbwaitset;
+		volatile int nbwaitunset;
+		#else
+  		pthread_cond_t waitset;
+       		pthread_cond_t waitunset;
+		#endif
+		#endif
+       	} ppause;
+
+	typedef struct pthread_create_args {
+		pthread_t *thread;
+		const pthread_attr_t *attr;
+		void *(*start_routine)();
+		void *arg;
+		unsigned long my_node_id;
+		unsigned long my_tid;
+		unsigned long my_mask;
+	} pthread_create_args;
+
+	static struct {
+	  clh_cc_qnode clh_cc_qn;
+	  int padding1[30];
+	} clh_cc_qnodes[128];		/* max threads = 128 */
+
+        #endif /* __MAIN_EENV__ */
+	struct timeval tp;
+	struct timeval* tpptr=&tp;
+       	pthread_t* newThread;
+       	pthlist CurrentThreadNode;
+       	pthlist CreatedThreads;
+       	int parcompt;
+       	int parcount;
+
+	#ifdef __GNUC__
+	unsigned int main_uses_cc = false;
+	#else
+	unsigned int main_uses_cc = true;
+	#endif /* __GNUC__ */
+
+	pthread_create_args pargs;
+	pthread_mutex_t	MyLogicLock;
+	volatile int MyLogicTID;
+	bar MyTimeBarrier;
+	int MyStartTime;
+	int MyEndTime;
+	int MyTotalLocks;
+	int total_lockinit;
+
+        #ifdef BIND_THREADS
+	/*
+	 * cabinet_nr = 1, 2, ...
+	 */
+	void bind_to_cabinet(int cabinet_nr)
+	{
+	  /* printf("binding to cabinet %d\n", cabinet_nr); */
+	  if (pset_bind(cabinet_nr, P_LWPID, P_MYID, NULL) == -1) {
+	    perror("pset_bind");
+	    exit(1);
+	  }
+	}
+        #endif
+
+	void *pthread_create_trampoline(void *arg)
+	{
+		void *(*start_routine)();
+
+		/*printf("*** my_node_id = %d\n", pargs.my_node_id);
+		  printf("*** my_tid     = %d\n", pargs.my_tid);*/
+
+		/*
+		 * store thread-private data into register %g2
+		 *
+		 */
+		asm_set_reg_g2((pargs.my_node_id << 8) | pargs.my_tid);
+
+	#ifdef BIND_THREADS
+		/*
+		 * bind this thread to the corresponding processor_set
+		 *
+		 */
+		/*printf("Thread %d ", pargs.my_tid);*/
+                bind_to_cabinet(pargs.my_tid + 1);
+
+	#endif /* BIND_THREADS */
+
+		start_routine = pargs.start_routine;
+
+		pthread_mutex_unlock(&MyLogicLock);
+
+		return start_routine();
+	}
+       	#endif /* __MAIN_ENV__ */
+')
+
+define(EXTERN_ENV, `
+        #if !(defined __MAIN_EENV__ || defined __MAIN_ENV__)
+       	#define __MAIN_EENV__
+       	#include<pthread.h>
+	#include<sys/time.h>
+	#include<assert.h>
+
+	#ifdef BIND_THREADS
+	#include <sys/pset.h>		/* pset_bind() is defined here */
+	#include <sys/types.h>
+	#include <sys/stat.h>
+	#include <fcntl.h>
+	#include <sys/mman.h>
+	#include <unistd.h>
+	#endif /* BIND_THREADS */
+
+	#include <tas.h>
+	#include <tas_exp.h>
+
+	#include <mcs.h>
+	extern mcs_plain_qnode mcs_pqn[128];	/* max threads = 128 */
+
+	#include "clh.h"
+	extern clh_cc_qnode initial_clh_plain_qnode[4096];
+	extern clh_cc_qnode *clh_cqnp[128];	/* max threads = 128 */
+
+	#include <rh.h>
+
+	#include <hbo.h>
+	#include <hbo_gt.h>
+	#include <hbo_gt_fair.h>
+
+	struct timeval* tpptr;
+       	extern int parcompt;
+       	typedef struct sthlist{
+       	   	pthread_t* theThread;
+       		struct sthlist* Next;
+       	} thlist; 
+       	typedef thlist* pthlist;
+       	typedef struct sbar {
+       		int val;
+	        volatile int in_use;
+       		pthread_mutex_t lock;
+       		pthread_cond_t not_all;
+       	} bar;
+	typedef struct spause {
+       		pthread_mutex_t lock;
+		#ifndef PTHREAD_LIGHT_PAUSE
+		int val;
+		#ifdef PTHREAD_MUTEX_PAUSE
+		pthread_mutex_t waitset;
+		pthread_mutex_t waitunset;
+		volatile int nbwaitset;
+		volatile int nbwaitunset;
+		#else
+  		pthread_cond_t waitset;
+       		pthread_cond_t waitunset;
+		#endif
+		#endif
+       	} ppause;
+
+	typedef struct pthread_create_args {
+		pthread_t *thread;
+		const pthread_attr_t *attr;
+		void *(*start_routine)();
+		void *arg;
+		unsigned long my_node_id;
+		unsigned long my_tid;
+		unsigned long my_mask;
+	} pthread_create_args;
+
+	static struct {
+	  clh_cc_qnode clh_cc_qn;
+	  int padding1[30];
+	} clh_cc_qnodes[128];		/* max threads = 128 */
+
+       	extern pthread_t* newThread;
+       	extern pthlist CurrentThreadNode;
+       	extern pthlist CreatedThreads;
+
+
+	extern unsigned int main_uses_cc;
+	extern pthread_create_args pargs;
+	extern pthread_mutex_t MyLogicLock;
+	extern volatile int MyLogicTID;
+	extern bar MyTimeBarrier;
+	extern int MyStartTime;
+	extern int MyEndTime;
+	extern int MyTotalLocks;
+	extern total_lockinit;
+
+	void *pthread_create_trampoline(void *arg);
+	void bind_to_cabinet(int);
+
+       	#endif /* __MAIN_EENV__ */
+')
+
+define(MAIN_INITENV, `{
+	int i;
+
+	pthread_mutex_init(&MyLogicLock, NULL);
+	MyLogicTID = 0; /* This is the master thread */
+
+	BARINIT(MyTimeBarrier);
+
+	MyTotalLocks = 0;
+	total_lockinit = 0;
+
+	asm_set_reg_g2(0);
+
+	for (i = 0; i < 128; i++)
+	  clh_cqnp[i] = &clh_cc_qnodes[i].clh_cc_qn;
+
+        printf("Main thread ");
+        
+        #ifdef BIND_THREADS
+	bind_to_cabinet(1);
+        #endif
+
+
+#ifdef Lock_HBO
+	hbo_lock_init();
+#endif
+
+#ifdef Lock_HBO_GT
+	hbo_gt_lock_init();
+#endif
+
+#ifdef Lock_HBO_GT_FAIR
+	hbo_gt_fair_lock_init();
+#endif
+
+	CurrentThreadNode=(thlist*)malloc(sizeof(thlist));
+       	CurrentThreadNode->Next=NULL;
+       	CurrentThreadNode->theThread=NULL;
+       	CreatedThreads=CurrentThreadNode;
+}')
+
+
+define(MAIN_END, `{exit(0);}')
+
+
+# note: slash-slash macro ==> 1st line must be empty
+define(START_TIME, `
+{
+	BARRIER(MyTimeBarrier, $2)
+	if (asm_get_reg_g2() == 0)
+	{
+		CLOCK(MyStartTime);
+	}
+}')
+
+
+# note: slash-slash macro ==> 1st line must be empty
+define(STOP_TIME, `
+{
+	CLOCK(MyEndTime);
+	printf("\n##### PARMACS TIME: %.2f\n",
+		(MyEndTime - MyStartTime) / 1000000.0);
+
+#ifdef PROFILE_LOCKS
+	printf("##@@@ total_lockinit = %8d, total_locks = %8d\n", total_lockinit, MyTotalLocks);
+#endif
+
+}')
+
+
+#########################
+#fork and join
+#########################
+
+define(CREATE, `{
+	pthread_attr_t attr;
+	int wildfire_total_nodes;
+	int wildfire_total_p;
+
+	pthread_mutex_lock(&MyLogicLock);
+
+       	#ifdef PAR_TRON
+       		printf("cREATE\n");
+       	#endif
+
+	MyLogicTID++;
+
+        #ifdef BIND_THREADS
+	/*
+	 * NOTE: this code is for only 2 BIND_THREADS nodes
+	 *
+	 */
+	if (getenv("NUM_PROCESSORS") != NULL) {
+	  wildfire_total_nodes = atoi(getenv("NUM_PROCESSORS"));
+	  /*printf("total_nodes = %d\n", wildfire_total_nodes);*/
+	}
+	else
+	  assert(!"NUM_PROCESSORS must be set");
+
+	if (getenv("BIND_THREADS_TOTAL_P") != NULL) {
+	  wildfire_total_p = atoi(getenv("BIND_THREADS_TOTAL_P"));
+	  /*printf("total_p = %d\n", wildfire_total_p);*/
+	}
+	else
+	  assert(!"BIND_THREADS_TOTAL_P must be set");
+
+	if (MyLogicTID < (wildfire_total_p / wildfire_total_nodes)) {
+	  pargs.my_node_id = 0;
+	}
+	else {
+	  pargs.my_node_id = 1;
+	}
+        #endif /*end if _BIND_THREADS*/
+
+
+	pargs.thread		= NULL;
+	pargs.attr		= NULL;
+	pargs.start_routine	= (void *)&($1);
+	pargs.arg		= NULL;
+	pargs.my_tid		= MyLogicTID;
+	pargs.my_mask		= 0;
+
+	pthread_attr_init( &attr );
+	pthread_attr_setscope( &attr, PTHREAD_SCOPE_SYSTEM );
+       	newThread=(pthread_t*)malloc(sizeof(pthread_t));
+       	pthread_create(newThread, &attr, pthread_create_trampoline, &pargs);
+       	CurrentThreadNode->theThread=newThread;
+       	CurrentThreadNode->Next=(thlist*)malloc(sizeof(thlist));
+       	CurrentThreadNode=CurrentThreadNode->Next;
+       	CurrentThreadNode->Next=NULL;
+       	CurrentThreadNode->theThread=NULL;
+}')
+
+define(WAIT_FOR_END, `{
+       	#ifdef PAR_TRON 
+	       	printf("wAIT_FOR_END\n");
+	#endif
+       	CurrentThreadNode=CreatedThreads;
+       	while((CurrentThreadNode!=NULL)&
+       		(CurrentThreadNode->theThread!=NULL)) {
+       		pthread_join(*(CurrentThreadNode->theThread),NULL);
+       		CurrentThreadNode=CurrentThreadNode->Next;
+		}
+	#ifdef PAR_TRON 
+    		printf("ALL GONE\n");
+       	#endif
+}')
+
+#########################
+#memory allocation
+#########################
+
+define(G_MALLOC, `
+malloc($1);
+')
+
+define(G_FREE, `
+free($1);
+')
+
+define(CLOCK, `{
+gettimeofday(tpptr,NULL);
+($1) = tpptr->tv_usec+tpptr->tv_sec*1000000;
+}')
+
+#########################
+#synchronisation barriers
+#########################
+
+define(BARRIER, `{
+    SIMICS_BEGIN_BARRIER    
+	while( $1.in_use )
+	  { ; }
+	#ifdef PAR_BAR_TRON
+		printf("bARRIER:enter %d %d %d/%d \n",&($1),$1.in_use,$1.val,$2);
+	#endif
+        pthread_mutex_lock(&($1.lock));
+        $1.val++;
+	if ($1.val==($2)) {
+               #ifdef PAR_BAR_TRON
+	       printf( "Last one at barrier, waking up everyone else!\n" );
+	       #endif
+	       $1.in_use = 1;
+	       pthread_cond_broadcast(&($1.not_all)); 
+	} else {
+               #ifdef PAR_BAR_TRON
+	       printf( "Waiting for others at barrier\n" );
+	       #endif
+	       pthread_cond_wait(&($1.not_all),&($1.lock)); 
+               #ifdef PAR_BAR_TRON
+	       printf( "Got back barrier mutex, preparing to leave\n" );
+	       #endif
+        }
+        $1.val--;
+	if( $1.val == 0 )
+	{
+	   $1.in_use = 0;
+        }
+        pthread_mutex_unlock(&($1.lock));
+    SIMICS_END_BARRIER    
+	#ifdef PAR_BAR_TRON 
+		printf("bARRIER:leave %d %d %d/%d \n",&($1),$1.in_use,$1.val,$2);
+	#endif
+}')
+
+define(BARDEC, `
+bar $1;
+')
+
+
+define(BARINIT, `{
+	#ifdef PAR_BAR_TRON 
+	      printf("bARINIT %d\n",&($1));
+	#endif
+        pthread_mutex_init(&($1.lock),NULL);
+	pthread_cond_init(&($1.not_all),NULL);
+	$1.val=0;
+	$1.in_use = 0;
+}')
+
+
+#########################
+#critical sections
+#########################
+
+define(LOCKDEC, `
+
+#ifdef Lock_pthread_mutex
+pthread_mutex_t ($1);
+#endif
+
+#ifdef Lock_TATAS
+tatas_lock ($1);
+#endif
+
+#ifdef Lock_TATAS_EXP
+tatas_exp_lock ($1);
+#endif
+
+#ifdef Lock_MCS
+mcs_plain_lock ($1);
+#endif
+
+#ifdef Lock_CLH
+clh_cc_lock ($1);
+#endif
+
+#ifdef Lock_RH
+rh_lock *($1);
+#endif
+
+#ifdef Lock_HBO
+hbo_lock ($1);
+#endif
+
+#ifdef Lock_HBO_GT
+hbo_gt_lock ($1);
+#endif
+
+#ifdef Lock_HBO_GT_FAIR
+hbo_gt_fair_lock ($1);
+#endif
+
+')
+
+define(LOCKINIT, `{
+
+	pthread_mutex_lock(&MyLogicLock);
+
+	#ifdef Lock_pthread_mutex
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_pthread_mutex %d\n", &($1));
+       	#endif
+       	pthread_mutex_init(&($1), NULL);
+       	#endif
+
+	#ifdef Lock_TATAS
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_TATAS %d\n", &($1));
+       	#endif
+       	($1) = 0;
+	#endif
+
+	#ifdef Lock_TATAS_EXP
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_TATAS_EXP %d\n", &($1));
+       	#endif
+       	($1) = 0;
+	#endif
+
+	#ifdef Lock_MCS
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_MCS %d\n", &($1));
+       	#endif
+	($1) = 0;
+	#endif
+
+	#ifdef Lock_CLH
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_CLH %d\n", &($1));
+       	#endif
+	{
+		initial_clh_plain_qnode[total_lockinit].status = available;
+		initial_clh_plain_qnode[total_lockinit].prev =
+			(struct clh_cc_qnode *)123;
+
+		($1) = &initial_clh_plain_qnode[total_lockinit];
+
+		//printf("lOCKINIT Lock_CLH %d\n", (unsigned int) &($1));
+		//printf("lOCKINIT Lock_CLH %d\n", (unsigned int) (($1)->status));
+		//printf("lOCKINIT Lock_CLH %d\n", (unsigned int) (($1)->prev));
+	}
+	#endif
+
+	#ifdef Lock_RH
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_RH %d\n", &($1));
+       	#endif
+	{
+		unsigned int rh_L_addr;
+
+		rh_L_addr = RH_LOCK_MEMORY_BASE + total_lockinit * 64;
+		printf("rh_L_addr = 0x%x\n", rh_L_addr);
+
+		($1) = (rh_lock *) rh_L_addr;
+	}
+	#endif
+
+	#ifdef Lock_HBO
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_HBO %d\n", &($1));
+       	#endif
+	($1) = HBO_FREE;
+	#endif
+
+	#ifdef Lock_HBO_GT
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_HBO_GT %d\n", &($1));
+       	#endif
+	($1) = HBO_GT_FREE;
+	#endif
+
+	#ifdef Lock_HBO_GT_FAIR
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCKINIT Lock_HBO_GT_FAIR %d\n", &($1));
+       	#endif
+	($1) = HBO_GT_FAIR_FREE;
+	#endif
+
+	total_lockinit++;
+	/*printf("total_lockinit = %d\n", total_lockinit);*/
+	pthread_mutex_unlock(&MyLogicLock);
+}')
+
+define(LOCK, `{
+
+#ifdef PROFILE_LOCKS
+	pthread_mutex_lock(&MyLogicLock);
+	MyTotalLocks++;
+
+        /*fprintf(stderr, "##@@@ total_locks = %d\n", MyTotalLocks);*/
+#endif
+
+
+	#ifdef Lock_pthread_mutex
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_pthread_mutex %d\n", &($1));
+       	#endif
+       	pthread_mutex_lock(&($1));
+       	#endif
+
+	#ifdef Lock_TATAS
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_TATAS %d\n", &($1));
+       	#endif
+       	tatas_acquire(&($1));
+	#endif
+
+	#ifdef Lock_TATAS_EXP
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_TATAS_EXP %d\n", &($1));
+       	#endif
+       	tatas_exp_acquire(&($1));
+	#endif
+
+	#ifdef Lock_MCS
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_MCS %d\n", &($1));
+       	#endif
+	{
+		unsigned long my_tid;
+
+		my_tid = asm_get_reg_g2() & 0xFF;
+
+		mcs_plain_acquire(&($1), &mcs_pqn[my_tid]);
+	}
+	#endif
+
+	#ifdef Lock_CLH
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_CLH %d\n", &($1));
+       	#endif
+	{
+		unsigned long my_tid;
+
+		my_tid = asm_get_reg_g2() & 0xFF;
+
+		clh_plain_acquire(&($1), clh_cqnp[my_tid]);
+	}
+	#endif
+
+	#ifdef Lock_RH
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_RH %d\n", &($1));
+       	#endif
+	{
+		register rh_lock *temp_rh_L;
+		unsigned long my_node_id;
+		unsigned int rh_L_addr;
+
+		my_node_id = asm_get_reg_g2() >> 8;
+
+		rh_L_addr = (unsigned int) ($1);
+		rh_L_addr = rh_L_addr + my_node_id * RH_LOCK_MEMORY_OFFSET;
+
+		temp_rh_L = (rh_lock *) rh_L_addr;
+
+		rh_acquire(temp_rh_L);
+	}
+	#endif
+
+	#ifdef Lock_HBO
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_HBO %d\n", &($1));
+       	#endif
+       	hbo_acquire(&($1));
+	#endif
+
+	#ifdef Lock_HBO_GT
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_HBO_GT %d\n", &($1));
+       	#endif
+       	hbo_gt_acquire(&($1));
+	#endif
+
+	#ifdef Lock_HBO_GT_FAIR
+	#ifdef PAR_LOCK_TRON
+       		printf("lOCK     Lock_HBO_GT_FAIR %d\n", &($1));
+       	#endif
+       	hbo_gt_fair_acquire(&($1));
+	#endif
+
+#ifdef PROFILE_LOCKS
+	pthread_mutex_unlock(&MyLogicLock);
+#endif
+
+}')
+
+define(UNLOCK, `{
+	#ifdef Lock_pthread_mutex
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_pthread_mutex %d\n", &($1));
+       	#endif
+       	pthread_mutex_unlock(&($1));
+	#endif
+
+	#ifdef Lock_TATAS
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_TATAS %d\n", &($1));
+       	#endif
+       	tatas_release(&($1));
+	#endif
+
+	#ifdef Lock_TATAS_EXP
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_TATAS_EXP %d\n", &($1));
+       	#endif
+       	tatas_exp_release(&($1));
+	#endif
+
+	#ifdef Lock_MCS
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_MCS %d\n", &($1));
+       	#endif
+	{
+		unsigned long my_tid;
+
+		my_tid = asm_get_reg_g2() & 0xFF;
+
+		mcs_plain_release(&($1), &mcs_pqn[my_tid]);
+	}
+	#endif
+
+	#ifdef Lock_CLH
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_CLH %d\n", &($1));
+       	#endif
+	{
+		unsigned long my_tid;
+
+		my_tid = asm_get_reg_g2() & 0xFF;
+
+		clh_plain_release(&clh_cqnp[my_tid]);
+	}
+	#endif
+
+	#ifdef Lock_RH
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_RH %d\n", &($1));
+       	#endif
+	{
+		register rh_lock *temp_rh_L;
+		unsigned long my_node_id;
+		unsigned int rh_L_addr;
+
+		my_node_id = asm_get_reg_g2() >> 8;
+
+		rh_L_addr = (unsigned int) ($1);
+		rh_L_addr = rh_L_addr + my_node_id * RH_LOCK_MEMORY_OFFSET;
+
+		temp_rh_L = (rh_lock *) rh_L_addr;
+
+		rh_release(temp_rh_L);
+	}
+	#endif
+
+	#ifdef Lock_HBO
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_HBO %d\n", &($1));
+       	#endif
+       	hbo_release(&($1));
+	#endif
+
+	#ifdef Lock_HBO_GT
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_HBO_GT %d\n", &($1));
+       	#endif
+       	hbo_gt_release(&($1));
+	#endif
+
+	#ifdef Lock_HBO_GT_FAIR
+   	#ifdef PAR_LOCK_TRON 
+  		printf("uNLOCK   Lock_HBO_GT_FAIR %d\n", &($1));
+       	#endif
+       	hbo_gt_fair_release(&($1));
+	#endif
+}')
+
+
+#########################
+#critical section arrays
+#########################
+
+define(ALOCKDEC, `
+       	LOCKDEC($1[($2)])
+')
+
+define(ALOCKINIT, `{
+	#ifdef PAR_LOCK_TRON 
+	   	printf("AlOCKINIT %d\n",&($1));
+     	#endif
+	for(parcompt=0;parcompt<($2);parcompt++) {
+		LOCKINIT(($1)[parcompt])
+	}
+}')
+
+define(ALOCK, `{
+  	#ifdef PAR_LOCK_TRON 
+	       	printf("AlOCK %d[%d]\n",&($1),$2);
+    	#endif
+	LOCK(($1)[($2)])
+}')
+
+define(AULOCK, `{
+       	#ifdef PAR_LOCK_TRON 
+       		printf("AuNLOCK %d[%d]\n",&($1),$2);
+       	#endif
+       	UNLOCK(($1)[($2)])
+}')
+
+
+#########################
+# pauses
+#########################
+
+define(PAUSEDEC, `
+       	ifelse($#,1,
+		ppause $1;
+	,
+		int bar$1count;
+		ppause $1[$2];
+	) 
+')
+
+define(PAUSEINIT, `{
+	ifelse($#,1,
+       	#ifdef PAR_TRON 
+       		printf("pAUSEINIT %d\n",&($1));
+       	#endif		
+		pthread_mutex_init(&($1.lock),NULL);
+		#ifndef PTHREAD_LIGHT_PAUSE
+		$1.val=0;
+		#ifdef PTHREAD_MUTEX_PAUSE
+		$1.nbwaitunset=0;
+		$1.nbwaitset=0;
+		pthread_mutex_init(&($1.waitset),NULL);
+		pthread_mutex_init(&($1.waitunset),NULL);
+		#else
+		pthread_cond_init(&($1.waitset),NULL);
+		pthread_cond_init(&($1.waitunset),NULL);
+		#endif
+		#endif
+       	,
+       	#ifdef PAR_TRON 
+       		printf("pAUSEINIT %d\n",&($1));
+       	#endif
+		for (parcount=0;parcount<$2;parcount++) {
+		        pthread_mutex_init(&($1[parcount].lock),NULL);
+			#ifndef PTHREAD_LIGHT_PAUSE
+			$1[parcount].val=0;
+			#ifdef PTHREAD_MUTEX_PAUSE
+			$1[parcount].nbwaitunset=0;
+			$1[parcount].nbwaitset=0;
+			pthread_mutex_init(&($1[parcount].waitset),NULL);
+			pthread_mutex_init(&($1[parcount].waitunset),NULL);
+			#else
+			pthread_cond_init(&($1[parcount].waitset),NULL);
+			pthread_cond_init(&($1[parcount].waitunset),NULL);
+			#endif
+			#endif
+		}
+       	)
+}')
+
+define(CLEARPAUSE, `{
+       	ifelse($#,1,
+		#ifdef PAR_TRON 
+       			printf("cLEARPAUSE %d\n",&($1));
+	       	#endif
+		pthread_mutex_lock(&(($1).lock));
+		$1.val=0;
+		#ifdef PTHREAD_MUTEX_PAUSE
+		while ($1.nbwaitunset!=0) {
+			pthread_mutex_unlock(&(($1).waitunset));
+			$1.nbwaitunset--;
+		}
+		#else
+		pthread_cond_broadcast(&(($1).waitunset));	
+		#endif
+		pthread_mutex_unlock(&(($1).lock));
+       	,
+		#ifdef PAR_TRON 
+       			printf("cLEARPAUSE %d[%d]\n",&($1),$2);
+	       	#endif
+		#ifdef PTHREAD_LIGHT_PAUSE
+		      pthread_mutex_trylock(&($1[$2].lock));
+		#else
+		      pthread_mutex_lock(&($1[$2].lock));
+		      $1[$2].val=0;
+		      #ifdef PTHREAD_MUTEX_PAUSE
+		      while ($1[$2].nbwaitunset!=0) {
+		             pthread_mutex_unlock(&($1[$2].waitunset));
+			     $1[$2].nbwaitunset--;
+		      }
+		      #else
+		      pthread_cond_broadcast(&($1[$2].waitunset));
+		      #endif
+		      pthread_mutex_unlock(&($1[$2].lock));
+		#endif
+       	)
+}')
+
+define(SETPAUSE, `{
+       	ifelse($#,1,
+       	#ifdef PAR_TRON 
+       		printf("sETPAUSE %d\n",&($1));
+       	#endif
+		pthread_mutex_lock(&($1.lock));
+		$1.val=1;
+		#ifdef PTHREAD_MUTEX_PAUSE
+		while ($1.nbwaitset!=0) {
+			pthread_mutex_unlock(&($1.waitset));
+			$1.nbwaitset--;
+		}
+		#else
+		pthread_cond_broadcast(&($1.waitset));
+		#endif
+		pthread_mutex_unlock(&($1.lock));
+       	,
+       	#ifdef PAR_TRON 
+       		printf("sETPAUSE %d[%d]\n",&($1),$2);
+       	#endif
+	#ifdef PTHREAD_LIGHT_PAUSE
+	pthread_mutex_unlock(&(($1[$2]).lock));
+	#else
+	pthread_mutex_lock(&(($1[$2]).lock));
+	($1[$2]).val=1;
+	#ifdef PTHREAD_MUTEX_PAUSE
+       		while ($1[$2].nbwaitset!=0) {
+			pthread_mutex_unlock(&(($1[$2]).waitset));
+			$1[$2].nbwaitset--;
+		}
+	#else
+	pthread_cond_broadcast(&(($1[$2]).waitset));
+	#endif
+	pthread_mutex_unlock(&(($1[$2]).lock));
+	#endif
+       	)
+}')
+
+define(EVENT, `{
+       	#ifdef PAR_TRON 
+       		printf("eVENT %d\n",&($1));
+       	#endif
+       	ifelse($#,1,
+		pthread_mutex_lock(&($1.lock));
+		if ($1.val==1) {
+		#ifdef PTHREAD_MUTEX_PAUSE
+		        $1.nbwaitunset++;
+			pthread_mutex_unlock(&($1.lock));
+			pthread_mutex_lock(&($1.waitunset));
+		        pthread_mutex_lock(&($1.lock));
+			
+		#else
+			pthread_cond_wait(&($1.waitunset),&($1.lock));
+		#endif
+		}
+		$1.val=1;
+		pthread_mutex_unlock(&($1.lock));
+       	,
+	        #ifdef PTHREAD_LIGHT_PAUSE
+		#error unsupported
+		#else
+		pthread_mutex_lock(&($1[$2].lock));
+		if ($1[$2].val==1) {
+		#ifdef PTHREAD_MUTEX_PAUSE
+			$1[$2].nbwaitunset++;
+			pthread_mutex_unlock(&($1[$2].lock));
+			pthread_mutex_lock(&($1[$2].waitunset));
+		        pthread_mutex_lock(&($1[$2].lock));
+		#else
+			pthread_cond_wait(&($1[$2].waitunset),&($1[$2].lock));
+		#endif
+		}
+		$1[$2].val=1;
+		pthread_mutex_unlock(&($1[$2].lock));
+		#endif
+       	)
+}')
+
+define(WAITPAUSE, `{
+       	ifelse($#,1,
+    	#ifdef PAR_TRON 
+       		printf("wAITPAUSE %d\n",&($1));
+       	#endif
+		pthread_mutex_lock(&($1.lock));
+		if ($1.val==0) {
+		#ifdef PTHREAD_MUTEX_PAUSE
+			$1.nbwaitset++;
+			pthread_mutex_unlock(&($1.lock));
+			pthread_mutex_lock(&($1.waitset));
+			pthread_mutex_lock(&($1.lock));
+		#else
+		        pthread_cond_wait(&($1.waitset),&($1.lock));
+		#endif
+		} 
+		pthread_mutex_unlock(&($1.lock));
+       	,
+    	#ifdef PAR_TRON 
+       		printf("wAITPAUSE %d[%d]\n",&($1),$2);
+	#endif
+	#ifdef PTHREAD_LIGHT_PAUSE
+		pthread_mutex_lock(&($1[$2].lock));
+	#else 
+       		pthread_mutex_lock(&($1[$2].lock));
+		if ($1[$2].val==0) {
+		#ifdef PTHREAD_MUTEX_PAUSE
+			$1[$2].nbwaitset++;
+			pthread_mutex_unlock(&($1[$2].lock));
+			pthread_mutex_lock(&($1[$2].waitset));
+			pthread_mutex_lock(&($1[$2].lock));
+		#else
+		pthread_cond_wait(&($1[$2].waitset),&($1[$2].lock));
+		#endif
+		}
+		pthread_mutex_unlock(&($1[$2].lock));
+	#endif
+       	)
+}')
+
+define(PAUSE, `{
+       	ifelse($#,1,
+    	#ifdef PAR_TRON 
+       		printf("pAUSE %d\n",&($1));
+       	#endif
+		pthread_mutex_lock(&($1.lock));
+		if ($1.val==0) {
+		#ifdef PTHREAD_MUTEX_PAUSE
+			$1.nbwaitset++;
+			pthread_mutex_unlock(&($1.lock));
+			pthread_mutex_lock(&($1.waitset));
+			pthread_mutex_lock(&($1.lock));
+		#else
+		        pthread_cond_wait(&($1.waitset),&($1.lock));
+		#endif
+		} 
+		$1.val=0;
+		pthread_mutex_unlock(&($1.lock));
+       	,
+    	#ifdef PAR_TRON 
+       		printf("pAUSE %d[%d]\n",&($1),$2);
+	#endif
+	#ifdef PTHREAD_LIGHT_PAUSE
+		/*sched_yield();*/
+		pthread_mutex_lock(&($1[$2].lock));
+	#else 
+       		pthread_mutex_lock(&($1[$2].lock));
+		if ($1[$2].val==0) {
+		#ifdef PTHREAD_MUTEX_PAUSE
+			$1[$2].nbwaitset++;
+			pthread_mutex_unlock(&($1[$2].lock));
+			pthread_mutex_lock(&($1[$2].waitset));
+			pthread_mutex_lock(&($1[$2].lock));
+		#else
+		pthread_cond_wait(&($1[$2].waitset),&($1[$2].lock));
+		#endif
+		}
+		$1[$2].val=0;
+		pthread_mutex_unlock(&($1[$2].lock));
+	#endif
+       	)
+}')
+
+#########################
+#proprietary macros
+#########################
+define(NBCPU,`{
+#include <unistd.h>
+$1=sysconf (_SC_NPROCESSORS_ONLN);
+}')
+
+#########################
+#unimplemeted macros 
+#########################
+
+#define(AUG_ON, ` ')
+#define(AUG_OFF, ` ')
+#define(TRACE_ON, ` ')
+#define(TRACE_OFF, ` ')
+#define(REF_TRACE_ON, ` ')
+#define(REF_TRACE_OFF, ` ')
+#define(DYN_TRACE_ON, `;')
+#define(DYN_TRACE_OFF, `;')
+#define(DYN_REF_TRACE_ON, `;')
+#define(DYN_REF_TRACE_OFF, `;')
+#define(DYN_SIM_ON, `;')
+#define(DYN_SIM_OFF, `;')
+#define(DYN_SCHED_ON, `;')
+#define(DYN_SCHED_OFF, `;')
+#define(AUG_SET_LOLIMIT, `;')
+#define(AUG_SET_HILIMIT, `;')
+
+#define(MENTER, `{;}')
+#define(DELAY, `{;}')
+#define(CONTINUE, `{;}')
+#define(MEXIT, `{;}')
+#define(MONINIT, `{;}')
+
+#define(GSDEC, `int ($1);')
+#define(GSINIT, `{ ($1) = 0; }')
+#define(GETSUB, `{ 
+#  if (($1)<=($3)) 
+#    ($2) = ($1)++; 
+#  else { 
+#    ($2) = -1; 
+#    ($1) = 0; 
+#  }
+#}')
+
+#define(NU_GSDEC, `int ($1);')
+#define(NU_GSINIT, `{ ($1) = 0; }')
+#define(NU_GETSUB, `GETSUB($1,$2,$3,$4)')
+
+#define(ADEC, `int ($1);')
+#define(AINIT, `{;}')
+#define(PROBEND, `{;}')
+
+#define(NLOCKDEC, `int ($1);')
+#define(NLOCKINIT, `{;}')
+#define(NLOCK, `{;}')
+#define(NUNLOCK, `{;}')
+#define(ENV, ` ')
+define(NU_MALLOC, `malloc($1);')
+#define(NU_FREE, `;')
+#define(NU_MALLOC_F, `malloc($1)')
+
+#define(GET_HOME, `{($1) = 0;}')
+#define(GET_PID, `{($1) = 0;}')
+#define(AUG_DELAY, `{sleep ($1);}')
+#define(ST_LOG, `{;}')
+#define(SET_HOME, `{;}')
+
+divert(0)

@@ -1,0 +1,2 @@
+PSEQ_MAX_UNCHECKED: 64
+#include ./config/std-8-L1:64K:2-L2:4M:4.txt
