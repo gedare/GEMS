@@ -60,8 +60,8 @@ The image.iso file is hard-linked to the workspace that was set up for RTEMS.
 Return to that directory, and you should be able to run RTEMS applications 
 on Simics Serengeti machine with or without GEMS.
  $> cd ../../
- $> ./quicktest-gems.sh samples hello
- $> ./quicktest-usiii.sh samples hello
+ $> ./gems-quicktest.sh samples hello
+ $> ./usiii-quicktest.sh samples hello
 
 The helper scripts generate a temp.simics file, which you can modify 
 to suit your needs.
