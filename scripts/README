@@ -17,3 +17,7 @@ setup-gems.sh
   Run in a gems-x.y.z-XXX subdirectory. Sets up the basic GEMS environment 
   and simics workspace, compiles both Opal and Ruby.
 
+setup-rtems-workspace.sh
+  Run in a simics workspace. Copies support files and creates links to 
+  facilitate running RTEMS workloads using Simics/GEMS.
+
