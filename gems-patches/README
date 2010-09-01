@@ -1,0 +1,11 @@
+gems-patches
+
+This directory is a repository of patches that are applied against GEMS.
+For each patch placed in this directory, please add a description here.
+
+gems-2.1.1-pre-build.diff
+This patch is applied prior to building GEMS.  If you use the make-gems.sh 
+script, this patch is automatically applied.  It corrects a few errors that
+are generated when using gcc 4.
+
+

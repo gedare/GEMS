@@ -17,7 +17,13 @@ make clean
 cd $GEMS/ruby
 make clean
 
+cd $GEMS/slicc
+make clean
+
 cd $GEMS
+
+# undo the pre-build patch
+patch -R -p1 < ../gems-patches/gems-2.1.1-pre-build.diff
 
 #delete simics softlink
 rm simics

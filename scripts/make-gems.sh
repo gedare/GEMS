@@ -2,7 +2,9 @@
 #
 # If this script fails to build everything for you:
 #   Check doc/GEMS-Ubuntu.pdf to ensure pre-requisites.
-#   Make sure to apply any necessary patches.
+#   Make sure to apply any necessary patches. (NOTE: the pre-build 
+#   patch is applied by this script, and reversed by the clean-gems.sh
+#   script.)
 #
 
 # Check for parameters.
@@ -57,6 +59,10 @@ sed -i \
     -e 's/\/dev\/null30/$(GEMS_ROOT)\/simics/' \
     -e 's/$(GEMS_ROOT)\/simics\/src\/include/$(SIMICS_INSTALL)\/src\/include/' \
     ${GEMS}/common/Makefile.common
+
+# apply pre-build patch.
+cd $GEMS
+patch -p1 < ../gems-patches/gems-2.1.1-pre-build.diff
 
 cd $GEMS/ruby
 make PROTOCOL=MOSI_SMP_bcast DESTINATION=MOSI_SMP_bcast
