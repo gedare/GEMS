@@ -12,6 +12,9 @@ repository:
 archive
   GEMS releases and other useful archived files.
 
+doc
+  Collected documentation on GEMS.
+
 gems-2.1.1
   The vanilla gems distribution for release 2.1.1.
 
