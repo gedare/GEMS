@@ -192,7 +192,7 @@ script-branch {
 }
 
 
-
+magic-break-enable
 
 break-exception number = 52  #Mem_Address_Not_Aligned
 break-exception number = 16  #Illegal_Instruction

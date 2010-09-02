@@ -191,7 +191,7 @@ script-branch {
 	quit 0
 }
 
-
+magic-break-enable
 
 
 break-exception number = 52  #Mem_Address_Not_Aligned
