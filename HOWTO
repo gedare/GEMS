@@ -6,6 +6,8 @@ appropriate license, that a copy of the RTEMS sources is on this machine
 (with appropriate patches or modifications), and that the 
 sparc64-rtems4.11 tools are installed and in your path.
 
+== BUILDING GEMS ==
+
 First, select or create a copy of the gems-2.1.1 folder. This howto will 
 use the gems-2.1.1-gedare folder.
 
@@ -23,11 +25,27 @@ This script should finish with the following output in your terminal:
 And Opal and Ruby should have been built successfully.  If there are errors
 while running this script, be sure that the Simics install point is correct,
 and also that all of the pre-requisite tools have been installed.  See 
-doc/GEMS-Ubuntu.pdf for some hints on which tools you may need.
+doc/GEMS-Ubuntu.pdf for some hints on which tools you may need. Before 
+re-running the setup-gems.sh script, you should see CLEANING UP GEMS.
+
+== CLEANING UP GEMS ==
+
+If you need to re-build gems, it is suggested to undo the setup-gems.sh 
+script. Do this by entering the gems-2.x.y.z-XXX directory and running 
+the cleanup script.
+ $> cd gems-2.1.1-gedare
+ $> ../scripts-clean-gems.sh
+
+This will undo the steps of setup-gems.sh, except it will leave the 
+simics_3_workspace in place. This way any modifications in the workspace 
+will persist across builds of GEMS.  To recreate the simics_3_workspace, 
+simply delete it manually.
+
+== SETTING UP A SIMICS GEMS RTEMS WORKSPACE ==
 
 At this point, GEMS will be compiled and installed to the simics subdirectory,
-which is a soft-link to simics_3_workspace located at the root of this 
-repository.
+which is a soft-link to simics_3_workspace. Each GEMS installation has 
+its own simics workspace.
 
 The next step is to setup scripts to help build and run RTEMS on GEMS. 
 Enter the GEMS Simics workspace and run the setup-rtems-workspace.sh 
