@@ -183,6 +183,9 @@ static void system_exception_handler( void *obj, conf_object_t *proc,
 static void system_exception_tracer( void *obj, conf_object_t *proc,
                                      uint64 exception );
 
+#include <signal.h>
+static void system_signalint(int sig);
+
 // C++ Template: explicit instantiation
 template class map<breakpoint_id_t, breakpoint_action_t *>;
 
@@ -217,6 +220,9 @@ system_t::system_t( const char *configurationFile )
   m_snoop_installed  = false;
   m_sim_status = SIMSTATUS_BREAK;
   sprintf( m_sim_message_buffer, "situation nominal" );
+
+  // register sigint handler
+  signal( SIGINT, system_signalint );
 
   // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
   m_opal_api = &hfa_ruby_interface;
@@ -370,6 +376,15 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
   HALT_SIMULATION;
   return;
   #endif
+}
+
+//***************************************************************************
+static void
+system_signalint( int sig )
+{
+   signal( sig, SIG_IGN ); //ignore the signal
+   HALT_SIMULATION;
+   signal( SIGINT, system_signalint ); // re-register signal
 }
 
 //***************************************************************************
