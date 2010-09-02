@@ -8,4 +8,7 @@ This patch is applied prior to building GEMS.  If you use the make-gems.sh
 script, this patch is automatically applied.  It corrects a few errors that
 are generated when using gcc 4.
 
+gems-magic-break.diff
+This patch adds the magic break capability to GEMS (opal), so that 
+MAGIC(0x40000) causes simulation to stop.
 

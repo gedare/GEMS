@@ -44,7 +44,11 @@ then
 fi
 
 cd build-sparc64
-ln -s ${RTEMS} rtems
+if [[ ! -h rtems ]]
+then
+  ln -s ${RTEMS} rtems
+fi
+
 touch boot/image.iso
 
 cd ${WORKSPACE}
@@ -63,8 +67,15 @@ cp  ${SUPPORT}/sun4u.rtems4.11-template-plain.simics .
 cd ${WORKSPACE}
 mkdir output
 ln build-sparc64/boot/image.iso .
-ln -s ${RTEMS} sources
-ln -s build-sparc64/boot/debug/rtems symbols
+if [[ ! -h sources ]]
+then
+  ln -s ${RTEMS} sources
+fi
+
+if [[ ! -h symbols ]]
+then
+  ln -s build-sparc64/boot/debug/rtems symbols
+fi
 
 echo "RTEMS workspace setup complete"
 
