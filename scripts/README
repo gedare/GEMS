@@ -1,6 +1,12 @@
 scripts
 
 For each script in this directory, add a brief description here.
+
+build-all.sh
+  Run in a gems-x.y.z-XXX subdirectory.
+  Runs setup-gems.sh, setup-rtems-workspace.sh, builds RTEMS for usiii, 
+  generates the image.iso, and runs hello world.
+
 clean-gems.sh
   Run in a gems-x.y.z-XXX subdirectory. Undoes setup-gems.sh
 

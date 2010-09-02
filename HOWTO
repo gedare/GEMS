@@ -27,14 +27,15 @@ This script should finish with the following output in your terminal:
   Finished.
 And Opal and Ruby should have been built successfully.  If there are errors
 while running this script, be sure that the Simics install point is correct,
-and also that all of the pre-requisite tools have been installed.  See 
+that the license server is reachable (run ../scripts/license-tunnel.sh),
+and that all of the pre-requisite tools have been installed.  See 
 doc/GEMS-Ubuntu.pdf for some hints on which tools you may need. Before 
 re-running the setup-gems.sh script, you should see CLEANING UP GEMS.
 
 == CLEANING UP GEMS ==
 
-If you need to re-build gems after making modifications, it is suggested 
-to undo the setup-gems.sh script. 
+If you need to re-build gems after making modifications to ruby or opal
+source code, it is suggested to undo the setup-gems.sh script.
 
 Do this by entering the gems-2.x.y.z-XXX directory and running 
 the cleanup script.
@@ -96,4 +97,9 @@ on Simics Serengeti machine with or without GEMS.
 The helper scripts generate a temp.simics file, which you can modify 
 to suit your needs.
 
-This concludes the howto.
+This concludes the howto. Note that the scripts/build-all.sh script will
+run all of the steps described in this howto.  Simply run it from within 
+a gems-2.1.1-XXX directory and provide it with an absolute path to where
+Simics is installed and an absolute path to the RTEMS source code you want
+to build and run.
+
