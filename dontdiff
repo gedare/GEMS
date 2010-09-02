@@ -5,6 +5,7 @@ amd64-linux
 generated
 html
 core
-.gz
+*.gz
 TAGS
-.d
+*.d
+*.swp
