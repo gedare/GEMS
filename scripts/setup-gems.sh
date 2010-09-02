@@ -36,21 +36,24 @@ export SIMICS_INSTALL=$1
 export GEMS=${PWD}
 
 # instantiate Simics workspace
-mkdir simics_3_workspace
-cd ${SIMICS_INSTALL}/bin
-./workspace-setup $GEMS/simics_3_workspace
+if [[ ! -d ${GEMS}/../simics_3_workspace ]]
+then
+  mkdir ${GEMS}/../simics_3_workspace
+  cd ${SIMICS_INSTALL}/bin
+  ./workspace-setup $GEMS/../simics_3_workspace
+fi
 
 # modify makesymlinks.sh, then run it from inside of simics_3_workspace
 sed -i \
     -e 's/\/p\/multifacet\/projects\/simics\/simics-3.0.11/${SIMICS_INSTALL}/' \
     ${GEMS}/scripts/makesymlinks.sh
 
-cd ${GEMS}/simics_3_workspace
-../scripts/makesymlinks.sh
+cd ${GEMS}/../simics_3_workspace
+${GEMS}/makesymlinks.sh
 
 # create simics soft-link
 cd ${GEMS}
-ln -s simics_3_workspace simics
+ln -s ../simics_3_workspace simics
 
 # update common/Makefile.common
 sed -i \
