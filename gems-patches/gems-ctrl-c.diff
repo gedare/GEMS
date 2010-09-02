@@ -1,0 +1,48 @@
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-gedare/opal/system/system.C
+--- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/system.C	2010-09-02 16:29:59.000000000 -0400
+@@ -183,6 +183,9 @@ static void system_exception_handler( vo
+ static void system_exception_tracer( void *obj, conf_object_t *proc,
+                                      uint64 exception );
+ 
++#include <signal.h>
++static void system_signalint(int sig);
++
+ // C++ Template: explicit instantiation
+ template class map<breakpoint_id_t, breakpoint_action_t *>;
+ 
+@@ -218,6 +221,9 @@ system_t::system_t( const char *configur
+   m_sim_status = SIMSTATUS_BREAK;
+   sprintf( m_sim_message_buffer, "situation nominal" );
+ 
++  // register sigint handler
++  signal( SIGINT, system_signalint );
++
+   // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
+   m_opal_api = &hfa_ruby_interface;
+   m_opal_api->hitCallback    = &system_t::rubyCompletedRequest;
+@@ -362,7 +368,7 @@ system_breakpoint( void *data, conf_obje
+   }
+  
+   //currently IGNORE the system_breakpoint (parameter = 0x4000)...
+-  #if 0
++  #if 1
+   ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
+ 
+   sprintf( system_t::inst->m_sim_message_buffer,
+@@ -373,6 +379,15 @@ system_breakpoint( void *data, conf_obje
+ }
+ 
+ //***************************************************************************
++static void
++system_signalint( int sig )
++{
++   signal( sig, SIG_IGN ); //ignore the signal
++   HALT_SIMULATION;
++   signal( SIGINT, system_signalint ); // re-register signal
++}
++
++//***************************************************************************
+ void system_t::simulate( uint64 instrCount )
+ {
+   //  

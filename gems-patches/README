@@ -12,3 +12,7 @@ gems-magic-break.diff
 This patch adds the magic break capability to GEMS (opal), so that 
 MAGIC(0x40000) causes simulation to stop.
 
+gems-ctrl-c.diff
+This patch adds the ability of GEMS to catch Ctrl+C to break simulation.
+It also enables the magic break capability.
+
