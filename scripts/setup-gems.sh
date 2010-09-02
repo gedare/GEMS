@@ -35,38 +35,43 @@ PWD=`pwd`
 export SIMICS_INSTALL=$1
 export GEMS=${PWD}
 
-# instantiate Simics workspace
-if [[ ! -d ${GEMS}/simics_3_workspace ]]
+## Check for the presence of the simics symlink. Its presence indicates 
+## that clean-gems.sh was not run, so this is a 'quick' re-build.
+if [[ ! -h simics ]]
 then
-  mkdir ${GEMS}/simics_3_workspace
+  # instantiate Simics workspace
+  if [[ ! -d ${GEMS}/simics_3_workspace ]]
+  then
+    mkdir ${GEMS}/simics_3_workspace
+  fi
+
+  cd ${SIMICS_INSTALL}/bin
+  ./workspace-setup $GEMS/simics_3_workspace
+
+  # modify makesymlinks.sh, then run it from inside of simics_3_workspace
+  sed -i \
+  -e 's/\/p\/multifacet\/projects\/simics\/simics-3.0.11/${SIMICS_INSTALL}/' \
+  ${GEMS}/scripts/makesymlinks.sh
+
+  cd ${GEMS}/simics_3_workspace
+  ${GEMS}/scripts/makesymlinks.sh
+
+  # create simics soft-link
+  cd ${GEMS}
+  ln -s simics_3_workspace simics
+
+  # update common/Makefile.common
+  sed -i \
+  -e 's/\/s\/gcc-3.4.4\/bin\/g++/\/usr\/bin\/g++/' \
+  -e 's/\/s\/gcc-3.4.1\/bin\/g++/\/usr\/bin\/g++/' \
+  -e 's/\/dev\/null30/$(GEMS_ROOT)\/simics/' \
+  -e 's/$(GEMS_ROOT)\/simics\/src\/include/$(SIMICS_INSTALL)\/src\/include/' \
+  ${GEMS}/common/Makefile.common
+
+  # apply pre-build patch.
+  cd $GEMS
+  patch -p1 < ../gems-patches/gems-2.1.1-pre-build.diff
 fi
-
-cd ${SIMICS_INSTALL}/bin
-./workspace-setup $GEMS/simics_3_workspace
-
-# modify makesymlinks.sh, then run it from inside of simics_3_workspace
-sed -i \
-    -e 's/\/p\/multifacet\/projects\/simics\/simics-3.0.11/${SIMICS_INSTALL}/' \
-    ${GEMS}/scripts/makesymlinks.sh
-
-cd ${GEMS}/simics_3_workspace
-${GEMS}/scripts/makesymlinks.sh
-
-# create simics soft-link
-cd ${GEMS}
-ln -s simics_3_workspace simics
-
-# update common/Makefile.common
-sed -i \
-    -e 's/\/s\/gcc-3.4.4\/bin\/g++/\/usr\/bin\/g++/' \
-    -e 's/\/s\/gcc-3.4.1\/bin\/g++/\/usr\/bin\/g++/' \
-    -e 's/\/dev\/null30/$(GEMS_ROOT)\/simics/' \
-    -e 's/$(GEMS_ROOT)\/simics\/src\/include/$(SIMICS_INSTALL)\/src\/include/' \
-    ${GEMS}/common/Makefile.common
-
-# apply pre-build patch.
-cd $GEMS
-patch -p1 < ../gems-patches/gems-2.1.1-pre-build.diff
 
 cd $GEMS/ruby
 make PROTOCOL=MOSI_SMP_bcast DESTINATION=MOSI_SMP_bcast

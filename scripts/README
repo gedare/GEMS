@@ -4,6 +4,9 @@ For each script in this directory, add a brief description here.
 clean-gems.sh
   Run in a gems-x.y.z-XXX subdirectory. Undoes setup-gems.sh
 
+license-tunnel.sh
+  Creates a tunnel to the license server. Assumes current user name.
+
 make-diff.sh
   Run in top level. Creates a diff file $2 between gems-2.1.1 and $1
 
