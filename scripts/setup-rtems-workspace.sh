@@ -37,7 +37,12 @@ TOP=$1
 RTEMS=$2
 SUPPORT=${TOP}/support
 
-tar -zxf ${SUPPORT}/build-sparc64.tgz
+# Check for build-sparc64 directory. If it exists, don't re-create it.
+if [[ ! -d build-sparc64 ]]
+then
+  tar -zxf ${SUPPORT}/build-sparc64.tgz
+fi
+
 cd build-sparc64
 ln -s ${RTEMS} rtems
 touch boot/image.iso
