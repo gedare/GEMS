@@ -3,3 +3,7 @@ simics
 simics_3_workspace
 amd64-linux
 generated
+html
+core
+.gz
+TAGS
