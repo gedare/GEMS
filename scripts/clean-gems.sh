@@ -32,7 +32,3 @@ rm simics
 cp ../gems-2.1.1/scripts/makesymlinks.sh scripts/makesymlinks.sh
 cp ../gems-2.1.1/common/Makefile.common common/Makefile.common
 
-# delete Simics workspace
-rm -rf simics_3_workspace
-
-

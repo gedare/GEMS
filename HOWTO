@@ -25,6 +25,10 @@ while running this script, be sure that the Simics install point is correct,
 and also that all of the pre-requisite tools have been installed.  See 
 doc/GEMS-Ubuntu.pdf for some hints on which tools you may need.
 
+At this point, GEMS will be compiled and installed to the simics subdirectory,
+which is a soft-link to simics_3_workspace located at the root of this 
+repository.
+
 The next step is to setup scripts to help build and run RTEMS on GEMS. 
 Enter the GEMS Simics workspace and run the setup-rtems-workspace.sh 
 script, which takes as argument the top-level directory of this repository

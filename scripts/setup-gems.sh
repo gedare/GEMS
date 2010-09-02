@@ -39,9 +39,10 @@ export GEMS=${PWD}
 if [[ ! -d ${GEMS}/../simics_3_workspace ]]
 then
   mkdir ${GEMS}/../simics_3_workspace
-  cd ${SIMICS_INSTALL}/bin
-  ./workspace-setup $GEMS/../simics_3_workspace
 fi
+
+cd ${SIMICS_INSTALL}/bin
+./workspace-setup $GEMS/../simics_3_workspace
 
 # modify makesymlinks.sh, then run it from inside of simics_3_workspace
 sed -i \
@@ -49,7 +50,7 @@ sed -i \
     ${GEMS}/scripts/makesymlinks.sh
 
 cd ${GEMS}/../simics_3_workspace
-${GEMS}/makesymlinks.sh
+${GEMS}/scripts/makesymlinks.sh
 
 # create simics soft-link
 cd ${GEMS}
