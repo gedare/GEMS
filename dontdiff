@@ -9,3 +9,4 @@ core
 TAGS
 *.d
 *.swp
+*.o
