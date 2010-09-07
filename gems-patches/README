@@ -16,3 +16,7 @@ gems-ctrl-c.diff
 This patch adds the ability of GEMS to catch Ctrl+C to break simulation.
 It also enables the magic break capability.
 
+magic_pause_cycles.diff
+This patch adds magic instructions that save and restore the cycle count,
+so that the simulation cycle count can be effectively 'paused'.
+

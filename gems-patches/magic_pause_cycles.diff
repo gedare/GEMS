@@ -1,0 +1,81 @@
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-gedare/opal/system/pseq.h
+--- gems-2.1.1/opal/system/pseq.h	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/pseq.h	2010-09-07 18:01:25.000000000 -0400
+@@ -442,6 +442,10 @@ public:
+   tick_t       getLocalCycle() {
+     return (m_local_cycles);
+   }
++  /** set the local cycle count */
++  void       setLocalCycle( tick_t t) {
++    (m_local_cycles = t);
++  }
+   /** step the sequence number */
+   uint64       stepSequenceNumber(unsigned int proc ) {
+     uint64 number = m_local_sequence_number[proc];
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-gedare/opal/system/system.C
+--- gems-2.1.1/opal/system/system.C	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/system.C	2010-09-07 18:08:50.000000000 -0400
+@@ -183,6 +183,9 @@ static void system_exception_handler( vo
+ static void system_exception_tracer( void *obj, conf_object_t *proc,
+                                      uint64 exception );
+ 
++#include <signal.h>
++static void system_signalint(int sig);
++
+ // C++ Template: explicit instantiation
+ template class map<breakpoint_id_t, breakpoint_action_t *>;
+ 
+@@ -218,6 +221,9 @@ system_t::system_t( const char *configur
+   m_sim_status = SIMSTATUS_BREAK;
+   sprintf( m_sim_message_buffer, "situation nominal" );
+ 
++  // register sigint handler
++  signal( SIGINT, system_signalint );
++
+   // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
+   m_opal_api = &hfa_ruby_interface;
+   m_opal_api->hitCallback    = &system_t::rubyCompletedRequest;
+@@ -350,6 +356,8 @@ system_t::~system_t( void )
+ static void
+ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
+ {
++  static tick_t cycles_store = 0;
++
+   if ( parameter != 4UL << 16 ) {
+     // ignore all transaction completion calls
+     /* sprintf( system_t::inst->m_sim_message_buffer,
+@@ -358,11 +366,17 @@ system_breakpoint( void *data, conf_obje
+     //cout << "system_breakpoint called" << endl;
+     // MAGIC breakpoints get intercepted here.  Opal currently does not do anything special here
+ 
++    if ( parameter == 2UL << 16 ) {
++      cycles_store = system_t::inst->m_seq[0]->getLocalCycle(); /* test, use just proc 0 */
++    } else if ( parameter == 1UL << 16 ) {
++      system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
++    }
++
+     return;
+   }
+  
+   //currently IGNORE the system_breakpoint (parameter = 0x4000)...
+-  #if 0
++  #if 1
+   ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
+ 
+   sprintf( system_t::inst->m_sim_message_buffer,
+@@ -373,6 +387,15 @@ system_breakpoint( void *data, conf_obje
+ }
+ 
+ //***************************************************************************
++static void
++system_signalint( int sig )
++{
++   signal( sig, SIG_IGN ); //ignore the signal
++   HALT_SIMULATION;
++   signal( SIGINT, system_signalint ); // re-register signal
++}
++
++//***************************************************************************
+ void system_t::simulate( uint64 instrCount )
+ {
+   //  
