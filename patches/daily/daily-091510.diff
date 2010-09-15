@@ -1,0 +1,424 @@
+diff -X dontdiff -uprN gems-2.1.1/common/Makefile.common gems-2.1.1-gedare/common/Makefile.common
+--- gems-2.1.1/common/Makefile.common	2010-09-07 11:16:12.000000000 -0400
++++ gems-2.1.1-gedare/common/Makefile.common	2010-09-07 11:17:28.000000000 -0400
+@@ -56,11 +56,11 @@ ifeq ($(SIMICS_VERSION),2.2.X)
+   SIMICS_INCLUDE_ROOT := /dev/null22
+ else
+ ifeq ($(SIMICS_VERSION),3.0)
+-  SIMICS_ROOT := /dev/null30
++  SIMICS_ROOT := $(GEMS_ROOT)/simics
+   SIMICS_EXEC_ROOT := $(GEMS_ROOT)/simics
+   # NOTE: This variable must be updated to point to the src/include directory
+   # of your Simics 3.0 installation
+-  SIMICS_INCLUDE_ROOT := $(GEMS_ROOT)/simics/src/include
++  SIMICS_INCLUDE_ROOT := $(SIMICS_INSTALL)/src/include
+ else
+   SIMICS_ROOT := /dev/blah
+   SIMICS_EXEC_ROOT := /dev/foo
+@@ -98,7 +98,7 @@ LFLAGS := 
+ CC_VERSION=3.4.4
+ 
+ ifeq ($(HOST_TYPE),amd64-linux)
+-  CC =  /s/gcc-3.4.4/bin/g++
++  CC =  /usr/bin/g++
+   #CC =  /usr/bin/g++
+   OPT_FLAGS = -m64 -march=opteron -fPIC
+   LDFLAGS += -ggdb -g3 -Wl,-R/s/gcc-3.4.4/lib64 
+@@ -106,14 +106,14 @@ ifeq ($(HOST_TYPE),amd64-linux)
+ 
+ else
+ ifeq ($(HOST_TYPE),v9-sol8-64)
+-  # CC = purify -best-effort -leaks-at-exit=yes -chain-length="15" /s/gcc-3.4.1/bin/g++ -static
++  # CC = purify -best-effort -leaks-at-exit=yes -chain-length="15" /usr/bin/g++ -static
+   # CC = /s/gcc-3.4.3/bin/g++ -I/s/getopt-0/include
+   CC = g++ -I/s/getopt-0/include
+   OPT_FLAGS = -m64 -mcpu=v9 -DUSE_DIRENT
+   LDFLAGS += -m64 -L/s/getopt-0/lib -lgetopt
+ else
+ ifeq ($(HOST_TYPE),x86-linux)
+-  CC =  /s/gcc-3.4.1/bin/g++
++  CC =  /usr/bin/g++
+   #CC =  /usr/bin/g++
+   OPT_FLAGS = -march=i686
+   LDFLAGS += -ggdb -g3
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-gedare/opal/system/cache.C
+--- gems-2.1.1/opal/system/cache.C	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/cache.C	2010-09-07 11:17:28.000000000 -0400
+@@ -360,57 +360,6 @@ pa_t generic_cache_template<BlockType>::
+ 
+ #endif
+ 
+-//**************************************************************************
+-template <class BlockType>
+-void generic_cache_template<BlockType>::Warmup(pa_t a) {
+-
+-  uint32 index = Set(a);
+-  pa_t ba = BlockAddress(a);
+-  ASSERT(index < n_sets);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+-    if (hit) { 
+-      return;
+-    }
+-  }
+-  int replace_set = random() % m_assoc;
+-  /* write new block into the cache */
+-  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+-}
+-
+-//**************************************************************************
+-template <class BlockType>
+-void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
+-  /* used when we want the execution of a particular load or store to
+-   * be prefetched perfectly.
+-   */
+-  uint32 index = Set(a);
+-  pa_t ba = BlockAddress(a);
+-  ASSERT(index < n_sets);
+-  STAT_INC(reads);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  int replace_set = 0;
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+-    if (hit) { 
+-      STAT_INC(read_hit);
+-      return;
+-    } 
+-    if (set[i].last_access < set[replace_set].last_access) {
+-      replace_set = i;
+-    }
+-  }
+-
+-  /* write new block into the cache */
+-  STAT_INC(read_miss);
+-  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+-  set[replace_set].last_access = m_eventQueue->getCycle();
+-}
+ 
+ //**************************************************************************
+ /* this function is called when a store is retired.  If the address
+@@ -568,18 +517,6 @@ set_error_t generic_cache_template<Block
+   return Sim_Set_Ok;
+ }
+ 
+-//**************************************************************************
+-template <class BlockType>
+-int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
+-{
+-  int rc;
+-
+-  rc = conf->register_attribute( name,
+-                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
+-                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
+-  return rc;
+-}
+-
+ /*------------------------------------------------------------------------*/
+ /* Accessor(s) / mutator(s)                                               */
+ /*------------------------------------------------------------------------*/
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-gedare/opal/system/cache.h
+--- gems-2.1.1/opal/system/cache.h	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/cache.h	2010-09-07 11:17:28.000000000 -0400
+@@ -59,6 +59,7 @@
+ 
+ #include "mshr.h"
+ #include "scheduler.h"
++#include "confio.h"
+ 
+ /*------------------------------------------------------------------------*/
+ /* Macro declarations                                                     */
+@@ -473,4 +474,72 @@ protected:
+ /* Global functions                                                       */
+ /*------------------------------------------------------------------------*/
+ 
++/* workaround see: https://lists.cs.wisc.edu/archive/gems-users/2009-March/msg00116.shtml */
++//**************************************************************************
++template <class BlockType>
++int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
++{
++  int rc;
++
++  rc = conf->register_attribute( name,
++                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
++                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
++  return rc;
++}
++
++//**************************************************************************
++template <class BlockType>
++void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
++  /* used when we want the execution of a particular load or store to
++   * be prefetched perfectly.
++   */
++  uint32 index = Set(a);
++  pa_t ba = BlockAddress(a);
++  ASSERT(index < n_sets);
++  STAT_INC(reads);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  int replace_set = 0;
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
++    if (hit) { 
++      STAT_INC(read_hit);
++      return;
++    } 
++    if (set[i].last_access < set[replace_set].last_access) {
++      replace_set = i;
++    }
++  }
++
++  /* write new block into the cache */
++  STAT_INC(read_miss);
++  set[replace_set].address_state = ba | CACHE_BLK_VALID;
++  set[replace_set].last_access = m_eventQueue->getCycle();
++}
++
++//**************************************************************************
++template <class BlockType>
++void generic_cache_template<BlockType>::Warmup(pa_t a) {
++
++  uint32 index = Set(a);
++  pa_t ba = BlockAddress(a);
++  ASSERT(index < n_sets);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
++    if (hit) { 
++      return;
++    }
++  }
++  int replace_set = random() % m_assoc;
++  /* write new block into the cache */
++  set[replace_set].address_state = ba | CACHE_BLK_VALID;
++}
++
++
++
++
+ #endif  /* _CACHE_H_ */
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-gedare/opal/system/pseq.C
+--- gems-2.1.1/opal/system/pseq.C	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/pseq.C	2010-09-15 17:37:40.000000000 -0400
+@@ -1288,6 +1288,7 @@ void pseq_t::advanceCycle( void )
+   }
+ #endif
+ 
++  if (!GAB_no_fetch()) {
+   // I. Fetch instructions
+   fetchInstruction();
+ 
+@@ -1296,7 +1297,7 @@ void pseq_t::advanceCycle( void )
+ 
+   // III. Schedule decoded instructions
+   scheduleInstruction();
+-
++  }
+   // (Executing scheduled instructions on functional units takes place
+   //  implicitly after their dependencies become resolved) 
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-gedare/opal/system/pseq.h
+--- gems-2.1.1/opal/system/pseq.h	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/pseq.h	2010-09-07 18:01:25.000000000 -0400
+@@ -442,6 +442,10 @@ public:
+   tick_t       getLocalCycle() {
+     return (m_local_cycles);
+   }
++  /** set the local cycle count */
++  void       setLocalCycle( tick_t t) {
++    (m_local_cycles = t);
++  }
+   /** step the sequence number */
+   uint64       stepSequenceNumber(unsigned int proc ) {
+     uint64 number = m_local_sequence_number[proc];
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-gedare/opal/system/system.C
+--- gems-2.1.1/opal/system/system.C	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/system.C	2010-09-15 17:51:27.000000000 -0400
+@@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
+ /** The highest number the SIM_current_proc_no() can return */
+ static int32 s_max_processor_id = 0;
+ 
++/** global pause flag */
++int gab_pause_flag = 0;
++
+ /*------------------------------------------------------------------------*/
+ /* Forward declarations                                                   */
+ /*------------------------------------------------------------------------*/
+@@ -183,6 +186,9 @@ static void system_exception_handler( vo
+ static void system_exception_tracer( void *obj, conf_object_t *proc,
+                                      uint64 exception );
+ 
++#include <signal.h>
++static void system_signalint(int sig);
++
+ // C++ Template: explicit instantiation
+ template class map<breakpoint_id_t, breakpoint_action_t *>;
+ 
+@@ -218,6 +224,9 @@ system_t::system_t( const char *configur
+   m_sim_status = SIMSTATUS_BREAK;
+   sprintf( m_sim_message_buffer, "situation nominal" );
+ 
++  // register sigint handler
++  signal( SIGINT, system_signalint );
++
+   // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
+   m_opal_api = &hfa_ruby_interface;
+   m_opal_api->hitCallback    = &system_t::rubyCompletedRequest;
+@@ -350,26 +359,65 @@ system_t::~system_t( void )
+ static void
+ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
+ {
+-  if ( parameter != 4UL << 16 ) {
+-    // ignore all transaction completion calls
+-    /* sprintf( system_t::inst->m_sim_message_buffer,
+-             "other breakpoint (ignoring) 0x%llx", parameter );
+-    */
+-    //cout << "system_breakpoint called" << endl;
+-    // MAGIC breakpoints get intercepted here.  Opal currently does not do anything special here
++  static tick_t cycles_store = 0;
+ 
+-    return;
++  /* Decode MAGIC() instructions */
++  switch ( parameter ) {
++
++    /* 0x40000: Magic breakpoint */
++    case (4UL << 16): 
++      ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", 
++          parameter);
++      sprintf( system_t::inst->m_sim_message_buffer,
++          "magic breakpoint reached" );
++      HALT_SIMULATION;
++      break;
++
++    /* 0x10000: "Pause" Simulation statistics  */
++    case (1UL << 16):
++      /* Set pause flag, fetching instructions */
++      gab_pause_flag = GAB_PAUSE_FETCH;
++
++      /* save the local cycle count */
++      cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
++      break;
++
++    /* 0x20000: "Resume" Simulation statistics  */
++    case (2UL << 16):
++      /* finish executing/retiring instructions in the pipeline,
++       * set pause flag to prevent further instructions from being fetched */
++      gab_pause_flag = GAB_PAUSE_FLUSH;
++      for (int j = 0; j < system_t::inst->m_numSMTProcs; j++) {
++        for (uint k = 0; k < CONFIG_LOGICAL_PER_PHY_PROC; ++k ) {
++          iwindow_t *iwin = system_t::inst->m_seq[j]->getIwindow(k); 
++          int index = iwin->getLastRetired();
++          while ( iwin->peekWindow(index) ) {
++            system_t::inst->m_seq[j]->advanceCycle();
++          }
++        }
++      }
++
++      /* fix the local cycle count. ignore global cycles. */
++      system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
++
++      /* clear the pause flag, normal execution resumes. */
++      gab_pause_flag = GAB_PAUSE_NORMAL;
++      break;
++
++    default: /* do nothing */
++      break;
+   }
+- 
+-  //currently IGNORE the system_breakpoint (parameter = 0x4000)...
+-  #if 0
+-  ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
+ 
+-  sprintf( system_t::inst->m_sim_message_buffer,
+-           "magic breakpoint reached" );
+-  HALT_SIMULATION;
+   return;
+-  #endif
++}
++
++//***************************************************************************
++static void
++system_signalint( int sig )
++{
++   signal( sig, SIG_IGN ); //ignore the signal
++   HALT_SIMULATION;
++   signal( SIGINT, system_signalint ); // re-register signal
+ }
+ 
+ //***************************************************************************
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.h gems-2.1.1-gedare/opal/system/system.h
+--- gems-2.1.1/opal/system/system.h	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/system/system.h	2010-09-15 17:38:11.000000000 -0400
+@@ -429,4 +429,14 @@ extern "C" cycles_t system_memory_operat
+                                              map_list_t *map,
+                                              memory_transaction_t *mem_op);
+ 
++/**
++ * Global flag hack
++ */
++extern int gab_pause_flag;
++#define GAB_PAUSE_NORMAL (0x00)
++#define GAB_PAUSE_FETCH (0x01)
++#define GAB_PAUSE_FLUSH (0x02)
++#define GAB_no_fetch() (gab_pause_flag & GAB_PAUSE_FLUSH)
++#define GAB_is_paused() (gab_pause_flag & (GAB_PAUSE_FETCH|GAB_PAUSE_FLUSH))
++
+ #endif /* __SYSTEM_H */
+diff -X dontdiff -uprN gems-2.1.1/ruby/common/Debug.C gems-2.1.1-gedare/ruby/common/Debug.C
+--- gems-2.1.1/ruby/common/Debug.C	2010-09-07 11:16:08.000000000 -0400
++++ gems-2.1.1-gedare/ruby/common/Debug.C	2010-09-07 11:17:28.000000000 -0400
+@@ -66,6 +66,7 @@
+ #include "Debug.h"
+ #include "EventQueue.h"
+ 
++#include "string.h"
+ class Debug;
+ extern Debug* g_debug_ptr;
+ std::ostream * debug_cout_ptr;
+diff -X dontdiff -uprN gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C gems-2.1.1-gedare/ruby/log_tm/LazyTransactionVersionManager.C
+--- gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-07 11:16:07.000000000 -0400
++++ gems-2.1.1-gedare/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-07 11:17:28.000000000 -0400
+@@ -280,8 +280,9 @@ void LazyTransactionVersionManager::issu
+       should_escape = true;
+     }
+ 
+-    CacheMsg storeMsg(Address(request_address),
+-                      Address(request_address),
++    Address ad(request_address);
++    CacheMsg storeMsg(ad,
++                      ad,
+                       CacheRequestType_ST_XACT,    
+                       SIMICS_get_program_counter(getLogicalProcID(thread)),
+                       AccessModeType_UserMode,
+diff -X dontdiff -uprN gems-2.1.1/ruby/system/CacheMemory.h gems-2.1.1-gedare/ruby/system/CacheMemory.h
+--- gems-2.1.1/ruby/system/CacheMemory.h	2010-09-07 11:16:07.000000000 -0400
++++ gems-2.1.1-gedare/ruby/system/CacheMemory.h	2010-09-07 11:17:28.000000000 -0400
+@@ -78,6 +78,7 @@
+ #include "PseudoLRUPolicy.h"
+ #include "LRUPolicy.h"
+ #include <vector>
++#include "string.h"
+ 
+ template<class ENTRY>
+ class CacheMemory {
+diff -X dontdiff -uprN gems-2.1.1/scripts/makesymlinks.sh gems-2.1.1-gedare/scripts/makesymlinks.sh
+--- gems-2.1.1/scripts/makesymlinks.sh	2010-09-07 11:16:11.000000000 -0400
++++ gems-2.1.1-gedare/scripts/makesymlinks.sh	2010-09-07 11:17:28.000000000 -0400
+@@ -22,7 +22,7 @@ cd ../..
+ # in your Simics 3 install
+ echo "Making symlink for import directory..."
+ #ln -s /simics-3.0.11/import import
+-ln -s /p/multifacet/projects/simics/simics-3.0.11/import import
++ln -s ${SIMICS_INSTALL}/import import
+ 
+ echo "Making symlinks for modules..."
+ cd modules
+Binary files gems-2.1.1/slicc/x86-linux/bin/slicc.exec and gems-2.1.1-gedare/slicc/x86-linux/bin/slicc.exec differ

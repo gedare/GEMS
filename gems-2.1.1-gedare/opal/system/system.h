@@ -429,4 +429,14 @@ extern "C" cycles_t system_memory_operation( conf_object_t *obj,
                                              map_list_t *map,
                                              memory_transaction_t *mem_op);
 
+/**
+ * Global flag hack
+ */
+extern int gab_pause_flag;
+#define GAB_PAUSE_NORMAL (0x00)
+#define GAB_PAUSE_FETCH (0x01)
+#define GAB_PAUSE_FLUSH (0x02)
+#define GAB_no_fetch() (gab_pause_flag & GAB_PAUSE_FLUSH)
+#define GAB_is_paused() (gab_pause_flag & (GAB_PAUSE_FETCH|GAB_PAUSE_FLUSH))
+
 #endif /* __SYSTEM_H */

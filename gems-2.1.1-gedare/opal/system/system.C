@@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
 /** The highest number the SIM_current_proc_no() can return */
 static int32 s_max_processor_id = 0;
 
+/** global pause flag */
+int gab_pause_flag = 0;
+
 /*------------------------------------------------------------------------*/
 /* Forward declarations                                                   */
 /*------------------------------------------------------------------------*/
@@ -358,32 +361,54 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
 {
   static tick_t cycles_store = 0;
 
-  if ( parameter != 4UL << 16 ) {
-    // ignore all transaction completion calls
-    /* sprintf( system_t::inst->m_sim_message_buffer,
-             "other breakpoint (ignoring) 0x%llx", parameter );
-    */
-    //cout << "system_breakpoint called" << endl;
-    // MAGIC breakpoints get intercepted here.  Opal currently does not do anything special here
+  /* Decode MAGIC() instructions */
+  switch ( parameter ) {
 
-    if ( parameter == 2UL << 16 ) {
-      cycles_store = system_t::inst->m_seq[0]->getLocalCycle(); /* test, use just proc 0 */
-    } else if ( parameter == 1UL << 16 ) {
+    /* 0x40000: Magic breakpoint */
+    case (4UL << 16): 
+      ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", 
+          parameter);
+      sprintf( system_t::inst->m_sim_message_buffer,
+          "magic breakpoint reached" );
+      HALT_SIMULATION;
+      break;
+
+    /* 0x10000: "Pause" Simulation statistics  */
+    case (1UL << 16):
+      /* Set pause flag, fetching instructions */
+      gab_pause_flag = GAB_PAUSE_FETCH;
+
+      /* save the local cycle count */
+      cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
+      break;
+
+    /* 0x20000: "Resume" Simulation statistics  */
+    case (2UL << 16):
+      /* finish executing/retiring instructions in the pipeline,
+       * set pause flag to prevent further instructions from being fetched */
+      gab_pause_flag = GAB_PAUSE_FLUSH;
+      for (int j = 0; j < system_t::inst->m_numSMTProcs; j++) {
+        for (uint k = 0; k < CONFIG_LOGICAL_PER_PHY_PROC; ++k ) {
+          iwindow_t *iwin = system_t::inst->m_seq[j]->getIwindow(k); 
+          int index = iwin->getLastRetired();
+          while ( iwin->peekWindow(index) ) {
+            system_t::inst->m_seq[j]->advanceCycle();
+          }
+        }
+      }
+
+      /* fix the local cycle count. ignore global cycles. */
       system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
-    }
 
-    return;
+      /* clear the pause flag, normal execution resumes. */
+      gab_pause_flag = GAB_PAUSE_NORMAL;
+      break;
+
+    default: /* do nothing */
+      break;
   }
- 
-  //currently IGNORE the system_breakpoint (parameter = 0x4000)...
-  #if 1
-  ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
 
-  sprintf( system_t::inst->m_sim_message_buffer,
-           "magic breakpoint reached" );
-  HALT_SIMULATION;
   return;
-  #endif
 }
 
 //***************************************************************************

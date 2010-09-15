@@ -1288,6 +1288,7 @@ void pseq_t::advanceCycle( void )
   }
 #endif
 
+  if (!GAB_no_fetch()) {
   // I. Fetch instructions
   fetchInstruction();
 
@@ -1296,7 +1297,7 @@ void pseq_t::advanceCycle( void )
 
   // III. Schedule decoded instructions
   scheduleInstruction();
-
+  }
   // (Executing scheduled instructions on functional units takes place
   //  implicitly after their dependencies become resolved) 
 
