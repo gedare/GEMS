@@ -442,6 +442,10 @@ public:
   tick_t       getLocalCycle() {
     return (m_local_cycles);
   }
+  /** set the local cycle count */
+  void       setLocalCycle( tick_t t) {
+    (m_local_cycles = t);
+  }
   /** step the sequence number */
   uint64       stepSequenceNumber(unsigned int proc ) {
     uint64 number = m_local_sequence_number[proc];

@@ -1,2 +1,0 @@
-python dis.py in
-dot -Tps in-dot > output.ps

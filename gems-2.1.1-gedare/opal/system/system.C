@@ -356,6 +356,8 @@ system_t::~system_t( void )
 static void
 system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
 {
+  static tick_t cycles_store = 0;
+
   if ( parameter != 4UL << 16 ) {
     // ignore all transaction completion calls
     /* sprintf( system_t::inst->m_sim_message_buffer,
@@ -363,6 +365,12 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
     */
     //cout << "system_breakpoint called" << endl;
     // MAGIC breakpoints get intercepted here.  Opal currently does not do anything special here
+
+    if ( parameter == 2UL << 16 ) {
+      cycles_store = system_t::inst->m_seq[0]->getLocalCycle(); /* test, use just proc 0 */
+    } else if ( parameter == 1UL << 16 ) {
+      system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
+    }
 
     return;
   }

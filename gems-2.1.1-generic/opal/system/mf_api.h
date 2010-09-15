@@ -1,1 +1,0 @@
-../../ruby/interfaces/mf_api.h

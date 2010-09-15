@@ -1,2 +1,0 @@
-// RAS parameters
-RAS_BITS: 6
