@@ -169,6 +169,7 @@ void out_intf_t::setDebugTime(uint64 t)
 //**************************************************************************
 bool out_intf_t::validDebug( void )
 {
+  return true; /* gem-users: 2008-September/msg00013.shtml */
   if ( m_starting_cycle > system_t::inst->getGlobalCycle() ) {
     return false;
   }

@@ -87,7 +87,7 @@
 // To track power when wrtting physical bits to regfile or on result bus
 #ifdef DYNAMIC_AF
 #define WATTCH_WRITE_DEST( A )                            \
-     if(WATTCH_POWER){   \
+     if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){   \
        m_pseq->getPowerStats()->incrementRegfileTotalPopCount(m_pseq->getPowerStats()->pop_count(A)); \
        m_pseq->getPowerStats()->incrementRegfileNumPopCount();     \
        m_pseq->getPowerStats()->incrementResultBusTotalPopCount(m_pseq->getPowerStats()->pop_count(A));       \
@@ -104,7 +104,7 @@
 
 // To track power when  trasferring a register value stored in Instruction window to Functional unit
 #define WATTCH_READ_SOURCE \
-      if(WATTCH_POWER){         \
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){         \
           m_pseq->getPowerStats()->incrementWinPregAccess(); \
      }
       

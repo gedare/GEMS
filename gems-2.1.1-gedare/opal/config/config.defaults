@@ -194,7 +194,7 @@ CHAIN_MP_MODE: 1
 //
 // WATTCH power analysis
 //
-WATTCH_POWER: 0
+WATTCH_POWER: 1
 PREFETCHER_POWER: 1
 COMPRESSION_POWER: 0
 //Used to simulate clock-gating of L1 banks

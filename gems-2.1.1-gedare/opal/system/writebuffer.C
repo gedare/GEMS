@@ -212,7 +212,7 @@ void writebuffer_t::flushWriteBuffer(){
                  next_ruby_request->m_is_outstanding = true;
 
                  /* WATTCH power */
-                 if(WATTCH_POWER){
+                 if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
                    system_t::inst->m_seq[m_id]->getPowerStats()->incrementDCacheAccess();
                  }
 

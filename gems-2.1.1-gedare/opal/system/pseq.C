@@ -199,7 +199,7 @@ pseq_t::pseq_t( int32 id )
   
  /* WATTCH power */
   m_power_stats = NULL;
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_power_stats = new power_t(this, id);
 
     //calculate static power:
@@ -1546,7 +1546,7 @@ void pseq_t::fetchInstrSimple( )
                }
 
                 /* WATTCH power */
-               if(WATTCH_POWER){
+               if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
                  getPowerStats()->incrementICacheAccess();
                }
 
@@ -1606,7 +1606,7 @@ void pseq_t::fetchInstrSimple( )
       }
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         getPowerStats()->incrementWindowAccess();
       }
 
@@ -2474,7 +2474,7 @@ void pseq_t::retireInstruction( )
           while ( d != NULL ) {
 
             /* WATTCH power */
-            if(WATTCH_POWER){
+            if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
               getPowerStats()->incrementWindowAccess();
             }
             squash_pipeline  = false;
@@ -3404,7 +3404,7 @@ pseq_t::partialSquash(uint32 last_good, abstract_pc_t *fetch_at,
   #endif
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       getPowerStats()->incrementWindowAccess();
     }
 
@@ -3451,7 +3451,7 @@ pseq_t::fullSquash( enum i_opcode offender, unsigned int proc )
 #endif
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       getPowerStats()->incrementWindowAccess();
     }   
 }
@@ -8176,7 +8176,7 @@ void pseq_t::collectBankNumStat(){
   m_l1i_2bank_histogram[unique_l1i_2banks]++;
   m_l1d_2bank_histogram[unique_l1d_2banks]++;
 
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     bank_num_t temp_bank_num;
     temp_bank_num.num_l1i_8banks = unique_l1i_8banks;
     temp_bank_num.num_l1d_8banks = unique_l1d_8banks;
@@ -8197,14 +8197,14 @@ void pseq_t::collectBankNumStat(){
 
 //**************************************************************************
 void pseq_t::clearAccessStats(){
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_power_stats->clear_access_stats();
   }
 }
 
 //**************************************************************************
 void pseq_t::updatePowerStats(){
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     //first collect our bank num stats and pass this info to WATTCH
     //  This is used to calculate clock-gating of banked L1 caches
     collectBankNumStat();
@@ -8214,14 +8214,14 @@ void pseq_t::updatePowerStats(){
 
 //**************************************************************************
 void pseq_t::incrementL2Access(){
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_power_stats->incrementL2CacheAccess();
   }
 }
 
 //*************************************************************************
 void pseq_t::incrementPrefetcherAccess(int num_prefetches, int isinstr){
-  if(WATTCH_POWER && PREFETCHER_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH) && PREFETCHER_POWER){
     m_power_stats->incrementPrefetcherAccess(num_prefetches, isinstr);
   }
 }

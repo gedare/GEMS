@@ -126,7 +126,7 @@ scheduler_t::Execute( tick_t localcycle )
       int32     fu_mapped = CONFIG_ALU_MAPPING[fu_type];
       if (alu_used[fu_mapped] < CONFIG_NUM_ALUS[fu_mapped]) {
         /* WATTCH power */
-        if(WATTCH_POWER){
+        if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
           //don't increment FU_NONE type
           if(fu_type != FU_NONE){
             m_pseq->getPowerStats()->incrementAluAccess();

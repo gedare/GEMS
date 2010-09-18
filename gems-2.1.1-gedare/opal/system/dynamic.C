@@ -253,7 +253,7 @@ dynamic_inst_t::Decode( uint64 issueTime )
     source.getARF()->readDecodeMap( source, m_proc );    
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementRegfileAccess();
     }
   }
@@ -262,7 +262,7 @@ dynamic_inst_t::Decode( uint64 issueTime )
   allocateDestRegs();
 
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_pseq->getPowerStats()->incrementRenameAccess();
   }
 
@@ -441,7 +441,7 @@ dynamic_inst_t::Schedule() {
       SetStage(WAIT_3RD_STAGE);
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         m_pseq->getPowerStats()->incrementWindowAccess();
       }
     }
@@ -482,7 +482,7 @@ dynamic_inst_t::Schedule() {
       SetStage(WAIT_2ND_STAGE);
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         m_pseq->getPowerStats()->incrementWindowAccess();
       }
     }
@@ -523,7 +523,7 @@ dynamic_inst_t::Schedule() {
       SetStage(WAIT_1ST_STAGE);
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         m_pseq->getPowerStats()->incrementWindowAccess();
       }
     }
@@ -564,7 +564,7 @@ dynamic_inst_t::Schedule() {
       SetStage(READY_STAGE);
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         m_pseq->getPowerStats()->incrementWindowAccess();
       }
     }
@@ -578,7 +578,7 @@ dynamic_inst_t::Schedule() {
     m_event_times[EVENT_TIME_OPERANDS_READY] = m_pseq->getLocalCycle() - m_fetch_cycle;
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementWindowAccess();
       m_pseq->getPowerStats()->incrementWinSelectionAccess();
     }
@@ -1100,7 +1100,7 @@ dynamic_inst_t::retireRegisters() {
       //       at this point.
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         m_pseq->getPowerStats()->incrementRegfileAccess();
         m_pseq->getPowerStats()->incrementResultBusAccess();
         m_pseq->getPowerStats()->incrementWinWakeupAccess();
@@ -1722,7 +1722,7 @@ void   dynamic_inst_t::nextPC_call( abstract_pc_t *a )
                                       &m_pseq->m_branch_except_stat[s->getBranchType()], m_proc);
 
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_pseq->getPowerStats()->incrementBpredAccess();
   }
 
@@ -1839,7 +1839,7 @@ void   dynamic_inst_t::nextPC_predicated_branch( abstract_pc_t *a )
                               s->getFlag(SI_STATICPRED) , m_proc );
 
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_pseq->getPowerStats()->incrementBpredAccess();
   }
 
@@ -1891,7 +1891,7 @@ void   dynamic_inst_t::nextPC_predict_branch( abstract_pc_t *a )
                                    s->getFlag(SI_STATICPRED), m_proc );
 
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_pseq->getPowerStats()->incrementBpredAccess();
   }
 
@@ -1941,7 +1941,7 @@ void   dynamic_inst_t::nextPC_indirect( abstract_pc_t *a )
                                       &m_pseq->m_branch_except_stat[s->getBranchType()] , m_proc);
 
   /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementBpredAccess();
     }
 

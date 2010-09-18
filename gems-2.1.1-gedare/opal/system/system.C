@@ -381,11 +381,23 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
 
     /* 0x2: turn on caching */
     case (2):
+      printf("turning on cache\n");
       gab_flag &= (~GAB_NO_CACHE);
+      break;
+
+    /* 0x3: Turn off power (wattch) */
+    case (3):
+      gab_flag |= GAB_NO_WATTCH;
+      break;
+
+    /* 0x4: Turn on power (wattch) */
+    case (4):
+      gab_flag &= (~GAB_NO_WATTCH);
       break;
 
     /* 0x10000: Pause Simulation timing  */
     case (1UL << 16):
+      printf("turning off timing\n");
       /* Set flag, continue fetching instructions */
       gab_flag |= GAB_NO_TIMING;
 
@@ -395,6 +407,7 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
 
     /* 0x20000: "Resume" normal timing */
     case (2UL << 16):
+      printf("turning on timing\n");
       /* finish executing/retiring instructions in the pipeline,
        * set flag to prevent further instructions from being fetched */
       gab_flag |= GAB_FLUSH;
@@ -1857,7 +1870,7 @@ integer_t system_t::rubyInstructionQuery( int cpuNumber)
 //**************************************************************************
 void system_t::rubyIncrementL2Access( int cpuNumber){
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     ASSERT( (cpuNumber >= 0) && (cpuNumber < system_t::inst->m_numProcs) );
     
     int32 seq_index = cpuNumber;
@@ -1870,7 +1883,7 @@ void system_t::rubyIncrementL2Access( int cpuNumber){
 //**************************************************************************
 void system_t::rubyIncrementPrefetcherAccess(int cpuNumber, int num_prefetches, int isinstr){
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     ASSERT( (cpuNumber >= 0) && (cpuNumber < system_t::inst->m_numProcs) );
     
     int32 seq_index = cpuNumber;

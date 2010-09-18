@@ -1053,7 +1053,7 @@ ruby_status_t rubycache_t::access( la_t logical_address, pa_t physical_address,
       system_t::inst->m_seq[seq_num]->L1IBankNumStat(banknum);
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         system_t::inst->m_seq[seq_num]->getPowerStats()->incrementICacheAccess();
       }
     }
@@ -1067,7 +1067,7 @@ ruby_status_t rubycache_t::access( la_t logical_address, pa_t physical_address,
       system_t::inst->m_seq[seq_num]->L1DBankNumStat(banknum);
 
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
         system_t::inst->m_seq[seq_num]->getPowerStats()->incrementDCacheAccess();
       }
     }
@@ -1185,13 +1185,13 @@ ruby_status_t rubycache_t::prefetch( la_t logical_address, pa_t physical_address
 //charge power to access the cache, depending on whether it is an Ifetch, LD, or ST
   if(requestType == OPAL_IFETCH){
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       system_t::inst->m_seq[m_id]->getPowerStats()->incrementICacheAccess();
     }
   }
   else{
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       system_t::inst->m_seq[m_id]->getPowerStats()->incrementDCacheAccess();
     }
   }

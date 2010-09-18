@@ -152,7 +152,7 @@ memory_inst_t::Squash() {
     m_pseq->getLSQ(m_proc)->remove( this );
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementLSQAccess();
     }
   }
@@ -244,7 +244,7 @@ memory_inst_t::Retire( abstract_pc_t *a )
     m_pseq->getLSQ(m_proc)->remove( this );
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementLSQAccess();
     }
   }
@@ -725,7 +725,7 @@ load_inst_t::Execute() {
 
     //charge for LSQ power before the if(), because we might return 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementLSQAccess();
       m_pseq->getPowerStats()->incrementLSQWakeupAccess();
     }
@@ -824,7 +824,7 @@ load_inst_t::lsqBypass( void ) {
   ASSERT(m_depend->getStoreValueReady());
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementLSQAccess();
       m_pseq->getPowerStats()->incrementLSQLoadDataAccess();
       m_pseq->getPowerStats()->incrementLSQPregAccess();
@@ -843,7 +843,7 @@ load_inst_t::lsqBypass( void ) {
       m_data_storage[i] = m_depend->getData()[i];
       
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
 #ifdef DYNAMIC_AF
         //charge power to write back some bits to the dest register
         // process each chunk of data read at a time
@@ -1067,7 +1067,7 @@ load_inst_t::accessCache( void ) {
      */
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
@@ -1193,7 +1193,7 @@ load_inst_t::doCacheRetirement(void){
      */
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
@@ -1486,7 +1486,7 @@ store_inst_t::storeDataToCache( void ) {
 
   //charge for the data being written to the LSQ here, bc the data wasn't available earlier
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
      #ifdef DYNAMIC_AF
             m_pseq->getPowerStats()->incrementLSQNumPopCount();  
      #endif
@@ -1506,7 +1506,7 @@ store_inst_t::storeDataToCache( void ) {
       m_data_storage[i] = source.getARF()->readInt64( source, m_proc );   
       
       /* WATTCH power */
-      if(WATTCH_POWER){
+      if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
 #ifdef DYNAMIC_AF
         //charge power to write back some bits to the lsq entry
         // process each chunk of data read at a time
@@ -1643,7 +1643,7 @@ store_inst_t::Execute() {
     
     //charge for LSQ access before the if() because we might return
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementLSQAccess();
       m_pseq->getPowerStats()->incrementLSQStoreDataAccess();
       m_pseq->getPowerStats()->incrementLSQPregAccess();
@@ -1851,7 +1851,7 @@ store_inst_t::accessCache( void ) {
     // check the cache for presence of this line
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
@@ -1942,7 +1942,7 @@ store_inst_t::doCacheRetirement(void){
     // check the cache for presence of this line
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
@@ -2071,7 +2071,7 @@ atomic_inst_t::lsqBypass( void ) {
   ASSERT(m_depend->getStoreValueReady());
 
   /* WATTCH power */
-  if(WATTCH_POWER){
+  if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
     m_pseq->getPowerStats()->incrementLSQAccess();
   }
   
@@ -2376,7 +2376,7 @@ prefetch_inst_t::accessCache( void ) {
     /* do a demand prefetch to the cache hierarchy */
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
@@ -2429,7 +2429,7 @@ prefetch_inst_t::doCacheRetirement(){
     /* do a demand prefetch to the cache hierarchy */
 
     /* WATTCH power */
-    if(WATTCH_POWER){
+    if(WATTCH_POWER && !(gab_flag & GAB_NO_WATTCH)){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 

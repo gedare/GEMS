@@ -437,8 +437,6 @@ extern int gab_flag;
 #define GAB_NO_TIMING   (0x01)  /* Timing information is not kept */
 #define GAB_NO_CACHE    (0x02)  /* Don't use cache */
 #define GAB_FLUSH       (0x04)  /* Insts are not fetched */
-
-/* unused */
-#define GAB_NO_POWER    (0x08)  /* When set, don't update power stats */
+#define GAB_NO_WATTCH   (0x08)  /* Don't update wattch stats */
 
 #endif /* __SYSTEM_H */

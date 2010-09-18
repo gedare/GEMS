@@ -241,7 +241,7 @@ public:
   bool Read(pa_t a, waiter_t *w, bool data_request = true,
             bool *primary_bool = NULL){
     /* always hit if ideal */
-    if(m_ideal) return true;
+    if(m_ideal || (gab_flag & GAB_NO_CACHE)) return true;
     
     BlockType *b;
     bool hit = TagSearch( a, true, false, &b, NULL );
