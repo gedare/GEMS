@@ -116,7 +116,7 @@ extern mf_opal_api_t hfa_ruby_interface;
 static int32 s_max_processor_id = 0;
 
 /** global pause flag */
-int gab_pause_flag = 0;
+int gab_flag = 0;
 
 /*------------------------------------------------------------------------*/
 /* Forward declarations                                                   */
@@ -372,21 +372,32 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
           "magic breakpoint reached" );
       HALT_SIMULATION;
       break;
+    
+    /* 0x1: Turn off caching */
+    case (1):
+      printf("turning off cache\n");
+      gab_flag |= GAB_NO_CACHE;
+      break;
 
-    /* 0x10000: "Pause" Simulation statistics  */
+    /* 0x2: turn on caching */
+    case (2):
+      gab_flag &= (~GAB_NO_CACHE);
+      break;
+
+    /* 0x10000: Pause Simulation timing  */
     case (1UL << 16):
-      /* Set pause flag, fetching instructions */
-      gab_pause_flag = GAB_PAUSE_FETCH;
+      /* Set flag, continue fetching instructions */
+      gab_flag |= GAB_NO_TIMING;
 
       /* save the local cycle count */
       cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
       break;
 
-    /* 0x20000: "Resume" Simulation statistics  */
+    /* 0x20000: "Resume" normal timing */
     case (2UL << 16):
       /* finish executing/retiring instructions in the pipeline,
-       * set pause flag to prevent further instructions from being fetched */
-      gab_pause_flag = GAB_PAUSE_FLUSH;
+       * set flag to prevent further instructions from being fetched */
+      gab_flag |= GAB_FLUSH;
       for (int j = 0; j < system_t::inst->m_numSMTProcs; j++) {
         for (uint k = 0; k < CONFIG_LOGICAL_PER_PHY_PROC; ++k ) {
           iwindow_t *iwin = system_t::inst->m_seq[j]->getIwindow(k); 
@@ -400,8 +411,8 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
       /* fix the local cycle count. ignore global cycles. */
       system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
 
-      /* clear the pause flag, normal execution resumes. */
-      gab_pause_flag = GAB_PAUSE_NORMAL;
+      /* resume normal timing. */
+      gab_flag &= (~(GAB_FLUSH | GAB_NO_TIMING));
       break;
 
     default: /* do nothing */

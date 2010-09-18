@@ -197,14 +197,19 @@ magic-break-enable
 break-exception number = 52  #Mem_Address_Not_Aligned
 #trace-exception -all
 
-#break 0x4000
+break 0x4000
 #break (sym Init)
 #break (sym fwrite)
 #break (sym __errno)
 #break (sym crc32file)
 #break (sym halted)
 c
-	
+c #continue after SILO
+break (sym break_start_opal)
+c #continue after starting rtems boot
+
+  con0.capture-start REPLACEDBYSED534TESTNAME.txt
+
 	instruction-fetch-mode instruction-fetch-trace
 	istc-disable
 	dstc-disable
@@ -222,5 +227,9 @@ c
 	opal0.init
 	opal0.sim-start "REPLACEDBYSED534TESTNAME.opal"
 	
-	opal0.sim-step 100000000
+	opal0.sim-step 1000000000
 #c
+
+# Magic breakpoint or sim-step reached
+	opal0.stats
+	quit 0

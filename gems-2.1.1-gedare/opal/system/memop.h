@@ -144,7 +144,7 @@ public:
     if ( m_asi == (uint16) -1 ) {
       return false;
     }
-    return ( pstate_t::is_cacheable( m_asi ) );
+    return ( pstate_t::is_cacheable( m_asi ) && !(gab_flag & GAB_NO_CACHE) );
   }
   
   /** access the mmu (SFMMU currently), using the m_pseq's mmu interface */

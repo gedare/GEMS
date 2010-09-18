@@ -432,11 +432,13 @@ extern "C" cycles_t system_memory_operation( conf_object_t *obj,
 /**
  * Global flag hack
  */
-extern int gab_pause_flag;
-#define GAB_PAUSE_NORMAL (0x00)
-#define GAB_PAUSE_FETCH (0x01)
-#define GAB_PAUSE_FLUSH (0x02)
-#define GAB_no_fetch() (gab_pause_flag & GAB_PAUSE_FLUSH)
-#define GAB_is_paused() (gab_pause_flag & (GAB_PAUSE_FETCH|GAB_PAUSE_FLUSH))
+extern int gab_flag;
+#define GAB_NORMAL      (0x00)  /* No flag bits set */
+#define GAB_NO_TIMING   (0x01)  /* Timing information is not kept */
+#define GAB_NO_CACHE    (0x02)  /* Don't use cache */
+#define GAB_FLUSH       (0x04)  /* Insts are not fetched */
+
+/* unused */
+#define GAB_NO_POWER    (0x08)  /* When set, don't update power stats */
 
 #endif /* __SYSTEM_H */

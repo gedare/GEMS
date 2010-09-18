@@ -1288,15 +1288,15 @@ void pseq_t::advanceCycle( void )
   }
 #endif
 
-  if (!GAB_no_fetch()) {
-  // I. Fetch instructions
-  fetchInstruction();
+  if (!(gab_flag & GAB_FLUSH)) {
+    // I. Fetch instructions
+    fetchInstruction();
 
-  // II. Decode instructions in the pipe
-  decodeInstruction();
+    // II. Decode instructions in the pipe
+    decodeInstruction();
 
-  // III. Schedule decoded instructions
-  scheduleInstruction();
+    // III. Schedule decoded instructions
+    scheduleInstruction();
   }
   // (Executing scheduled instructions on functional units takes place
   //  implicitly after their dependencies become resolved) 
@@ -1537,6 +1537,13 @@ void pseq_t::fetchInstrSimple( )
                    #endif
                      // Modified to take in the logical proc's waiter object:
                hit = l1_inst_cache->Read( fetchPhysicalPC, m_proc_waiter[proc], false );
+
+               if (!hit && (gab_flag & GAB_NO_CACHE)) {
+                 //remove waiter from wait list
+                 ASSERT(m_proc_waiter[proc]->Waiting() == true);
+                 m_proc_waiter[proc]->RemoveWaitQueue();
+                 hit = true;
+               }
 
                 /* WATTCH power */
                if(WATTCH_POWER){
