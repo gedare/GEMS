@@ -1,0 +1,23 @@
+diff -X dontdiff -uprN gems-2.1.1/opal/common/debugio.C gems-2.1.1-gedare/opal/common/debugio.C
+--- gems-2.1.1/opal/common/debugio.C	2010-09-07 11:16:13.000000000 -0400
++++ gems-2.1.1-gedare/opal/common/debugio.C	2010-09-18 14:40:46.000000000 -0400
+@@ -169,6 +169,7 @@ void out_intf_t::setDebugTime(uint64 t)
+ //**************************************************************************
+ bool out_intf_t::validDebug( void )
+ {
++  return true; /* gem-users: 2008-September/msg00013.shtml */
+   if ( m_starting_cycle > system_t::inst->getGlobalCycle() ) {
+     return false;
+   }
+diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-gedare/opal/config/config.defaults
+--- gems-2.1.1/opal/config/config.defaults	2010-09-07 11:16:14.000000000 -0400
++++ gems-2.1.1-gedare/opal/config/config.defaults	2010-09-18 14:30:20.000000000 -0400
+@@ -194,7 +194,7 @@ CHAIN_MP_MODE: 1
+ //
+ // WATTCH power analysis
+ //
+-WATTCH_POWER: 0
++WATTCH_POWER: 1
+ PREFETCHER_POWER: 1
+ COMPRESSION_POWER: 0
+ //Used to simulate clock-gating of L1 banks
