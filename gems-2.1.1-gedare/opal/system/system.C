@@ -373,25 +373,25 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
       HALT_SIMULATION;
       break;
     
-    /* 0x1: Turn off caching */
-    case (1):
+    /* 0x1000: Turn off caching */
+    case (1 << 12):
       printf("turning off cache\n");
       gab_flag |= GAB_NO_CACHE;
       break;
 
-    /* 0x2: turn on caching */
-    case (2):
+    /* 0x2000: turn on caching */
+    case (2 << 12):
       printf("turning on cache\n");
       gab_flag &= (~GAB_NO_CACHE);
       break;
 
-    /* 0x3: Turn off power (wattch) */
-    case (3):
+    /* 0x4000: Turn off power (wattch) */
+    case (4 << 12):
       gab_flag |= GAB_NO_WATTCH;
       break;
 
-    /* 0x4: Turn on power (wattch) */
-    case (4):
+    /* 0x8000: Turn on power (wattch) */
+    case (8 << 12):
       gab_flag &= (~GAB_NO_WATTCH);
       break;
 
@@ -428,7 +428,10 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
       gab_flag &= (~(GAB_FLUSH | GAB_NO_TIMING));
       break;
 
-    default: /* do nothing */
+    default: /* other values indicate simulation is finished, parameter
+                is number of deadlines missed */
+      printf("%d\tdeadlines missed", parameter );
+      HALT_SIMULATION;
       break;
   }
 
