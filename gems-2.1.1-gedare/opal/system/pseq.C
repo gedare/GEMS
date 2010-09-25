@@ -7345,6 +7345,14 @@ void pseq_t::printStats( void )
     il1_mshr->printStats( this );
   }
 
+  // GAB: custom statistics
+  out_info("\n***GAB Custom stats***\n");
+  out_info("\tds1_accesses[ %lld ]\n", gab_hw_ds1_accesses);
+  out_info("\tds2_accesses[ %lld ]\n", gab_hw_ds2_accesses);
+
+  out_info("\tds1_cycles_saved[ %lld ]\n", gab_hw_ds1_cycles_saved);
+  out_info("\tds2_cycles_saved[ %lld ]\n", gab_hw_ds2_cycles_saved);
+
   //print out SMT icount stats
   for(uint32 k=0; k <  CONFIG_LOGICAL_PER_PHY_PROC; ++k){  
     out_info("\n***ICount Stats [logical proc %d]: \n",k);
@@ -7587,6 +7595,12 @@ pseq_t::initializeStats(void) {
   #ifdef DEBUG_PSEQ
   DEBUG_OUT("pseq_t:initializeStats BEGIN\n");
   #endif
+
+  // GAB custom statistics
+  gab_hw_ds1_accesses = 0;
+  gab_hw_ds2_accesses = 0;
+  gab_hw_ds1_cycles_saved = 0;
+  gab_hw_ds2_cycles_saved = 0;
 
   //WATTCH power: bank num stats
   for(int i=0; i < 8; ++i){

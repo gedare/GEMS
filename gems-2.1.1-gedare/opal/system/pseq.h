@@ -1729,6 +1729,13 @@ public:
     m_atomic_miss_latency[thread].num_fastpath++;
   }
 
+  // GAB custom statistics
+  uint64 gab_hw_ds1_accesses;
+  uint64 gab_hw_ds2_accesses;
+
+  uint64 gab_hw_ds1_cycles_saved;
+  uint64 gab_hw_ds2_cycles_saved;
+
   // WATTCH power
   //    Used to simulated power of banked L1 caches
   void L1IBankNumStat(int banknum);

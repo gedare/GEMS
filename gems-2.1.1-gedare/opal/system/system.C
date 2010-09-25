@@ -360,44 +360,98 @@ static void
 system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
 {
   static tick_t cycles_store = 0;
+  static bool entered = false;
+  tick_t cycles_diff = 0;
 
   /* Decode MAGIC() instructions */
   switch ( parameter ) {
 
-    /* 0x40000: Magic breakpoint */
-    case (4UL << 16): 
-      ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", 
-          parameter);
+    /* 0x1: Deadlines missed */
+    case (1):
+      ERROR_OUT("deadlines missed\n");
       sprintf( system_t::inst->m_sim_message_buffer,
-          "magic breakpoint reached" );
-      HALT_SIMULATION;
+          "deadlines missed" );
       break;
-    
+
+    /* 0x100, 0x200: Start to access HW DS */
+    case (1UL << 8): case(2UL << 8):
+      if ( entered ) {
+        ERROR_OUT("MAGIC[ 0x%x ] called during previous access\n", parameter);
+        system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
+      }
+      /* Turn off caching, power, and timing */
+      gab_flag |= (GAB_NO_CACHE | GAB_NO_WATTCH | GAB_NO_TIMING);
+
+      /* save the local cycle count */
+      cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
+
+      /* increase access count */
+      if (parameter == 1UL << 8)
+        system_t::inst->m_seq[0]->gab_hw_ds1_accesses++;
+      else
+        system_t::inst->m_seq[0]->gab_hw_ds2_accesses++;
+
+      /* set flag for checking reentrance */
+      entered = true;
+      break;
+
+    /* 0x800, 0x900: Complete access of HW DS */
+    case (8UL << 8): case(9UL << 8):
+      if ( !entered ) {
+        ERROR_OUT("MAGIC[ 0x%x ] called without previous access\n", parameter);
+        break;
+      }
+      entered = false;
+
+      /* flush pipeline -- not sure this does anything */
+      gab_flag |= GAB_FLUSH;
+      for (int j = 0; j < system_t::inst->m_numSMTProcs; j++) {
+        for (uint k = 0; k < CONFIG_LOGICAL_PER_PHY_PROC; ++k ) {
+          iwindow_t *iwin = system_t::inst->m_seq[j]->getIwindow(k); 
+          int index = iwin->getLastRetired();
+          while ( iwin->peekWindow(index) ) {
+            system_t::inst->m_seq[j]->advanceCycle();
+          }
+        }
+      }
+
+      /* compute number of cycles 'saved' by this ds call */
+      cycles_diff = system_t::inst->m_seq[0]->getLocalCycle() - cycles_store;
+      if (parameter == (8UL << 8)) {
+        system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved += cycles_diff;
+      } else if (parameter == (9UL << 8)) {
+        system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved += cycles_diff;
+      }
+
+      /* fix the local cycle count. ignore global cycles. */
+      system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
+ 
+      /* Turn on caching, power, and timing */
+      gab_flag &= ~(GAB_NO_CACHE | GAB_NO_WATTCH | GAB_NO_TIMING | GAB_FLUSH);
+      break;
+#if 0
     /* 0x1000: Turn off caching */
-    case (1 << 12):
-      printf("turning off cache\n");
+    case (1UL << 12):
       gab_flag |= GAB_NO_CACHE;
       break;
 
     /* 0x2000: turn on caching */
-    case (2 << 12):
-      printf("turning on cache\n");
+    case (2UL << 12):
       gab_flag &= (~GAB_NO_CACHE);
       break;
 
     /* 0x4000: Turn off power (wattch) */
-    case (4 << 12):
+    case (4UL << 12):
       gab_flag |= GAB_NO_WATTCH;
       break;
 
     /* 0x8000: Turn on power (wattch) */
-    case (8 << 12):
+    case (8UL << 12):
       gab_flag &= (~GAB_NO_WATTCH);
       break;
 
     /* 0x10000: Pause Simulation timing  */
     case (1UL << 16):
-      printf("turning off timing\n");
       /* Set flag, continue fetching instructions */
       gab_flag |= GAB_NO_TIMING;
 
@@ -407,7 +461,6 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
 
     /* 0x20000: "Resume" normal timing */
     case (2UL << 16):
-      printf("turning on timing\n");
       /* finish executing/retiring instructions in the pipeline,
        * set flag to prevent further instructions from being fetched */
       gab_flag |= GAB_FLUSH;
@@ -427,11 +480,18 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
       /* resume normal timing. */
       gab_flag &= (~(GAB_FLUSH | GAB_NO_TIMING));
       break;
-
-    default: /* other values indicate simulation is finished, parameter
-                is number of deadlines missed */
-      printf("%d\tdeadlines missed", parameter );
+#endif
+    /* 0x40000: Magic breakpoint */
+    case (4UL << 16): 
+      ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", 
+          parameter);
+      sprintf( system_t::inst->m_sim_message_buffer,
+          "magic breakpoint reached" );
       HALT_SIMULATION;
+      break;
+
+    default: 
+      printf("unrecognized magic: %d", parameter );
       break;
   }
 
