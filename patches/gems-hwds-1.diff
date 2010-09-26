@@ -887,7 +887,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-gedare/opal/sy
 +      }
 +
 +      /* fix the local cycle count. ignore global cycles. */
-+      system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
++      //system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
   
 -  //currently IGNORE the system_breakpoint (parameter = 0x4000)...
 -  #if 0
