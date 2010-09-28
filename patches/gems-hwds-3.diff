@@ -789,7 +789,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwds/opal/s
              m_pseq->getPowerStats()->incrementAluAccess();
 diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds/opal/system/system.C
 --- gems-2.1.1/opal/system/system.C	2010-09-07 11:16:13.000000000 -0400
-+++ gems-2.1.1-hwds/opal/system/system.C	2010-09-28 13:57:20.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/system.C	2010-09-28 14:33:21.000000000 -0400
 @@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
  /** The highest number the SIM_current_proc_no() can return */
  static int32 s_max_processor_id = 0;
@@ -859,7 +859,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds/opal/syst
 +//        system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
 +      }
 +      /* Turn off caching, power, and timing */
-+      gab_flag |= (GAB_NO_CACHE | GAB_NO_WATTCH | GAB_NO_TIMING);
++      gab_flag |= (/*GAB_NO_CACHE |*/ GAB_NO_WATTCH | GAB_NO_TIMING);
 +
 +      /* save the local cycle count */
 +      cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
