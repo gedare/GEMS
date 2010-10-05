@@ -810,7 +810,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwsched/opa
              m_pseq->getPowerStats()->incrementAluAccess();
 diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwsched/opal/system/system.C
 --- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwsched/opal/system/system.C	2010-10-05 13:36:08.000000000 -0400
++++ gems-2.1.1-hwsched/opal/system/system.C	2010-10-05 13:45:12.000000000 -0400
 @@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
  /** The highest number the SIM_current_proc_no() can return */
  static int32 s_max_processor_id = 0;
@@ -882,7 +882,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwsched/opal/s
 +        break; /* don't do anything in nested scheduler calls */
 +    case (2UL << 4):  /* HW SCHED UNPAUSE */
 +      if (parameter == (2UL << 4)) {
-+        if (sched_entered == 0 || sched_pause == false)
++        if (sched_entered == 0)
 +          break; /* spurious unpause */
 +      }
 +        sched_pause = false;
@@ -935,7 +935,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwsched/opal/s
 +      if (sched_entered > 0 || sched_pause == true) break;
 +    case (9UL << 4):  /* HW SCHED PAUSE */
 +      if (parameter == 9UL << 4) {
-+        if (sched_entered == 0)
++        if (sched_entered == 0 || sched_pause == true)
 +          break;  /* spurious */
 +        sched_pause = true;
 +      }
