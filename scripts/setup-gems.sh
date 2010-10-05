@@ -73,8 +73,8 @@ then
   patch -p1 < ../gems-patches/gems-2.1.1-pre-build.diff
 fi
 
-cd $GEMS/ruby
-make PROTOCOL=MOSI_SMP_bcast DESTINATION=MOSI_SMP_bcast
+#cd $GEMS/ruby
+#make PROTOCOL=MOSI_SMP_bcast DESTINATION=MOSI_SMP_bcast
 
 cd $GEMS/opal
 make module DESTINATION=MOSI_SMP_bcast
