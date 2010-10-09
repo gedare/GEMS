@@ -952,7 +952,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwds2/opal/
              m_pseq->getPowerStats()->incrementAluAccess();
 diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/system/system.C
 --- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/system.C	2010-10-09 19:49:20.000000000 -0400
++++ gems-2.1.1-hwds2/opal/system/system.C	2010-10-09 19:52:06.000000000 -0400
 @@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
  /** The highest number the SIM_current_proc_no() can return */
  static int32 s_max_processor_id = 0;
@@ -1177,7 +1177,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 +            break;
 +        }
 +        /* implicit 'unpause' */
-+      } else if (parameter&~(0xff) == (0x210UL)) {
++      } else if (parameter&~(0xf) == (0x210UL)) {
 +        system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved += cycles_diff;
 +        gab_update_max_triplet(cycles_diff, 
 +          system_t::inst->m_seq[0]->gab_hw_ds2_cycles_max);
