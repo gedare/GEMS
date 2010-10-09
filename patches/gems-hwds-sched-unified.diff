@@ -539,7 +539,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/memop.C gems-2.1.1-hwds2/opal/syst
  
 diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/system/pseq.C
 --- gems-2.1.1/opal/system/pseq.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/pseq.C	2010-10-09 17:34:23.000000000 -0400
++++ gems-2.1.1-hwds2/opal/system/pseq.C	2010-10-09 18:38:12.000000000 -0400
 @@ -199,7 +199,7 @@ pseq_t::pseq_t( int32 id )
    
   /* WATTCH power */
@@ -626,7 +626,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
        getPowerStats()->incrementWindowAccess();
      }   
  }
-@@ -7337,6 +7345,42 @@ void pseq_t::printStats( void )
+@@ -7337,6 +7345,45 @@ void pseq_t::printStats( void )
      il1_mshr->printStats( this );
    }
  
@@ -661,15 +661,18 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
 +
 +  out_info("\tsched_accesses[ %lld ]\n", gab_hw_sched_accesses);
 +  out_info("\tsched_cycles_saved[ %lld ]\n", gab_hw_sched_cycles_saved);
-+  out_info("\tsched_cycles_max[ %lld ]\n", gab_hw_sched_cycles_max);
-+  out_info("\tsched_ds1_max[ %lld ]\n", gab_hw_sched_ds1_cycles_max);
-+  out_info("\tsched_ds2_max[ %lld ]\n", gab_hw_sched_ds2_cycles_max);
++  out_info("\tsched_cycles_max[ %lld, %lld, %lld, %lld, %lld ]\n", 
++      gab_hw_sched_cycles_max[0],gab_hw_sched_cycles_max[1],gab_hw_sched_cycles_max[2],gab_hw_sched_cycles_max[3],gab_hw_sched_cycles_max[4]);
++  out_info("\tsched_ds1_max[ %lld, %lld, %lld, %lld, %lld ]\n", 
++      gab_hw_sched_ds1_cycles_max[0],gab_hw_sched_ds1_cycles_max[1],gab_hw_sched_ds1_cycles_max[2],gab_hw_sched_ds1_cycles_max[3],gab_hw_sched_ds1_cycles_max[4]);
++  out_info("\tsched_ds2_max[ %lld, %lld, %lld, %lld, %lld ]\n", 
++      gab_hw_sched_ds2_cycles_max[0],gab_hw_sched_ds2_cycles_max[1],gab_hw_sched_ds2_cycles_max[2],gab_hw_sched_ds2_cycles_max[3],gab_hw_sched_ds2_cycles_max[4]);
 +
 +
    //print out SMT icount stats
    for(uint32 k=0; k <  CONFIG_LOGICAL_PER_PHY_PROC; ++k){  
      out_info("\n***ICount Stats [logical proc %d]: \n",k);
-@@ -7580,6 +7624,37 @@ pseq_t::initializeStats(void) {
+@@ -7580,6 +7627,37 @@ pseq_t::initializeStats(void) {
    DEBUG_OUT("pseq_t:initializeStats BEGIN\n");
    #endif
  
@@ -697,17 +700,17 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
 +  gab_hw_ds2_cycles_max[0] = gab_hw_ds2_cycles_max[1] = gab_hw_ds2_cycles_max[2] = 0;
 +  gab_hw_ds2_critical_max[0] = gab_hw_ds2_critical_max[1] = gab_hw_ds2_critical_max[2] = 0;
 +
-+  gab_hw_sched_ds1_cycles_max = 0;
-+  gab_hw_sched_ds2_cycles_max = 0;
++  gab_hw_sched_cycles_max[0] = gab_hw_sched_cycles_max[1] = gab_hw_sched_cycles_max[2] = gab_hw_sched_cycles_max[3] = gab_hw_sched_cycles_max[4] = 0;
++  gab_hw_sched_ds1_cycles_max[0] = gab_hw_sched_ds1_cycles_max[1] = gab_hw_sched_ds1_cycles_max[2] = gab_hw_sched_ds1_cycles_max[3] = gab_hw_sched_ds1_cycles_max[4] = 0;
++  gab_hw_sched_ds2_cycles_max[0] = gab_hw_sched_ds2_cycles_max[1] = gab_hw_sched_ds2_cycles_max[2] = gab_hw_sched_ds2_cycles_max[3] = gab_hw_sched_ds2_cycles_max[4] = 0;
 +  gab_hw_sched_accesses = 0;
 +  gab_hw_sched_cycles_saved = 0;
-+  gab_hw_sched_cycles_max = 0;
 +
 +
    //WATTCH power: bank num stats
    for(int i=0; i < 8; ++i){
      m_l1i_banknum_accesses[i] = 0;
-@@ -8168,7 +8243,7 @@ void pseq_t::collectBankNumStat(){
+@@ -8168,7 +8246,7 @@ void pseq_t::collectBankNumStat(){
    m_l1i_2bank_histogram[unique_l1i_2banks]++;
    m_l1d_2bank_histogram[unique_l1d_2banks]++;
  
@@ -716,7 +719,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
      bank_num_t temp_bank_num;
      temp_bank_num.num_l1i_8banks = unique_l1i_8banks;
      temp_bank_num.num_l1d_8banks = unique_l1d_8banks;
-@@ -8189,14 +8264,14 @@ void pseq_t::collectBankNumStat(){
+@@ -8189,14 +8267,14 @@ void pseq_t::collectBankNumStat(){
  
  //**************************************************************************
  void pseq_t::clearAccessStats(){
@@ -733,7 +736,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
      //first collect our bank num stats and pass this info to WATTCH
      //  This is used to calculate clock-gating of banked L1 caches
      collectBankNumStat();
-@@ -8206,14 +8281,14 @@ void pseq_t::updatePowerStats(){
+@@ -8206,14 +8284,14 @@ void pseq_t::updatePowerStats(){
  
  //**************************************************************************
  void pseq_t::incrementL2Access(){
@@ -752,7 +755,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
  }
 diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwds2/opal/system/pseq.h
 --- gems-2.1.1/opal/system/pseq.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/pseq.h	2010-10-09 17:31:16.000000000 -0400
++++ gems-2.1.1-hwds2/opal/system/pseq.h	2010-10-09 18:38:15.000000000 -0400
 @@ -442,6 +442,10 @@ public:
    tick_t       getLocalCycle() {
      return (m_local_cycles);
@@ -793,11 +796,11 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwds2/opal/syste
 +
 +  uint64 gab_hw_ds2_critical_max[3];
 +
-+  uint64 gab_hw_sched_ds1_cycles_max;
-+  uint64 gab_hw_sched_ds2_cycles_max;
++  uint64 gab_hw_sched_ds1_cycles_max[5];
++  uint64 gab_hw_sched_ds2_cycles_max[5];
 +  uint64 gab_hw_sched_accesses;
 +  uint64 gab_hw_sched_cycles_saved;
-+  uint64 gab_hw_sched_cycles_max;
++  uint64 gab_hw_sched_cycles_max[5];
 +
 +
 +
@@ -855,7 +858,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwds2/opal/
              m_pseq->getPowerStats()->incrementAluAccess();
 diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/system/system.C
 --- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/system.C	2010-10-09 17:59:04.000000000 -0400
++++ gems-2.1.1-hwds2/opal/system/system.C	2010-10-09 18:40:09.000000000 -0400
 @@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
  /** The highest number the SIM_current_proc_no() can return */
  static int32 s_max_processor_id = 0;
@@ -886,7 +889,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
    // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
    m_opal_api = &hfa_ruby_interface;
    m_opal_api->hitCallback    = &system_t::rubyCompletedRequest;
-@@ -350,26 +359,272 @@ system_t::~system_t( void )
+@@ -350,26 +359,269 @@ system_t::~system_t( void )
  static void
  system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
  {
@@ -1036,15 +1039,12 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 +      if (parameter == (1UL << 4 | 1) || parameter == (2UL << 4 |1)) {
 +        system_t::inst->m_seq[0]->gab_hw_sched_cycles_saved += 
 +          cycles_this_access;
-+        if(cycles_this_access > 
-+            system_t::inst->m_seq[0]->gab_hw_sched_cycles_max) {
-+           system_t::inst->m_seq[0]->gab_hw_sched_cycles_max = 
-+             cycles_this_access;
-+           system_t::inst->m_seq[0]->gab_hw_sched_ds1_cycles_max = 
-+             system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved - cycles_base1;
-+           system_t::inst->m_seq[0]->gab_hw_sched_ds2_cycles_max = 
-+             system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved - cycles_base2;
-+        }
++        gab_update_sched_quintet(cycles_this_access,
++            system_t::inst->m_seq[0]->gab_hw_sched_cycles_max,
++            system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved - cycles_base1,
++            system_t::inst->m_seq[0]->gab_hw_sched_ds1_cycles_max,
++            system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved - cycles_base2,
++            system_t::inst->m_seq[0]->gab_hw_sched_ds2_cycles_max);
 +        /* reset counter */
 +        cycles_base1 = system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved;
 +        cycles_base2 = system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved;
@@ -1175,7 +1175,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
  }
  
  //***************************************************************************
-@@ -1798,7 +2053,7 @@ integer_t system_t::rubyInstructionQuery
+@@ -1798,7 +2050,7 @@ integer_t system_t::rubyInstructionQuery
  //**************************************************************************
  void system_t::rubyIncrementL2Access( int cpuNumber){
    /* WATTCH power */
@@ -1184,7 +1184,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
      ASSERT( (cpuNumber >= 0) && (cpuNumber < system_t::inst->m_numProcs) );
      
      int32 seq_index = cpuNumber;
-@@ -1811,7 +2066,7 @@ void system_t::rubyIncrementL2Access( in
+@@ -1811,7 +2063,7 @@ void system_t::rubyIncrementL2Access( in
  //**************************************************************************
  void system_t::rubyIncrementPrefetcherAccess(int cpuNumber, int num_prefetches, int isinstr){
    /* WATTCH power */
@@ -1195,8 +1195,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
      int32 seq_index = cpuNumber;
 diff -X dontdiff -uprN gems-2.1.1/opal/system/system.h gems-2.1.1-hwds2/opal/system/system.h
 --- gems-2.1.1/opal/system/system.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/system.h	2010-10-09 16:28:02.000000000 -0400
-@@ -429,4 +429,59 @@ extern "C" cycles_t system_memory_operat
++++ gems-2.1.1-hwds2/opal/system/system.h	2010-10-09 18:39:58.000000000 -0400
+@@ -429,4 +429,96 @@ extern "C" cycles_t system_memory_operat
                                               map_list_t *map,
                                               memory_transaction_t *mem_op);
  
@@ -1251,6 +1251,43 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.h gems-2.1.1-hwds2/opal/sys
 +        } \
 +      } else { \
 +        arr[2] = val; \
++      } \
++    } \
++  } while (0)
++
++#define gab_update_sched_quintet( val, arr, val2, arr2, val3, arr3 ) \
++  do { \
++    if (val > arr[4]) { \
++      if (val > arr[3]) { \
++        arr[4] = arr[3]; \
++        if (val > arr[2]) { \
++          arr[3] = arr[2]; \
++          if (val > arr[1]) { \
++            arr[2] = arr[1]; \
++            if (val > arr[0]) { \
++              arr[1] = arr[0]; \
++              arr[0] = val; \
++              arr2[0] = val2; \
++              arr3[0] = val3; \
++            } else { \
++            arr[1] = val; \
++            arr2[1] = val2; \
++            arr3[1] = val3; \
++            } \
++          } else { \
++            arr[2] = val; \
++            arr2[2] = val2; \
++            arr2[2] = val3; \
++          } \
++        } else { \
++          arr[3] = val; \
++          arr2[3] = val2; \
++          arr3[3] = val3; \
++        } \
++      } else { \
++        arr[4] = val; \
++        arr2[4] = val2; \
++        arr3[4] = val3; \
 +      } \
 +    } \
 +  } while (0)
