@@ -1,6 +1,6 @@
-diff -X dontdiff -uprN gems-2.1.1/common/Makefile.common gems-2.1.1-hwds2/common/Makefile.common
+diff -X dontdiff -uprN gems-2.1.1/common/Makefile.common gems-2.1.1-hwds/common/Makefile.common
 --- gems-2.1.1/common/Makefile.common	2010-09-01 14:06:12.000000000 -0400
-+++ gems-2.1.1-hwds2/common/Makefile.common	2010-09-28 22:37:08.000000000 -0400
++++ gems-2.1.1-hwds/common/Makefile.common	2010-09-28 22:36:26.000000000 -0400
 @@ -56,11 +56,11 @@ ifeq ($(SIMICS_VERSION),2.2.X)
    SIMICS_INCLUDE_ROOT := /dev/null22
  else
@@ -41,9 +41,9 @@ diff -X dontdiff -uprN gems-2.1.1/common/Makefile.common gems-2.1.1-hwds2/common
    #CC =  /usr/bin/g++
    OPT_FLAGS = -march=i686
    LDFLAGS += -ggdb -g3
-diff -X dontdiff -uprN gems-2.1.1/opal/common/debugio.C gems-2.1.1-hwds2/opal/common/debugio.C
+diff -X dontdiff -uprN gems-2.1.1/opal/common/debugio.C gems-2.1.1-hwds/opal/common/debugio.C
 --- gems-2.1.1/opal/common/debugio.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/common/debugio.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/common/debugio.C	2010-09-28 22:35:46.000000000 -0400
 @@ -169,6 +169,7 @@ void out_intf_t::setDebugTime(uint64 t)
  //**************************************************************************
  bool out_intf_t::validDebug( void )
@@ -52,9 +52,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/common/debugio.C gems-2.1.1-hwds2/opal/co
    if ( m_starting_cycle > system_t::inst->getGlobalCycle() ) {
      return false;
    }
-diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-hwds2/opal/config/config.defaults
+diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-hwds/opal/config/config.defaults
 --- gems-2.1.1/opal/config/config.defaults	2010-09-01 14:06:14.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/config/config.defaults	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/config/config.defaults	2010-09-28 22:35:46.000000000 -0400
 @@ -194,7 +194,7 @@ CHAIN_MP_MODE: 1
  //
  // WATTCH power analysis
@@ -64,35 +64,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-hwds2/o
  PREFETCHER_POWER: 1
  COMPRESSION_POWER: 0
  //Used to simulate clock-gating of L1 banks
-diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-hwds2/opal/system/cache.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-hwds/opal/system/cache.C
 --- gems-2.1.1/opal/system/cache.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/cache.C	2010-10-09 18:45:41.000000000 -0400
-@@ -104,6 +104,12 @@ cache_t::cache_t(const char *n, mshr_t *
-   write_prefetches = 0;
-   replacements = 0;
-   writebacks = 0;
-+  gab_hw_cache_read_misses = 0;
-+  gab_hw_cache_write_misses = 0;
-+  gab_hw_cache_read_hits = 0;
-+  gab_hw_cache_write_hits = 0;
-+
-+
- }
- 
- //**************************************************************************
-@@ -136,6 +142,11 @@ void cache_t::printStats( pseq_t *pseq )
-                  "demand miss per 1000 retired instructions [logical proc %d]:",
-                  1000.0 * (read_miss+write_miss) / pseq->m_stat_committed[k],k );
-   }
-+  pseq->out_info("\n***GAB Cache stats***\n");
-+  pseq->out_info("\tds1_%s_read_misses[ %lld ]\n", name, gab_hw_cache_read_misses);
-+  pseq->out_info("\tds1_%s_write_misses[ %lld ]\n", name, gab_hw_cache_write_misses);
-+  pseq->out_info("\tds1_%s_read_hits[ %lld ]\n", name, gab_hw_cache_read_hits);
-+  pseq->out_info("\tds1_%s_write_hits[ %lld ]\n", name, gab_hw_cache_write_hits);
- }
- 
- /*------------------------------------------------------------------------*/
-@@ -360,57 +371,6 @@ pa_t generic_cache_template<BlockType>::
++++ gems-2.1.1-hwds/opal/system/cache.C	2010-09-28 22:35:46.000000000 -0400
+@@ -360,57 +360,6 @@ pa_t generic_cache_template<BlockType>::
  
  #endif
  
@@ -150,7 +125,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-hwds2/opal/syst
  
  //**************************************************************************
  /* this function is called when a store is retired.  If the address
-@@ -568,18 +528,6 @@ set_error_t generic_cache_template<Block
+@@ -568,18 +517,6 @@ set_error_t generic_cache_template<Block
    return Sim_Set_Ok;
  }
  
@@ -169,9 +144,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-hwds2/opal/syst
  /*------------------------------------------------------------------------*/
  /* Accessor(s) / mutator(s)                                               */
  /*------------------------------------------------------------------------*/
-diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwds2/opal/system/cache.h
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwds/opal/system/cache.h
 --- gems-2.1.1/opal/system/cache.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/cache.h	2010-10-09 18:45:41.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/cache.h	2010-09-28 22:35:46.000000000 -0400
 @@ -59,6 +59,7 @@
  
  #include "mshr.h"
@@ -180,40 +155,16 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwds2/opal/syst
  
  /*------------------------------------------------------------------------*/
  /* Macro declarations                                                     */
-@@ -135,6 +136,12 @@ protected:
-   /** total number of read accesses */
-   uint64 accesses;
- 
-+  uint64  gab_hw_cache_read_misses;
-+  uint64  gab_hw_cache_write_misses;
-+  uint64  gab_hw_cache_read_hits;
-+  uint64  gab_hw_cache_write_hits;
-+
-+
-   /** total number of writes */
-   uint64 writes;
-   /** total number of write hits */
-@@ -245,11 +252,17 @@ public:
+@@ -240,7 +241,7 @@ public:
+   bool Read(pa_t a, waiter_t *w, bool data_request = true,
+             bool *primary_bool = NULL){
+     /* always hit if ideal */
+-    if(m_ideal) return true;
++    if(m_ideal || (gab_flag & GAB_NO_CACHE)) return true;
+     
      BlockType *b;
      bool hit = TagSearch( a, true, false, &b, NULL );
-     if (hit) {
--      
-+      if (gab_flag & GAB_TRACK_CACHE) {
-+       gab_hw_cache_read_hits++;
-+     }    
-+     if (gab_flag & GAB_NO_CACHE) return true;
-       DoWhenAccessHit(b, /* read */ true, /* data */ data_request);
-       
-     } else {
--      
-+     if (gab_flag & GAB_TRACK_CACHE) {
-+       gab_hw_cache_read_misses++;
-+     }
-+     if (gab_flag & GAB_NO_CACHE) return true;
-       DoWhenAccessMiss(a, /* read */ true, /* data */ data_request);
-       
-       /* check the pre-fetch/victim buffer to make sure we missed.
-@@ -267,16 +280,22 @@ public:
+@@ -267,7 +268,7 @@ public:
  
    bool Write(pa_t a, waiter_t *w){
      /* always hit if ideal */
@@ -222,24 +173,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwds2/opal/syst
      
      BlockType *b;
      bool hit = TagSearch( a, true, true, &b, NULL );
-     if (hit) {
--      
-+     if (gab_flag & GAB_TRACK_CACHE) {
-+       gab_hw_cache_write_hits++;
-+     }     
-+     if (gab_flag & GAB_NO_CACHE) return true;
-       DoWhenAccessHit(b, /* read */ false, /* data */ true);
-       
-     } else {
--      
-+    if (gab_flag & GAB_TRACK_CACHE) {
-+       gab_hw_cache_write_misses++;
-+     }
-+     if (gab_flag & GAB_NO_CACHE) return true;
-       DoWhenAccessMiss(a, /* read */ false, /* data */ true);
-       
-       /* check the pre-fetch/victim buffer to make sure we missed */
-@@ -473,4 +492,72 @@ protected:
+@@ -473,4 +474,72 @@ protected:
  /* Global functions                                                       */
  /*------------------------------------------------------------------------*/
  
@@ -312,9 +246,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwds2/opal/syst
 +
 +
  #endif  /* _CACHE_H_ */
-diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwds2/opal/system/dx.i
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwds/opal/system/dx.i
 --- gems-2.1.1/opal/system/dx.i	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/dx.i	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/dx.i	2010-09-28 22:35:46.000000000 -0400
 @@ -87,7 +87,7 @@
  // To track power when wrtting physical bits to regfile or on result bus
  #ifdef DYNAMIC_AF
@@ -333,9 +267,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwds2/opal/system/
            m_pseq->getPowerStats()->incrementWinPregAccess(); \
       }
        
-diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwds2/opal/system/dynamic.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwds/opal/system/dynamic.C
 --- gems-2.1.1/opal/system/dynamic.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/dynamic.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/dynamic.C	2010-09-28 22:35:46.000000000 -0400
 @@ -253,7 +253,7 @@ dynamic_inst_t::Decode( uint64 issueTime
      source.getARF()->readDecodeMap( source, m_proc );    
  
@@ -444,9 +378,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwds2/opal/sy
        m_pseq->getPowerStats()->incrementBpredAccess();
      }
  
-diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwds2/opal/system/ix.i
+diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwds/opal/system/ix.i
 --- gems-2.1.1/opal/system/ix.i	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/ix.i	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/ix.i	2010-09-28 22:35:46.000000000 -0400
 @@ -87,7 +87,7 @@
  // To track power when wrtting physical bits to regfile or on result bus
  #ifdef DYNAMIC_AF
@@ -465,9 +399,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwds2/opal/system/
            m_pseq->getPowerStats()->incrementWinPregAccess(); \
       }
        
-diff -X dontdiff -uprN gems-2.1.1/opal/system/memop.C gems-2.1.1-hwds2/opal/system/memop.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/memop.C gems-2.1.1-hwds/opal/system/memop.C
 --- gems-2.1.1/opal/system/memop.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/memop.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/memop.C	2010-09-28 22:35:46.000000000 -0400
 @@ -152,7 +152,7 @@ memory_inst_t::Squash() {
      m_pseq->getLSQ(m_proc)->remove( this );
  
@@ -603,9 +537,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/memop.C gems-2.1.1-hwds2/opal/syst
        m_pseq->getPowerStats()->incrementDCacheAccess();
      }
  
-diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/system/pseq.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds/opal/system/pseq.C
 --- gems-2.1.1/opal/system/pseq.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/pseq.C	2010-10-09 19:37:15.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/pseq.C	2010-10-02 02:06:22.000000000 -0400
 @@ -199,7 +199,7 @@ pseq_t::pseq_t( int32 id )
    
   /* WATTCH power */
@@ -692,7 +626,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
        getPowerStats()->incrementWindowAccess();
      }   
  }
-@@ -7337,6 +7345,55 @@ void pseq_t::printStats( void )
+@@ -7337,6 +7345,28 @@ void pseq_t::printStats( void )
      il1_mshr->printStats( this );
    }
  
@@ -713,42 +647,15 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
 +  out_info("\tds1_cycles_saved[ %lld ]\n", gab_hw_ds1_cycles_saved);
 +  out_info("\tds2_cycles_saved[ %lld ]\n", gab_hw_ds2_cycles_saved);
 +
-+  out_info("\tds1_first_cycles[ %lld ]\n", gab_hw_ds1_first_cycles);
-+  out_info("\tds1_enqueue_cycles[ %lld ]\n", gab_hw_ds1_enqueue_cycles);
-+  out_info("\tds1_enqueue_first_cycles[ %lld ]\n", gab_hw_ds1_enqueue_first_cycles);
-+  out_info("\tds1_extract_cycles[ %lld ]\n", gab_hw_ds1_extract_cycles);
-+  out_info("\tds1_requeue_cycles[ %lld ]\n", gab_hw_ds1_requeue_cycles);
-+
-+  out_info("\tds2_enqueue_cycles[ %lld ]\n", gab_hw_ds2_enqueue_cycles);
-+  out_info("\tds2_extract_cycles[ %lld ]\n", gab_hw_ds2_extract_cycles);
-+
-+  out_info("\tds1_cycles_max[ %lld, %lld, %lld ]\n", gab_hw_ds1_cycles_max[0],gab_hw_ds1_cycles_max[1],gab_hw_ds1_cycles_max[2]);
-+  out_info("\tds2_cycles_max[ %lld, %lld, %lld ]\n", gab_hw_ds2_cycles_max[0],gab_hw_ds2_cycles_max[1],gab_hw_ds2_cycles_max[2]);
-+ 
-+  out_info("\tds1_first_max[ %lld, %lld, %lld ]\n", gab_hw_ds1_first_max[0],gab_hw_ds1_first_max[1],gab_hw_ds1_first_max[2]);
-+  out_info("\tds1_enqueue_max[ %lld, %lld, %lld, %lld, %lld ]\n", gab_hw_ds1_enqueue_max[0],gab_hw_ds1_enqueue_max[1],gab_hw_ds1_enqueue_max[2],gab_hw_ds1_enqueue_max[3],gab_hw_ds1_enqueue_max[4]);
-+  out_info("\tds1_enqueue_first_max[ %lld, %lld, %lld ]\n", gab_hw_ds1_enqueue_first_max[0],gab_hw_ds1_enqueue_first_max[1],gab_hw_ds1_enqueue_first_max[2]);
-+  out_info("\tds1_extract_max[ %lld, %lld, %lld, %lld, %lld ]\n", gab_hw_ds1_extract_max[0],gab_hw_ds1_extract_max[1],gab_hw_ds1_extract_max[2],gab_hw_ds1_extract_max[3],gab_hw_ds1_extract_max[4]);
-+  out_info("\tds1_requeue_max[ %lld, %lld, %lld ]\n", gab_hw_ds1_requeue_max[0],gab_hw_ds1_requeue_max[1],gab_hw_ds1_requeue_max[2]);
-+
-+  out_info("\tds2_enqueue_max[ %lld, %lld, %lld, %lld, %lld ]\n", gab_hw_ds2_enqueue_max[0],gab_hw_ds2_enqueue_max[1],gab_hw_ds2_enqueue_max[2],gab_hw_ds2_enqueue_max[3],gab_hw_ds2_enqueue_max[4]);
-+  out_info("\tds2_extract_max[ %lld, %lld, %lld, %lld, %lld ]\n", gab_hw_ds2_extract_max[0],gab_hw_ds2_extract_max[1],gab_hw_ds2_extract_max[2],gab_hw_ds2_extract_max[3],gab_hw_ds2_extract_max[4]);
-+  out_info("\tds2_critical_max[ %lld, %lld, %lld ]\n", gab_hw_ds2_critical_max[0],gab_hw_ds2_critical_max[1],gab_hw_ds2_critical_max[2]);
-+
-+  out_info("\tsched_accesses[ %lld ]\n", gab_hw_sched_accesses);
-+  out_info("\tsched_cycles_saved[ %lld ]\n", gab_hw_sched_cycles_saved);
-+  out_info("\tsched_cycles_max[ %lld, %lld, %lld, %lld, %lld ]\n", 
-+      gab_hw_sched_cycles_max[0],gab_hw_sched_cycles_max[1],gab_hw_sched_cycles_max[2],gab_hw_sched_cycles_max[3],gab_hw_sched_cycles_max[4]);
-+  out_info("\tsched_ds1_max[ %lld, %lld, %lld, %lld, %lld ]\n", 
-+      gab_hw_sched_ds1_cycles_max[0],gab_hw_sched_ds1_cycles_max[1],gab_hw_sched_ds1_cycles_max[2],gab_hw_sched_ds1_cycles_max[3],gab_hw_sched_ds1_cycles_max[4]);
-+  out_info("\tsched_ds2_max[ %lld, %lld, %lld, %lld, %lld ]\n", 
-+      gab_hw_sched_ds2_cycles_max[0],gab_hw_sched_ds2_cycles_max[1],gab_hw_sched_ds2_cycles_max[2],gab_hw_sched_ds2_cycles_max[3],gab_hw_sched_ds2_cycles_max[4]);
-+
++  out_info("\tds1_cycles_max[ %lld ]\n", gab_hw_ds1_cycles_max);
++  out_info("\tds2_cycles_max[ %lld ]\n", gab_hw_ds2_cycles_max);
++  
++  out_info("\tds2_critical_max[ %lld ]\n", gab_hw_ds2_critical_max);
 +
    //print out SMT icount stats
    for(uint32 k=0; k <  CONFIG_LOGICAL_PER_PHY_PROC; ++k){  
      out_info("\n***ICount Stats [logical proc %d]: \n",k);
-@@ -7580,6 +7637,46 @@ pseq_t::initializeStats(void) {
+@@ -7580,6 +7610,24 @@ pseq_t::initializeStats(void) {
    DEBUG_OUT("pseq_t:initializeStats BEGIN\n");
    #endif
  
@@ -761,41 +668,19 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
 +  gab_hw_ds1_enqueue_first = 0;
 +  gab_hw_ds1_extract = 0;
 +  gab_hw_ds1_requeue = 0;
-+  gab_hw_ds1_first_cycles = 0;
-+  gab_hw_ds1_enqueue_cycles = 0;
-+  gab_hw_ds1_enqueue_first_cycles = 0;
-+  gab_hw_ds1_extract_cycles = 0;
-+  gab_hw_ds1_requeue_cycles = 0;
-+  gab_hw_ds1_first_max[0] = gab_hw_ds1_first_max[1] = gab_hw_ds1_first_max[2] = 0;
-+  gab_hw_ds1_enqueue_max[0] = gab_hw_ds1_enqueue_max[1] = gab_hw_ds1_enqueue_max[2] = gab_hw_ds1_enqueue_max[3] = gab_hw_ds1_enqueue_max[4] = 0;
-+  gab_hw_ds1_enqueue_first_max[0] = gab_hw_ds1_enqueue_first_max[1] = gab_hw_ds1_enqueue_first_max[2] = 0;
-+  gab_hw_ds1_extract_max[0] = gab_hw_ds1_extract_max[1] = gab_hw_ds1_extract_max[2] = gab_hw_ds1_extract_max[3] = gab_hw_ds1_extract_max[4] = 0;
-+  gab_hw_ds1_requeue_max[0] = gab_hw_ds1_requeue_max[1] = gab_hw_ds1_requeue_max[2] = 0;
-+
-+  gab_hw_ds1_cycles_saved = 0;
-+  gab_hw_ds1_cycles_max[0] = gab_hw_ds1_cycles_max[1] = gab_hw_ds1_cycles_max[2] = 0;
 +
 +  gab_hw_ds2_enqueue = 0;
 +  gab_hw_ds2_extract = 0;
-+  gab_hw_ds2_enqueue_cycles = 0;
-+  gab_hw_ds2_extract_cycles = 0;
++  gab_hw_ds1_cycles_saved = 0;
 +  gab_hw_ds2_cycles_saved = 0;
-+  gab_hw_ds2_enqueue_max[0] = gab_hw_ds2_enqueue_max[1] = gab_hw_ds2_enqueue_max[2] = gab_hw_ds2_enqueue_max[3] = gab_hw_ds2_enqueue_max[4] = 0;
-+  gab_hw_ds2_extract_max[0] = gab_hw_ds2_extract_max[1] = gab_hw_ds2_extract_max[2] = gab_hw_ds2_extract_max[3] = gab_hw_ds2_extract_max[4] = 0;
-+  gab_hw_ds2_cycles_max[0] = gab_hw_ds2_cycles_max[1] = gab_hw_ds2_cycles_max[2] = 0;
-+  gab_hw_ds2_critical_max[0] = gab_hw_ds2_critical_max[1] = gab_hw_ds2_critical_max[2] = 0;
-+
-+  gab_hw_sched_cycles_max[0] = gab_hw_sched_cycles_max[1] = gab_hw_sched_cycles_max[2] = gab_hw_sched_cycles_max[3] = gab_hw_sched_cycles_max[4] = 0;
-+  gab_hw_sched_ds1_cycles_max[0] = gab_hw_sched_ds1_cycles_max[1] = gab_hw_sched_ds1_cycles_max[2] = gab_hw_sched_ds1_cycles_max[3] = gab_hw_sched_ds1_cycles_max[4] = 0;
-+  gab_hw_sched_ds2_cycles_max[0] = gab_hw_sched_ds2_cycles_max[1] = gab_hw_sched_ds2_cycles_max[2] = gab_hw_sched_ds2_cycles_max[3] = gab_hw_sched_ds2_cycles_max[4] = 0;
-+  gab_hw_sched_accesses = 0;
-+  gab_hw_sched_cycles_saved = 0;
-+
++  gab_hw_ds1_cycles_max = 0;
++  gab_hw_ds2_cycles_max = 0;
++  gab_hw_ds2_critical_max = 0;
 +
    //WATTCH power: bank num stats
    for(int i=0; i < 8; ++i){
      m_l1i_banknum_accesses[i] = 0;
-@@ -8168,7 +8265,7 @@ void pseq_t::collectBankNumStat(){
+@@ -8168,7 +8216,7 @@ void pseq_t::collectBankNumStat(){
    m_l1i_2bank_histogram[unique_l1i_2banks]++;
    m_l1d_2bank_histogram[unique_l1d_2banks]++;
  
@@ -804,7 +689,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
      bank_num_t temp_bank_num;
      temp_bank_num.num_l1i_8banks = unique_l1i_8banks;
      temp_bank_num.num_l1d_8banks = unique_l1d_8banks;
-@@ -8189,14 +8286,14 @@ void pseq_t::collectBankNumStat(){
+@@ -8189,14 +8237,14 @@ void pseq_t::collectBankNumStat(){
  
  //**************************************************************************
  void pseq_t::clearAccessStats(){
@@ -821,7 +706,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
      //first collect our bank num stats and pass this info to WATTCH
      //  This is used to calculate clock-gating of banked L1 caches
      collectBankNumStat();
-@@ -8206,14 +8303,14 @@ void pseq_t::updatePowerStats(){
+@@ -8206,14 +8254,14 @@ void pseq_t::updatePowerStats(){
  
  //**************************************************************************
  void pseq_t::incrementL2Access(){
@@ -838,9 +723,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwds2/opal/syste
      m_power_stats->incrementPrefetcherAccess(num_prefetches, isinstr);
    }
  }
-diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwds2/opal/system/pseq.h
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwds/opal/system/pseq.h
 --- gems-2.1.1/opal/system/pseq.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/pseq.h	2010-10-09 19:30:02.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/pseq.h	2010-10-02 02:06:47.000000000 -0400
 @@ -442,6 +442,10 @@ public:
    tick_t       getLocalCycle() {
      return (m_local_cycles);
@@ -852,7 +737,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwds2/opal/syste
    /** step the sequence number */
    uint64       stepSequenceNumber(unsigned int proc ) {
      uint64 number = m_local_sequence_number[proc];
-@@ -1725,6 +1729,48 @@ public:
+@@ -1725,6 +1729,26 @@ public:
      m_atomic_miss_latency[thread].num_fastpath++;
    }
  
@@ -864,46 +749,24 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwds2/opal/syste
 + uint64 gab_hw_ds1_enqueue_first;
 + uint64 gab_hw_ds1_extract;
 + uint64 gab_hw_ds1_requeue;
-+ uint64 gab_hw_ds1_first_cycles;
-+ uint64 gab_hw_ds1_enqueue_cycles;
-+ uint64 gab_hw_ds1_enqueue_first_cycles;
-+ uint64 gab_hw_ds1_extract_cycles;
-+ uint64 gab_hw_ds1_requeue_cycles;
-+ uint64 gab_hw_ds1_first_max[3];
-+ uint64 gab_hw_ds1_enqueue_max[5];
-+ uint64 gab_hw_ds1_enqueue_first_max[3];
-+ uint64 gab_hw_ds1_extract_max[5];
-+ uint64 gab_hw_ds1_requeue_max[3];
-+
++ 
 + uint64 gab_hw_ds2_enqueue;
 + uint64 gab_hw_ds2_extract;
-+ uint64 gab_hw_ds2_enqueue_cycles;
-+ uint64 gab_hw_ds2_extract_cycles;
-+ uint64 gab_hw_ds2_enqueue_max[5];
-+ uint64 gab_hw_ds2_extract_max[5];
 +
 +  uint64 gab_hw_ds1_cycles_saved;
 +  uint64 gab_hw_ds2_cycles_saved;
 +
-+  uint64 gab_hw_ds1_cycles_max[3];
-+  uint64 gab_hw_ds2_cycles_max[3];
++  uint64 gab_hw_ds1_cycles_max;
++  uint64 gab_hw_ds2_cycles_max;
 +
-+  uint64 gab_hw_ds2_critical_max[3];
-+
-+  uint64 gab_hw_sched_ds1_cycles_max[5];
-+  uint64 gab_hw_sched_ds2_cycles_max[5];
-+  uint64 gab_hw_sched_accesses;
-+  uint64 gab_hw_sched_cycles_saved;
-+  uint64 gab_hw_sched_cycles_max[5];
-+
-+
++  uint64 gab_hw_ds2_critical_max;
 +
    // WATTCH power
    //    Used to simulated power of banked L1 caches
    void L1IBankNumStat(int banknum);
-diff -X dontdiff -uprN gems-2.1.1/opal/system/rubycache.C gems-2.1.1-hwds2/opal/system/rubycache.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/rubycache.C gems-2.1.1-hwds/opal/system/rubycache.C
 --- gems-2.1.1/opal/system/rubycache.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/rubycache.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/rubycache.C	2010-09-28 22:35:46.000000000 -0400
 @@ -1053,7 +1053,7 @@ ruby_status_t rubycache_t::access( la_t 
        system_t::inst->m_seq[seq_num]->L1IBankNumStat(banknum);
  
@@ -938,9 +801,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/rubycache.C gems-2.1.1-hwds2/opal/
        system_t::inst->m_seq[m_id]->getPowerStats()->incrementDCacheAccess();
      }
    }
-diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwds2/opal/system/scheduler.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwds/opal/system/scheduler.C
 --- gems-2.1.1/opal/system/scheduler.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/scheduler.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/scheduler.C	2010-09-28 22:35:46.000000000 -0400
 @@ -126,7 +126,7 @@ scheduler_t::Execute( tick_t localcycle 
        int32     fu_mapped = CONFIG_ALU_MAPPING[fu_type];
        if (alu_used[fu_mapped] < CONFIG_NUM_ALUS[fu_mapped]) {
@@ -950,9 +813,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/scheduler.C gems-2.1.1-hwds2/opal/
            //don't increment FU_NONE type
            if(fu_type != FU_NONE){
              m_pseq->getPowerStats()->incrementAluAccess();
-diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/system/system.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds/opal/system/system.C
 --- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/system.C	2010-10-09 19:52:06.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/system.C	2010-10-02 02:05:18.000000000 -0400
 @@ -115,6 +115,9 @@ extern mf_opal_api_t hfa_ruby_interface;
  /** The highest number the SIM_current_proc_no() can return */
  static int32 s_max_processor_id = 0;
@@ -983,7 +846,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
    // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
    m_opal_api = &hfa_ruby_interface;
    m_opal_api->hitCallback    = &system_t::rubyCompletedRequest;
-@@ -350,26 +359,286 @@ system_t::~system_t( void )
+@@ -350,26 +359,198 @@ system_t::~system_t( void )
  static void
  system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
  {
@@ -996,14 +859,12 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 -    // MAGIC breakpoints get intercepted here.  Opal currently does not do anything special here
 +  static tick_t cycles_store = 0;
 +  static bool entered = false;
-+  static bool sched_pause = false;
-+  static int sched_entered = 0;
 +  tick_t cycles_diff = 0;
-+  static tick_t cycles_base1 = 0;
-+  static tick_t cycles_base2 = 0;
 +  static tick_t cycles_max = 0;
 +  static tick_t cycles_this_access = 0;
-+
+ 
+-    return;
+-  }
 +
 +  /* Decode MAGIC() instructions */
 +  switch ( parameter ) {
@@ -1014,23 +875,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 +      sprintf( system_t::inst->m_sim_message_buffer,
 +          "deadlines missed" );
 +      break;
- 
--    return;
--  }
-+     /* 0x10: access hw scheduler;
-+     * 0x100, 0x200: access HW DS;  
-+     * 0x300: access DS2 without updating count */
-+    case (1UL << 4):  /* HW SCHED START */
-+      sched_entered++;
-+      if (sched_pause == false && sched_entered > 1)
-+        break; /* don't do anything in nested scheduler calls */
-+    case (2UL << 4):  /* HW SCHED UNPAUSE */
-+      if (parameter == (2UL << 4)) {
-+        if (sched_entered == 0)
-+          break; /* spurious unpause */
-+      }
-+        sched_pause = false;
-+      /* otherwise fall-thru */
 +
 +    /* 0x100, 0x200: access HW DS; 0x300: access DS2 without updating count */
 +    case (1UL << 8):  /* HW DS1 START */
@@ -1038,36 +882,21 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 +    case ((1UL << 8) | 4): case ((1UL << 8) | 5): 
 +    case(2UL << 8): /* HW DS2 START */
 +    case ((2UL <<8)|1): case ((2UL << 8) | 2):
-+    case (4UL << 8): /* HW DS2 UNPAUSE */
-+      if ( sched_entered == 0 && entered ) {
++    case (3UL << 8): /* HW DS2 UNPAUSE */
++      if ( entered ) {
 +        ERROR_OUT("MAGIC[ 0x%x ] called during previous access\n", parameter);
 +//        system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
 +      }
 +      /* Turn off caching, power, and timing */
-+      gab_flag |= (/*GAB_NO_CACHE |*/ /*GAB_TRACK_CACHE |*/ GAB_NO_WATTCH | GAB_NO_TIMING);
++      gab_flag |= (/*GAB_NO_CACHE |*/ GAB_NO_WATTCH | GAB_NO_TIMING);
 +
-+      /* implicit 'pause' scheduler on nested hwds access */
-+      if (parameter & 0x100 && sched_entered > 0) {
-+        cycles_diff = system_t::inst->m_seq[0]->getLocalCycle() - cycles_store;
-+        cycles_this_access += cycles_diff;
-+      }
-  
--  //currently IGNORE the system_breakpoint (parameter = 0x4000)...
--  #if 0
--  ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
 +      /* save the local cycle count */
 +      cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
 +
 +      /* update access counters on first access */
-+      if (parameter ==  1UL << 4 || parameter == 2UL << 4) {
-+        system_t::inst->m_seq[0]->gab_hw_sched_accesses++;
-+        cycles_base1 = system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved;
-+        cycles_base2 = system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved;
-+        cycles_this_access = 0;
-+      } else if (parameter & 0x100) {
++      if (parameter & 0x100 && parameter != (3UL<<8)) {
 +        system_t::inst->m_seq[0]->gab_hw_ds1_accesses++;
-+        if (sched_entered == 0)
-+          cycles_this_access = 0;
++        cycles_this_access = 0;
 +        switch (parameter & 0xf) {
 +          case 1:
 +            system_t::inst->m_seq[0]->gab_hw_ds1_first++;
@@ -1085,17 +914,14 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 +            system_t::inst->m_seq[0]->gab_hw_ds1_requeue++;
 +            break;
 +        }
-+      } else if (parameter & 0x200) {
-+        if (sched_entered == 0)
-+          cycles_this_access = 0;
++      } else if (parameter == 2UL << 8 || parameter == ((2UL<<8)|1) ||
++          parameter == ((2UL<<8)|2)) {
++        cycles_this_access = 0;
 +        system_t::inst->m_seq[0]->gab_hw_ds2_accesses++;
-+        switch (parameter & 0xf) {
-+          case 1:
-+            system_t::inst->m_seq[0]->gab_hw_ds2_enqueue++;
-+            break;
-+          case 2:
-+            system_t::inst->m_seq[0]->gab_hw_ds2_extract++;
-+            break;
++        if (parameter == ((2UL<<8)|1)) {
++          system_t::inst->m_seq[0]->gab_hw_ds2_enqueue++;
++        } else if (parameter == ((2UL<<8)|2)) {
++          system_t::inst->m_seq[0]->gab_hw_ds2_extract++;
 +        }
 +      }
 +      
@@ -1103,105 +929,54 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
 +      entered = true;
 +      break;
 +
-+    case (0x11):  /* HW SCHED END */
-+      if (sched_entered <= 0) break;
-+      sched_entered--;
-+      /* only update counts on outer scheduler access */
-+      if (sched_entered > 0 || sched_pause == true) break;
-+    case (0x21):  /* HW SCHED PAUSE */
-+      if (parameter == 0x21) {
-+        if (sched_entered == 0 || sched_pause == true)
-+          break;  /* spurious */
-+        sched_pause = true;
-+      }
 +    /* 0x800, 0x900: Complete access of HW DS. 0xA00 indicates isr flash */
-+    case (0x110UL):  /* HW DS1 END   */
-+    case (0x111UL): case (0x112UL): case (0x113UL): 
-+    case (0x114UL): case (0x115UL): 
-+    case(0x210): case (0x211): case (0x212):   /* HW DS2 END   */
-+    case (0x410):  /* HW DS2 PAUSE */
++    case (8UL << 8):  /* HW DS1 END   */
++    case(9UL << 8):   /* HW DS2 END   */
++    case (10UL << 8): /* HW DS2 PAUSE */
 +      if ( !entered ) {
 +        ERROR_OUT("MAGIC[ 0x%x ] called without previous access\n", parameter);
 +        break;
 +      }
-+      if ( sched_entered == 0 )
-+        entered = false;
++      entered = false;
++
++      /* flush pipeline -- not sure this does anything */
++#if 0
++      gab_flag |= GAB_FLUSH;
++      for (int j = 0; j < system_t::inst->m_numSMTProcs; j++) {
++        for (uint k = 0; k < CONFIG_LOGICAL_PER_PHY_PROC; ++k ) {
++          iwindow_t *iwin = system_t::inst->m_seq[j]->getIwindow(k); 
++          int index = iwin->getLastRetired();
++          while ( iwin->peekWindow(index) ) {
++            system_t::inst->m_seq[j]->advanceCycle();
++          }
++        }
++      }
++#endif
 +
 +      /* compute number of cycles 'saved' by this ds call */
 +      cycles_diff = system_t::inst->m_seq[0]->getLocalCycle() - cycles_store;
 +      cycles_this_access += cycles_diff;
-+      if (parameter == (1UL << 4 | 1) || parameter == (2UL << 4 |1)) {
-+        system_t::inst->m_seq[0]->gab_hw_sched_cycles_saved += 
-+          cycles_this_access;
-+        gab_update_sched_quintet(cycles_this_access,
-+            system_t::inst->m_seq[0]->gab_hw_sched_cycles_max,
-+            system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved - cycles_base1,
-+            system_t::inst->m_seq[0]->gab_hw_sched_ds1_cycles_max,
-+            system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved - cycles_base2,
-+            system_t::inst->m_seq[0]->gab_hw_sched_ds2_cycles_max);
-+        /* reset counter */
-+        cycles_base1 = system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved;
-+        cycles_base2 = system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved;
-+        cycles_this_access = 0;
-+      }
-+      /* use cycles_diff because hw ds access is never nested */
-+      else if ((parameter&~(0xff)) == (1UL << 8)) {
-+        system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved += cycles_diff;
-+        gab_update_max_triplet(cycles_diff, 
-+          system_t::inst->m_seq[0]->gab_hw_ds1_cycles_max);
-+        switch (parameter & 0xf) {
-+          case 1:
-+            system_t::inst->m_seq[0]->gab_hw_ds1_first_cycles += cycles_diff;
-+            gab_update_max_triplet(cycles_diff, 
-+                system_t::inst->m_seq[0]->gab_hw_ds1_first_max);
-+            break;
-+          case 2:
-+            system_t::inst->m_seq[0]->gab_hw_ds1_enqueue_cycles += cycles_diff;
-+            gab_update_max_quintet(cycles_diff, 
-+                system_t::inst->m_seq[0]->gab_hw_ds1_enqueue_max);
-+            break;
-+          case 3:
-+            system_t::inst->m_seq[0]->gab_hw_ds1_enqueue_first_cycles += cycles_diff;
-+            gab_update_max_triplet(cycles_diff, 
-+                system_t::inst->m_seq[0]->gab_hw_ds1_enqueue_first_max);
-+            break;
-+          case 4:
-+            system_t::inst->m_seq[0]->gab_hw_ds1_extract_cycles += cycles_diff;
-+            gab_update_max_quintet(cycles_diff, 
-+                system_t::inst->m_seq[0]->gab_hw_ds1_extract_max);
-+            break;
-+          case 5:
-+            system_t::inst->m_seq[0]->gab_hw_ds1_requeue_cycles += cycles_diff;
-+            gab_update_max_triplet(cycles_diff, 
-+                system_t::inst->m_seq[0]->gab_hw_ds1_requeue_max);
-+            break;
-+        }
-+        /* implicit 'unpause' */
-+      } else if (parameter&~(0xf) == (0x210UL)) {
-+        system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved += cycles_diff;
-+        gab_update_max_triplet(cycles_diff, 
-+          system_t::inst->m_seq[0]->gab_hw_ds2_cycles_max);
-+        switch (parameter & 0xf) {
-+          case 1:
-+            system_t::inst->m_seq[0]->gab_hw_ds2_enqueue_cycles += cycles_diff;
-+            gab_update_max_quintet(cycles_diff,
-+                system_t::inst->m_seq[0]->gab_hw_ds2_enqueue_max);
-+            break;
-+          case 2:
-+            system_t::inst->m_seq[0]->gab_hw_ds2_extract_cycles += cycles_diff;
-+            gab_update_max_quintet(cycles_diff,
-+                system_t::inst->m_seq[0]->gab_hw_ds2_extract_max);
-+            break;
-+        }
-+      } else if (parameter == (0x410UL)) {
-+        gab_update_max_triplet(cycles_diff, 
-+          system_t::inst->m_seq[0]->gab_hw_ds2_critical_max);
++      if (parameter == (8UL << 8)) {
++        system_t::inst->m_seq[0]->gab_hw_ds1_cycles_saved += cycles_this_access;
++        if(cycles_this_access > system_t::inst->m_seq[0]->gab_hw_ds1_cycles_max)
++          system_t::inst->m_seq[0]->gab_hw_ds1_cycles_max = cycles_this_access;
++      } else if (parameter == (9UL << 8)) {
++        system_t::inst->m_seq[0]->gab_hw_ds2_cycles_saved += cycles_this_access;
++        if(cycles_this_access > system_t::inst->m_seq[0]->gab_hw_ds2_cycles_max)
++          system_t::inst->m_seq[0]->gab_hw_ds2_cycles_max = cycles_this_access;
++      } else if (parameter == (10UL << 8)) {
++        if ( cycles_diff > system_t::inst->m_seq[0]->gab_hw_ds2_critical_max )
++          system_t::inst->m_seq[0]->gab_hw_ds2_critical_max = cycles_diff;
 +      }
 +
-+      cycles_store = system_t::inst->m_seq[0]->getLocalCycle();
-+ 
++      /* fix the local cycle count. ignore global cycles. */
++      //system_t::inst->m_seq[0]->setLocalCycle(cycles_store);
+  
+-  //currently IGNORE the system_breakpoint (parameter = 0x4000)...
+-  #if 0
+-  ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
 +      /* Turn on caching, power, and timing */
-+      gab_flag &= ~(GAB_NO_CACHE | GAB_TRACK_CACHE | GAB_NO_WATTCH | GAB_NO_TIMING | GAB_FLUSH);
++      gab_flag &= ~(GAB_NO_CACHE | GAB_NO_WATTCH | GAB_NO_TIMING | GAB_FLUSH);
 +      break;
 +#if 0
 +    /* 0x1000: Turn off caching */
@@ -1286,7 +1061,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
  }
  
  //***************************************************************************
-@@ -1798,7 +2067,7 @@ integer_t system_t::rubyInstructionQuery
+@@ -1798,7 +1979,7 @@ integer_t system_t::rubyInstructionQuery
  //**************************************************************************
  void system_t::rubyIncrementL2Access( int cpuNumber){
    /* WATTCH power */
@@ -1295,7 +1070,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
      ASSERT( (cpuNumber >= 0) && (cpuNumber < system_t::inst->m_numProcs) );
      
      int32 seq_index = cpuNumber;
-@@ -1811,7 +2080,7 @@ void system_t::rubyIncrementL2Access( in
+@@ -1811,7 +1992,7 @@ void system_t::rubyIncrementL2Access( in
  //**************************************************************************
  void system_t::rubyIncrementPrefetcherAccess(int cpuNumber, int num_prefetches, int isinstr){
    /* WATTCH power */
@@ -1304,10 +1079,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds2/opal/sys
      ASSERT( (cpuNumber >= 0) && (cpuNumber < system_t::inst->m_numProcs) );
      
      int32 seq_index = cpuNumber;
-diff -X dontdiff -uprN gems-2.1.1/opal/system/system.h gems-2.1.1-hwds2/opal/system/system.h
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.h gems-2.1.1-hwds/opal/system/system.h
 --- gems-2.1.1/opal/system/system.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/system.h	2010-10-09 18:46:52.000000000 -0400
-@@ -429,4 +429,97 @@ extern "C" cycles_t system_memory_operat
++++ gems-2.1.1-hwds/opal/system/system.h	2010-09-28 22:35:46.000000000 -0400
+@@ -429,4 +429,14 @@ extern "C" cycles_t system_memory_operat
                                               map_list_t *map,
                                               memory_transaction_t *mem_op);
  
@@ -1320,94 +1095,11 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/system.h gems-2.1.1-hwds2/opal/sys
 +#define GAB_NO_CACHE    (0x02)  /* Don't use cache */
 +#define GAB_FLUSH       (0x04)  /* Insts are not fetched */
 +#define GAB_NO_WATTCH   (0x08)  /* Don't update wattch stats */
-+#define GAB_TRACK_CACHE (0x10)  /* Track cache usage separately */
-+
-+#define gab_update_max_quintet( val, arr ) \
-+  do { \
-+    if (val > arr[4]) { \
-+      if (val > arr[3]) { \
-+        arr[4] = arr[3]; \
-+        if (val > arr[2]) { \
-+          arr[3] = arr[2]; \
-+          if (val > arr[1]) { \
-+            arr[2] = arr[1]; \
-+            if (val > arr[0]) { \
-+              arr[1] = arr[0]; \
-+              arr[0] = val; \
-+            } else { \
-+            arr[1] = val; \
-+            } \
-+          } else { \
-+            arr[2] = val; \
-+          } \
-+        } else { \
-+          arr[3] = val; \
-+        } \
-+      } else { \
-+        arr[4] = val; \
-+      } \
-+    } \
-+  } while (0)
-+
-+#define gab_update_max_triplet( val, arr ) \
-+  do { \
-+    if (val > arr[2]) { \
-+      if (val > arr[1]) { \
-+        if (val > arr[0]) { \
-+          arr[2] = arr[1]; \
-+          arr[1] = arr[0]; \
-+          arr[0] = val; \
-+        } else { \
-+          arr[2] = arr[1]; \
-+          arr[1] = val; \
-+        } \
-+      } else { \
-+        arr[2] = val; \
-+      } \
-+    } \
-+  } while (0)
-+
-+#define gab_update_sched_quintet( val, arr, val2, arr2, val3, arr3 ) \
-+  do { \
-+    if (val > arr[4]) { \
-+      if (val > arr[3]) { \
-+        arr[4] = arr[3]; \
-+        if (val > arr[2]) { \
-+          arr[3] = arr[2]; \
-+          if (val > arr[1]) { \
-+            arr[2] = arr[1]; \
-+            if (val > arr[0]) { \
-+              arr[1] = arr[0]; \
-+              arr[0] = val; \
-+              arr2[0] = val2; \
-+              arr3[0] = val3; \
-+            } else { \
-+            arr[1] = val; \
-+            arr2[1] = val2; \
-+            arr3[1] = val3; \
-+            } \
-+          } else { \
-+            arr[2] = val; \
-+            arr2[2] = val2; \
-+            arr2[2] = val3; \
-+          } \
-+        } else { \
-+          arr[3] = val; \
-+          arr2[3] = val2; \
-+          arr3[3] = val3; \
-+        } \
-+      } else { \
-+        arr[4] = val; \
-+        arr2[4] = val2; \
-+        arr3[4] = val3; \
-+      } \
-+    } \
-+  } while (0)
 +
  #endif /* __SYSTEM_H */
-diff -X dontdiff -uprN gems-2.1.1/opal/system/writebuffer.C gems-2.1.1-hwds2/opal/system/writebuffer.C
+diff -X dontdiff -uprN gems-2.1.1/opal/system/writebuffer.C gems-2.1.1-hwds/opal/system/writebuffer.C
 --- gems-2.1.1/opal/system/writebuffer.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwds2/opal/system/writebuffer.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/writebuffer.C	2010-09-28 22:35:46.000000000 -0400
 @@ -212,7 +212,7 @@ void writebuffer_t::flushWriteBuffer(){
                   next_ruby_request->m_is_outstanding = true;
  
@@ -1417,9 +1109,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/writebuffer.C gems-2.1.1-hwds2/opa
                     system_t::inst->m_seq[m_id]->getPowerStats()->incrementDCacheAccess();
                   }
  
-diff -X dontdiff -uprN gems-2.1.1/ruby/common/Debug.C gems-2.1.1-hwds2/ruby/common/Debug.C
+diff -X dontdiff -uprN gems-2.1.1/ruby/common/Debug.C gems-2.1.1-hwds/ruby/common/Debug.C
 --- gems-2.1.1/ruby/common/Debug.C	2010-09-01 14:06:10.000000000 -0400
-+++ gems-2.1.1-hwds2/ruby/common/Debug.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/ruby/common/Debug.C	2010-09-28 22:35:46.000000000 -0400
 @@ -66,6 +66,7 @@
  #include "Debug.h"
  #include "EventQueue.h"
@@ -1428,9 +1120,9 @@ diff -X dontdiff -uprN gems-2.1.1/ruby/common/Debug.C gems-2.1.1-hwds2/ruby/comm
  class Debug;
  extern Debug* g_debug_ptr;
  std::ostream * debug_cout_ptr;
-diff -X dontdiff -uprN gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C gems-2.1.1-hwds2/ruby/log_tm/LazyTransactionVersionManager.C
+diff -X dontdiff -uprN gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C gems-2.1.1-hwds/ruby/log_tm/LazyTransactionVersionManager.C
 --- gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-01 14:06:10.000000000 -0400
-+++ gems-2.1.1-hwds2/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-28 22:35:46.000000000 -0400
 @@ -280,8 +280,9 @@ void LazyTransactionVersionManager::issu
        should_escape = true;
      }
@@ -1443,9 +1135,9 @@ diff -X dontdiff -uprN gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C ge
                        CacheRequestType_ST_XACT,    
                        SIMICS_get_program_counter(getLogicalProcID(thread)),
                        AccessModeType_UserMode,
-diff -X dontdiff -uprN gems-2.1.1/ruby/system/CacheMemory.h gems-2.1.1-hwds2/ruby/system/CacheMemory.h
+diff -X dontdiff -uprN gems-2.1.1/ruby/system/CacheMemory.h gems-2.1.1-hwds/ruby/system/CacheMemory.h
 --- gems-2.1.1/ruby/system/CacheMemory.h	2010-09-01 14:06:10.000000000 -0400
-+++ gems-2.1.1-hwds2/ruby/system/CacheMemory.h	2010-09-28 22:36:47.000000000 -0400
++++ gems-2.1.1-hwds/ruby/system/CacheMemory.h	2010-09-28 22:35:46.000000000 -0400
 @@ -78,6 +78,7 @@
  #include "PseudoLRUPolicy.h"
  #include "LRUPolicy.h"
@@ -1454,9 +1146,9 @@ diff -X dontdiff -uprN gems-2.1.1/ruby/system/CacheMemory.h gems-2.1.1-hwds2/rub
  
  template<class ENTRY>
  class CacheMemory {
-diff -X dontdiff -uprN gems-2.1.1/scripts/makesymlinks.sh gems-2.1.1-hwds2/scripts/makesymlinks.sh
+diff -X dontdiff -uprN gems-2.1.1/scripts/makesymlinks.sh gems-2.1.1-hwds/scripts/makesymlinks.sh
 --- gems-2.1.1/scripts/makesymlinks.sh	2010-09-01 14:06:12.000000000 -0400
-+++ gems-2.1.1-hwds2/scripts/makesymlinks.sh	2010-09-28 22:37:08.000000000 -0400
++++ gems-2.1.1-hwds/scripts/makesymlinks.sh	2010-09-28 22:36:26.000000000 -0400
 @@ -22,7 +22,7 @@ cd ../..
  # in your Simics 3 install
  echo "Making symlink for import directory..."
