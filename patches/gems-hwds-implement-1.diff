@@ -1,0 +1,296 @@
+diff -X dontdiff -uprN gems-2.1.1/opal/common/hfatypes.h gems-2.1.1-hwds/opal/common/hfatypes.h
+--- gems-2.1.1/opal/common/hfatypes.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds/opal/common/hfatypes.h	2010-11-24 11:53:31.000000000 -0500
+@@ -162,6 +162,7 @@ enum fu_type_t {
+   FU_FLOATSQRT,            // floating point square root
+   FU_RDPORT,               // memory read port
+   FU_WRPORT,               // memory write port
++  FU_IMPDEP2,              // impdep2 functional unit
+   FU_NUM_FU_TYPES          // total functional unit classes
+ };
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-hwds/opal/config/config.defaults
+--- gems-2.1.1/opal/config/config.defaults	2010-09-01 14:06:14.000000000 -0400
++++ gems-2.1.1-hwds/opal/config/config.defaults	2010-11-24 12:38:52.000000000 -0500
+@@ -48,20 +48,22 @@ CONFIG_ALU_MAPPING: (
+     6, // FU_FLOATDIV,             // floating point divider
+     6, // FU_FLOATSQRT,            // floating point square root
+     7, // FU_RDPORT,               // memory read port
+-    8  // FU_WRPORT,               // memory write port
++    8,  // FU_WRPORT,               // memory write port
++    9 // FU_IMPDEP2,               // implementation dependent FU
+        // FU_NUM_FU_TYPES          // total functional unit classes
+ )
+ 
+ CONFIG_NUM_ALUS: (
+-  127, // inst does not use a functional unit
+-    4, // integer ALU (fused multiply/add)
+-    2, // integer divisor
+-    2, // compare branch units
+-    4, // FP ALU
+-    2, // FP multiply
+-    2, // FP divisor / square-root
+-    10, // load unit (memory read)
+-    10, // store unit (memory write)
++  127, // inst does not use a functional unit (0)
++    4, // integer ALU (fused multiply/add)    (1)
++    2, // integer divisor                     (2)
++    2, // compare branch units                (3)
++    4, // FP ALU                              (4)
++    2, // FP multiply                         (5)
++    2, // FP divisor / square-root            (6)
++    10, // load unit (memory read)            (7)
++    10, // store unit (memory write)          (8)
++    1, // impdep2                             (9)
+     0,
+     0,
+     0,
+@@ -81,7 +83,8 @@ CONFIG_ALU_LATENCY: (
+    12, // FU_FLOATDIV,             // floating point divider
+    24, // FU_FLOATSQRT,            // floating point square root
+     1, // FU_RDPORT,               // memory read port
+-    1  // FU_WRPORT,               // memory write port
++    1,  // FU_WRPORT,               // memory write port
++    1  // FU_IMPDEP2,               // implementation dependent FU
+        // FU_NUM_FU_TYPES          // total functional unit classes
+ )
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwds/opal/system/dx.i
+--- gems-2.1.1/opal/system/dx.i	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/dx.i	2010-11-24 11:48:33.000000000 -0500
+@@ -3423,8 +3423,101 @@ DX_RETURNT dx__trap( DX_PLIST ) {
+ 
+ DX_RETURNT dx_impdep1( DX_PLIST ) {
+ }
+-
++#include "pq.h"
++priority_queue ready_queue;
+ DX_RETURNT dx_impdep2( DX_PLIST ) {
++  // check the immediate bit
++  if (getStaticInst()->getFlag(SI_ISIMMEDIATE)) {
++    int imm = maskBits32(S2ORI,12,0);         // truncate immediate
++    int queue = maskBits32( imm, 12, 11 );    // queue to use
++    int operation = maskBits32( imm, 2, 0 );  // queue operation
++    pq_node *node;
++    static pq_node *new_node = NULL;
++    static int flag = 0;
++
++    switch ( queue ) {
++      case 0:   // ready queue
++        switch ( operation ) {
++          case 0:   // first
++            node = pq_first(&ready_queue);
++            if (node) {
++              IREGISTER result = node->payload;
++              WRITE_DEST(result);
++//              SIM_write_register(cpu, rd, (uint64)node->payload);
++            }
++            break;
++          case 1:   // extract
++            node = pq_extract(&ready_queue);
++            if (node) {
++              IREGISTER result = node->payload;
++              WRITE_DEST(result);
++  //            SIM_write_register(cpu, rd, (uint64)node->payload);
++              free(node);
++            }
++            break;
++
++          /* There are two cases to cover insert. This is because of the 
++           * lack of enough fields to properly encode instructions and 
++           * registers. In a true ISA extension, we could add extra opcode,
++           * but we are constrained to the impdep2 insn.
++           * As long as both instructions are executed, the node should be 
++           * properly generated and inserted; the order of instructions 
++           * should not affect the correctness of these operations...
++           *
++           * Need to be careful for multiple in-flight PQ operations.
++           */
++          case 2:   // insert
++            if (!flag) {
++              new_node = (pq_node*)malloc(sizeof(pq_node));
++              flag = 1;
++            } else
++              flag = 0;
++            if (!new_node) {
++              printf("Unable to allocate space for new pq node\n");
++              break; // should throw exception
++            }
++            new_node->priority = SOURCE1;
++//            new_node->priority = SIM_read_register(cpu, rs1);
++            if (!flag) {
++              pq_insert(&ready_queue, new_node);
++              new_node = NULL;
++            }
++            break;
++          case 3:   // insert
++             if (!flag) {
++              new_node = (pq_node*)malloc(sizeof(pq_node));
++              flag = 1;
++            } else
++              flag = 0;
++            if (!new_node) {
++              printf("Unable to allocate space for new pq node\n");
++              break; // should throw exception
++            }
++            new_node->payload = SOURCE1;
++//            new_node->payload = SIM_read_register(cpu, rs1);
++            if (!flag) {
++              pq_insert(&ready_queue, new_node);
++              new_node = NULL;
++            }
++            break;
++
++          default:
++            printf("Unknown operation: %d\n", operation);
++            break; // should throw exception
++        }
++        
++        break;
++      case 1:   // timer queue
++
++        break;
++      default:
++        printf("Unknown queue operation\n");
++        break; // fail silently, maybe throw exception?
++    }
++  } else {
++    m_pseq->out_info("Unimplemented instruction: 0x%0x\n", 
++        getStaticInst()->getInst());
++  }
+ }
+ 
+ DX_RETURNT dx_membar( DX_PLIST ) {
+diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwds/opal/system/ix.i
+--- gems-2.1.1/opal/system/ix.i	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/ix.i	2010-11-23 13:26:19.000000000 -0500
+@@ -3426,6 +3426,7 @@ DX_RETURNT dx_impdep1( DX_PLIST ) {
+ }
+ 
+ DX_RETURNT dx_impdep2( DX_PLIST ) {
++  DEBUG_OUT("ix:dx_impdep2\n");
+ }
+ 
+ DX_RETURNT dx_membar( DX_PLIST ) {
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pq.h gems-2.1.1-hwds/opal/system/pq.h
+--- gems-2.1.1/opal/system/pq.h	1969-12-31 19:00:00.000000000 -0500
++++ gems-2.1.1-hwds/opal/system/pq.h	2010-11-24 10:07:03.000000000 -0500
+@@ -0,0 +1,103 @@
++/*
++ * pq.h
++ *
++ * A priority queue supporting:
++ *  enqueue
++ *  extract
++ *  first (peek)
++ * For modelling a HW PQ.  Additional options are included to support special
++ * queue structures.
++ */
++
++typedef struct pq_node {
++  int             priority;
++  uint64          payload;
++  struct pq_node *next;
++  struct pq_node *prev;
++} pq_node;
++
++typedef struct priority_queue {
++  pq_node *head;
++  int options;  // 0 for min, 1 for max, 2 for timer
++} priority_queue;
++
++pq_node* pq_first(priority_queue *pq) { return pq->head; }
++
++pq_node* pq_extract(priority_queue *pq)
++{
++  pq_node *first = pq->head;
++  if (first) {
++    pq->head = first->next;
++    if (first->next)
++      first->next->prev = NULL;
++  } else {
++    pq->head = NULL;
++  }
++  return first;
++}
++
++void pq_insert(priority_queue *pq, pq_node *node) 
++{
++  pq_node *iter = pq->head;
++  pq_node *prev = NULL;
++  if ( pq->options == 0 ) { /* min sort */
++    while( iter ) {
++      if ( node->priority < iter->priority ) {
++        if (iter->prev)
++          iter->prev->next = node;
++        else
++          pq->head = node;
++        node->prev = iter->prev;
++        node->next = iter;
++        iter->prev = node;
++        return;
++      }
++      prev = iter;
++      iter = iter->next;
++    }
++  } else if (pq->options == 1) { /* max sort */
++    while( iter ) {
++      if ( node->priority > iter->priority ) {
++        if (iter->prev)
++          iter->prev->next = node;
++        else
++          pq->head = node;
++        node->prev = iter->prev;
++        node->next = iter;
++        iter->prev = node;
++        return;
++      }
++      prev = iter;
++      iter = iter->next;
++    }
++  } else if (pq->options == 2) { /* timer chain insert */
++     while( iter ) {
++      if ( node->priority < iter->priority ) {
++        if (iter->prev)
++          iter->prev->next = node;
++        else
++          pq->head = node;
++        node->prev = iter->prev;
++        node->next = iter;
++        iter->prev = node;
++        return;
++      }
++      node->priority -= iter->priority;
++      prev = iter;
++      iter = iter->next;
++    }
++  } else {
++    printf("unrecognized options to pq: %d\n", pq->options);
++  }
++
++  // !iter
++  if (!prev) { /* empty list */
++    pq->head = node;
++    node->next = NULL;
++    node->prev = NULL;
++  } else { /* end of list */
++    prev->next = node;
++    node->next = NULL;
++    node->prev = prev;
++  }
++}
+diff -X dontdiff -uprN gems-2.1.1/opal/system/statici.C gems-2.1.1-hwds/opal/system/statici.C
+--- gems-2.1.1/opal/system/statici.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds/opal/system/statici.C	2010-11-24 12:43:55.000000000 -0500
+@@ -2869,6 +2869,11 @@ static_inst_t::decodeInstructionInfo( pa
+       break;
+ 
+     case 55:  // impdep2
++      // GAB: Interpret the impdep2 instruction
++
++      REG_TWO_I( 12 );    // decode two-reg with either rs2 or imm
++      m_futype = FU_IMPDEP2; // need a function unit to order accesses..
++
+       m_opcode = i_impdep2;
+       break;
+ 
