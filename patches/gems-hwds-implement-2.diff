@@ -1,0 +1,660 @@
+diff -X dontdiff -uprN gems-2.1.1/common/Makefile.common gems-2.1.1-hwds-implement/common/Makefile.common
+--- gems-2.1.1/common/Makefile.common	2010-09-01 14:06:12.000000000 -0400
++++ gems-2.1.1-hwds-implement/common/Makefile.common	2010-11-24 12:53:35.000000000 -0500
+@@ -56,11 +56,11 @@ ifeq ($(SIMICS_VERSION),2.2.X)
+   SIMICS_INCLUDE_ROOT := /dev/null22
+ else
+ ifeq ($(SIMICS_VERSION),3.0)
+-  SIMICS_ROOT := /dev/null30
++  SIMICS_ROOT := $(GEMS_ROOT)/simics
+   SIMICS_EXEC_ROOT := $(GEMS_ROOT)/simics
+   # NOTE: This variable must be updated to point to the src/include directory
+   # of your Simics 3.0 installation
+-  SIMICS_INCLUDE_ROOT := $(GEMS_ROOT)/simics/src/include
++  SIMICS_INCLUDE_ROOT := $(SIMICS_INSTALL)/src/include
+ else
+   SIMICS_ROOT := /dev/blah
+   SIMICS_EXEC_ROOT := /dev/foo
+@@ -98,7 +98,7 @@ LFLAGS := 
+ CC_VERSION=3.4.4
+ 
+ ifeq ($(HOST_TYPE),amd64-linux)
+-  CC =  /s/gcc-3.4.4/bin/g++
++  CC =  /usr/bin/g++
+   #CC =  /usr/bin/g++
+   OPT_FLAGS = -m64 -march=opteron -fPIC
+   LDFLAGS += -ggdb -g3 -Wl,-R/s/gcc-3.4.4/lib64 
+@@ -106,14 +106,14 @@ ifeq ($(HOST_TYPE),amd64-linux)
+ 
+ else
+ ifeq ($(HOST_TYPE),v9-sol8-64)
+-  # CC = purify -best-effort -leaks-at-exit=yes -chain-length="15" /s/gcc-3.4.1/bin/g++ -static
++  # CC = purify -best-effort -leaks-at-exit=yes -chain-length="15" /usr/bin/g++ -static
+   # CC = /s/gcc-3.4.3/bin/g++ -I/s/getopt-0/include
+   CC = g++ -I/s/getopt-0/include
+   OPT_FLAGS = -m64 -mcpu=v9 -DUSE_DIRENT
+   LDFLAGS += -m64 -L/s/getopt-0/lib -lgetopt
+ else
+ ifeq ($(HOST_TYPE),x86-linux)
+-  CC =  /s/gcc-3.4.1/bin/g++
++  CC =  /usr/bin/g++
+   #CC =  /usr/bin/g++
+   OPT_FLAGS = -march=i686
+   LDFLAGS += -ggdb -g3
+diff -X dontdiff -uprN gems-2.1.1/opal/common/hfatypes.h gems-2.1.1-hwds-implement/opal/common/hfatypes.h
+--- gems-2.1.1/opal/common/hfatypes.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/common/hfatypes.h	2010-11-24 12:53:00.000000000 -0500
+@@ -162,6 +162,7 @@ enum fu_type_t {
+   FU_FLOATSQRT,            // floating point square root
+   FU_RDPORT,               // memory read port
+   FU_WRPORT,               // memory write port
++  FU_IMPDEP2,              // impdep2 functional unit
+   FU_NUM_FU_TYPES          // total functional unit classes
+ };
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-hwds-implement/opal/config/config.defaults
+--- gems-2.1.1/opal/config/config.defaults	2010-09-01 14:06:14.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/config/config.defaults	2010-11-24 12:53:00.000000000 -0500
+@@ -48,20 +48,22 @@ CONFIG_ALU_MAPPING: (
+     6, // FU_FLOATDIV,             // floating point divider
+     6, // FU_FLOATSQRT,            // floating point square root
+     7, // FU_RDPORT,               // memory read port
+-    8  // FU_WRPORT,               // memory write port
++    8,  // FU_WRPORT,               // memory write port
++    9 // FU_IMPDEP2,               // implementation dependent FU
+        // FU_NUM_FU_TYPES          // total functional unit classes
+ )
+ 
+ CONFIG_NUM_ALUS: (
+-  127, // inst does not use a functional unit
+-    4, // integer ALU (fused multiply/add)
+-    2, // integer divisor
+-    2, // compare branch units
+-    4, // FP ALU
+-    2, // FP multiply
+-    2, // FP divisor / square-root
+-    10, // load unit (memory read)
+-    10, // store unit (memory write)
++  127, // inst does not use a functional unit (0)
++    4, // integer ALU (fused multiply/add)    (1)
++    2, // integer divisor                     (2)
++    2, // compare branch units                (3)
++    4, // FP ALU                              (4)
++    2, // FP multiply                         (5)
++    2, // FP divisor / square-root            (6)
++    10, // load unit (memory read)            (7)
++    10, // store unit (memory write)          (8)
++    1, // impdep2                             (9)
+     0,
+     0,
+     0,
+@@ -81,7 +83,8 @@ CONFIG_ALU_LATENCY: (
+    12, // FU_FLOATDIV,             // floating point divider
+    24, // FU_FLOATSQRT,            // floating point square root
+     1, // FU_RDPORT,               // memory read port
+-    1  // FU_WRPORT,               // memory write port
++    1,  // FU_WRPORT,               // memory write port
++    1  // FU_IMPDEP2,               // implementation dependent FU
+        // FU_NUM_FU_TYPES          // total functional unit classes
+ )
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-hwds-implement/opal/system/cache.C
+--- gems-2.1.1/opal/system/cache.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/system/cache.C	2010-11-24 12:52:32.000000000 -0500
+@@ -360,57 +360,6 @@ pa_t generic_cache_template<BlockType>::
+ 
+ #endif
+ 
+-//**************************************************************************
+-template <class BlockType>
+-void generic_cache_template<BlockType>::Warmup(pa_t a) {
+-
+-  uint32 index = Set(a);
+-  pa_t ba = BlockAddress(a);
+-  ASSERT(index < n_sets);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+-    if (hit) { 
+-      return;
+-    }
+-  }
+-  int replace_set = random() % m_assoc;
+-  /* write new block into the cache */
+-  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+-}
+-
+-//**************************************************************************
+-template <class BlockType>
+-void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
+-  /* used when we want the execution of a particular load or store to
+-   * be prefetched perfectly.
+-   */
+-  uint32 index = Set(a);
+-  pa_t ba = BlockAddress(a);
+-  ASSERT(index < n_sets);
+-  STAT_INC(reads);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  int replace_set = 0;
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+-    if (hit) { 
+-      STAT_INC(read_hit);
+-      return;
+-    } 
+-    if (set[i].last_access < set[replace_set].last_access) {
+-      replace_set = i;
+-    }
+-  }
+-
+-  /* write new block into the cache */
+-  STAT_INC(read_miss);
+-  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+-  set[replace_set].last_access = m_eventQueue->getCycle();
+-}
+ 
+ //**************************************************************************
+ /* this function is called when a store is retired.  If the address
+@@ -568,18 +517,6 @@ set_error_t generic_cache_template<Block
+   return Sim_Set_Ok;
+ }
+ 
+-//**************************************************************************
+-template <class BlockType>
+-int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
+-{
+-  int rc;
+-
+-  rc = conf->register_attribute( name,
+-                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
+-                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
+-  return rc;
+-}
+-
+ /*------------------------------------------------------------------------*/
+ /* Accessor(s) / mutator(s)                                               */
+ /*------------------------------------------------------------------------*/
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwds-implement/opal/system/cache.h
+--- gems-2.1.1/opal/system/cache.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/system/cache.h	2010-11-24 12:52:32.000000000 -0500
+@@ -59,6 +59,7 @@
+ 
+ #include "mshr.h"
+ #include "scheduler.h"
++#include "confio.h"
+ 
+ /*------------------------------------------------------------------------*/
+ /* Macro declarations                                                     */
+@@ -473,4 +474,72 @@ protected:
+ /* Global functions                                                       */
+ /*------------------------------------------------------------------------*/
+ 
++/* workaround see: https://lists.cs.wisc.edu/archive/gems-users/2009-March/msg00116.shtml */
++//**************************************************************************
++template <class BlockType>
++int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
++{
++  int rc;
++
++  rc = conf->register_attribute( name,
++                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
++                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
++  return rc;
++}
++
++//**************************************************************************
++template <class BlockType>
++void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
++  /* used when we want the execution of a particular load or store to
++   * be prefetched perfectly.
++   */
++  uint32 index = Set(a);
++  pa_t ba = BlockAddress(a);
++  ASSERT(index < n_sets);
++  STAT_INC(reads);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  int replace_set = 0;
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
++    if (hit) { 
++      STAT_INC(read_hit);
++      return;
++    } 
++    if (set[i].last_access < set[replace_set].last_access) {
++      replace_set = i;
++    }
++  }
++
++  /* write new block into the cache */
++  STAT_INC(read_miss);
++  set[replace_set].address_state = ba | CACHE_BLK_VALID;
++  set[replace_set].last_access = m_eventQueue->getCycle();
++}
++
++//**************************************************************************
++template <class BlockType>
++void generic_cache_template<BlockType>::Warmup(pa_t a) {
++
++  uint32 index = Set(a);
++  pa_t ba = BlockAddress(a);
++  ASSERT(index < n_sets);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
++    if (hit) { 
++      return;
++    }
++  }
++  int replace_set = random() % m_assoc;
++  /* write new block into the cache */
++  set[replace_set].address_state = ba | CACHE_BLK_VALID;
++}
++
++
++
++
+ #endif  /* _CACHE_H_ */
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwds-implement/opal/system/dx.i
+--- gems-2.1.1/opal/system/dx.i	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/system/dx.i	2010-11-24 17:03:09.000000000 -0500
+@@ -3423,8 +3423,174 @@ DX_RETURNT dx__trap( DX_PLIST ) {
+ 
+ DX_RETURNT dx_impdep1( DX_PLIST ) {
+ }
+-
++#include "pq.h"
++priority_queue ready_queue;
++priority_queue timer_queue;
+ DX_RETURNT dx_impdep2( DX_PLIST ) {
++  // check the immediate bit
++  if (getStaticInst()->getFlag(SI_ISIMMEDIATE)) {
++    int imm = maskBits32(S2ORI,12,0);         // truncate immediate
++    int queue = maskBits32( imm, 12, 11 );    // queue to use
++    int operation = maskBits32( imm, 2, 0 );  // queue operation
++    pq_node *node;
++    static pq_node *new_node = NULL;
++    static int flag = 0;
++    uint64 payload = 0;
++
++    switch ( queue ) {
++      case 0:   // ready queue
++        switch ( operation ) {
++          case 0:   // first
++            node = pq_first(&ready_queue);
++            if (node) {
++              IREGISTER result = node->payload;
++              WRITE_DEST(result);
++//              SIM_write_register(cpu, rd, (uint64)node->payload);
++            } else {
++              WRITE_DEST(0);
++            }
++            break;
++          case 1:   // extract
++            payload = SOURCE1;
++            node = pq_extract(&ready_queue, payload);
++            if (node)
++              free(node);
++            WRITE_DEST(0);
++            break;
++
++          /* There are two cases to cover insert. This is because of the 
++           * lack of enough fields to properly encode instructions and 
++           * registers. In a true ISA extension, we could add extra opcode,
++           * but we are constrained to the impdep2 insn.
++           * As long as both instructions are executed, the node should be 
++           * properly generated and inserted; the order of instructions 
++           * should not affect the correctness of these operations...
++           *
++           * Need to be careful for multiple in-flight PQ operations.
++           */
++          case 2:   // insert
++            if (!flag) {
++              new_node = (pq_node*)malloc(sizeof(pq_node));
++              flag = 1;
++            } else
++              flag = 0;
++            if (!new_node) {
++              printf("Unable to allocate space for new pq node\n");
++              break; // should throw exception
++            }
++            new_node->priority = SOURCE1;
++//            new_node->priority = SIM_read_register(cpu, rs1);
++            if (!flag) {
++              pq_insert(&ready_queue, new_node);
++              new_node = NULL;
++            }
++            WRITE_DEST(0);
++            break;
++          case 3:   // insert
++             if (!flag) {
++              new_node = (pq_node*)malloc(sizeof(pq_node));
++              flag = 1;
++            } else
++              flag = 0;
++            if (!new_node) {
++              printf("Unable to allocate space for new pq node\n");
++              break; // should throw exception
++            }
++            new_node->payload = SOURCE1;
++//            new_node->payload = SIM_read_register(cpu, rs1);
++            if (!flag) {
++              pq_insert(&ready_queue, new_node);
++              new_node = NULL;
++            }
++            WRITE_DEST(0);
++            break;
++
++          default:
++            printf("Unknown operation: %d\n", operation);
++            break; // should throw exception
++        }
++        
++        break;
++      case 1:   // timer queue
++        switch ( operation ) {
++          case 0:   // first
++            node = pq_first(&timer_queue);
++            if (node) {
++              IREGISTER result = node->payload;
++              WRITE_DEST(result);
++//              SIM_write_register(cpu, rd, (uint64)node->payload);
++            } else
++              WRITE_DEST(0);
++            break;
++          case 1:   // extract
++            payload = SOURCE1;
++            node = pq_extract(&timer_queue, payload);
++            if (node)
++              free(node);
++            WRITE_DEST(0);
++            break;
++
++          /* There are two cases to cover insert. This is because of the 
++           * lack of enough fields to properly encode instructions and 
++           * registers. In a true ISA extension, we could add extra opcode,
++           * but we are constrained to the impdep2 insn.
++           * As long as both instructions are executed, the node should be 
++           * properly generated and inserted; the order of instructions 
++           * should not affect the correctness of these operations...
++           *
++           * Need to be careful for multiple in-flight PQ operations.
++           */
++          case 2:   // insert
++            if (!flag) {
++              new_node = (pq_node*)malloc(sizeof(pq_node));
++              flag = 1;
++            } else
++              flag = 0;
++            if (!new_node) {
++              printf("Unable to allocate space for new pq node\n");
++              break; // should throw exception
++            }
++            new_node->priority = SOURCE1;
++//            new_node->priority = SIM_read_register(cpu, rs1);
++            if (!flag) {
++              pq_insert(&timer_queue, new_node);
++              new_node = NULL;
++            }
++            WRITE_DEST(0);
++            break;
++          case 3:   // insert
++             if (!flag) {
++              new_node = (pq_node*)malloc(sizeof(pq_node));
++              flag = 1;
++            } else
++              flag = 0;
++            if (!new_node) {
++              printf("Unable to allocate space for new pq node\n");
++              break; // should throw exception
++            }
++            new_node->payload = SOURCE1;
++//            new_node->payload = SIM_read_register(cpu, rs1);
++            if (!flag) {
++              pq_insert(&timer_queue, new_node);
++              new_node = NULL;
++            }
++            WRITE_DEST(0);
++            break;
++
++          default:
++            printf("Unknown operation: %d\n", operation);
++            break; // should throw exception
++        }
++        
++        break;
++      default:
++        printf("Unknown queue operation\n");
++        break; // fail silently, maybe throw exception?
++    }
++  } else {
++    m_pseq->out_info("Unimplemented instruction: 0x%0x\n", 
++        getStaticInst()->getInst());
++  }
+ }
+ 
+ DX_RETURNT dx_membar( DX_PLIST ) {
+diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwds-implement/opal/system/ix.i
+--- gems-2.1.1/opal/system/ix.i	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/system/ix.i	2010-11-24 12:53:00.000000000 -0500
+@@ -3426,6 +3426,7 @@ DX_RETURNT dx_impdep1( DX_PLIST ) {
+ }
+ 
+ DX_RETURNT dx_impdep2( DX_PLIST ) {
++  DEBUG_OUT("ix:dx_impdep2\n");
+ }
+ 
+ DX_RETURNT dx_membar( DX_PLIST ) {
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pq.h gems-2.1.1-hwds-implement/opal/system/pq.h
+--- gems-2.1.1/opal/system/pq.h	1969-12-31 19:00:00.000000000 -0500
++++ gems-2.1.1-hwds-implement/opal/system/pq.h	2010-11-26 16:31:40.000000000 -0500
+@@ -0,0 +1,126 @@
++/*
++ * pq.h
++ *
++ * A priority queue supporting:
++ *  enqueue
++ *  extract
++ *  first (peek)
++ * For modelling a HW PQ.  Additional options are included to support special
++ * queue structures.
++ */
++
++//#define GAB_DEBUG
++
++typedef struct pq_node {
++  int             priority;
++  uint64          payload;
++  struct pq_node *next;
++  struct pq_node *prev;
++} pq_node;
++
++typedef struct priority_queue {
++  pq_node *head;
++  int options;  // 0 for min, 1 for max, 2 for timer
++} priority_queue;
++
++void pq_print_node(pq_node *n) {
++  printf("%d\t%llu\t%p\t%p\n",n->priority,n->payload,n->next,n->prev);
++}
++
++void pq_print_queue(priority_queue *pq) {
++  pq_node* n = NULL;
++  if (!pq) return;
++  n = pq->head;
++  while(n) {
++    pq_print_node(n);
++    n = n->next;
++  }
++}
++
++pq_node* pq_first(priority_queue *pq) { 
++#ifdef GAB_DEBUG
++  printf("pq_first:\n");
++  pq_print_queue(pq);
++#endif
++  return pq->head;
++}
++
++pq_node* pq_extract(priority_queue *pq, uint64 data)
++{
++  pq_node *node = pq->head;
++  while (node && node->payload != data) node = node->next;
++
++  if (node) {
++    if (node->prev) 
++      node->prev->next = node->next;
++    else 
++      pq->head = node->next;
++    if (node->next) {
++      node->next->prev = node->prev;
++    }
++  }
++#ifdef GAB_DEBUG
++  printf("pq_extract:\n");
++  pq_print_queue(pq);
++#endif
++  return node;
++}
++
++void pq_insert(priority_queue *pq, pq_node *node) 
++{
++  pq_node *iter = pq->head;
++  pq_node *prev = NULL;
++  node->next = NULL;
++  node->prev = NULL;
++  
++  if (!iter) {
++    pq->head = node;
++    goto out;
++  }
++
++  if ( pq->options == 0 || pq->options == 2 ) { /* min sort, timer chain */
++    while( iter ) {
++      if ( node->priority < iter->priority ) {
++        if (iter->prev)
++          iter->prev->next = node;
++        else
++          pq->head = node;
++        node->prev = iter->prev;
++        node->next = iter;
++        iter->prev = node;
++        goto out;
++      }
++      prev = iter;
++      iter = iter->next;
++    }
++  } else if (pq->options == 1) { /* max sort */
++    while( iter ) {
++      if ( node->priority > iter->priority ) {
++        if (iter->prev)
++          iter->prev->next = node;
++        else
++          pq->head = node;
++        node->prev = iter->prev;
++        node->next = iter;
++        iter->prev = node;
++        goto out;
++      }
++      prev = iter;
++      iter = iter->next;
++    }
++  } else {
++    printf("unrecognized options to pq: %d\n", pq->options);
++  }
++
++  /* end of list */
++  prev->next = node;
++  node->next = NULL;
++  node->prev = prev;
++out:
++#ifdef GAB_DEBUG
++  printf("pq_insert\n");
++  pq_print_queue(pq);
++#else
++  ;
++#endif
++}
+diff -X dontdiff -uprN gems-2.1.1/opal/system/statici.C gems-2.1.1-hwds-implement/opal/system/statici.C
+--- gems-2.1.1/opal/system/statici.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/system/statici.C	2010-11-24 12:53:00.000000000 -0500
+@@ -2869,6 +2869,11 @@ static_inst_t::decodeInstructionInfo( pa
+       break;
+ 
+     case 55:  // impdep2
++      // GAB: Interpret the impdep2 instruction
++
++      REG_TWO_I( 12 );    // decode two-reg with either rs2 or imm
++      m_futype = FU_IMPDEP2; // need a function unit to order accesses..
++
+       m_opcode = i_impdep2;
+       break;
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwds-implement/opal/system/system.C
+--- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwds-implement/opal/system/system.C	2010-11-24 12:52:43.000000000 -0500
+@@ -362,7 +362,7 @@ system_breakpoint( void *data, conf_obje
+   }
+  
+   //currently IGNORE the system_breakpoint (parameter = 0x4000)...
+-  #if 0
++  #if 1
+   ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
+ 
+   sprintf( system_t::inst->m_sim_message_buffer,
+diff -X dontdiff -uprN gems-2.1.1/ruby/common/Debug.C gems-2.1.1-hwds-implement/ruby/common/Debug.C
+--- gems-2.1.1/ruby/common/Debug.C	2010-09-01 14:06:10.000000000 -0400
++++ gems-2.1.1-hwds-implement/ruby/common/Debug.C	2010-11-24 12:52:32.000000000 -0500
+@@ -66,6 +66,7 @@
+ #include "Debug.h"
+ #include "EventQueue.h"
+ 
++#include "string.h"
+ class Debug;
+ extern Debug* g_debug_ptr;
+ std::ostream * debug_cout_ptr;
+diff -X dontdiff -uprN gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C gems-2.1.1-hwds-implement/ruby/log_tm/LazyTransactionVersionManager.C
+--- gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-01 14:06:10.000000000 -0400
++++ gems-2.1.1-hwds-implement/ruby/log_tm/LazyTransactionVersionManager.C	2010-11-24 12:52:32.000000000 -0500
+@@ -280,8 +280,9 @@ void LazyTransactionVersionManager::issu
+       should_escape = true;
+     }
+ 
+-    CacheMsg storeMsg(Address(request_address),
+-                      Address(request_address),
++    Address ad(request_address);
++    CacheMsg storeMsg(ad,
++                      ad,
+                       CacheRequestType_ST_XACT,    
+                       SIMICS_get_program_counter(getLogicalProcID(thread)),
+                       AccessModeType_UserMode,
+diff -X dontdiff -uprN gems-2.1.1/ruby/system/CacheMemory.h gems-2.1.1-hwds-implement/ruby/system/CacheMemory.h
+--- gems-2.1.1/ruby/system/CacheMemory.h	2010-09-01 14:06:10.000000000 -0400
++++ gems-2.1.1-hwds-implement/ruby/system/CacheMemory.h	2010-11-24 12:52:32.000000000 -0500
+@@ -78,6 +78,7 @@
+ #include "PseudoLRUPolicy.h"
+ #include "LRUPolicy.h"
+ #include <vector>
++#include "string.h"
+ 
+ template<class ENTRY>
+ class CacheMemory {
+diff -X dontdiff -uprN gems-2.1.1/scripts/makesymlinks.sh gems-2.1.1-hwds-implement/scripts/makesymlinks.sh
+--- gems-2.1.1/scripts/makesymlinks.sh	2010-09-01 14:06:12.000000000 -0400
++++ gems-2.1.1-hwds-implement/scripts/makesymlinks.sh	2010-11-24 12:53:35.000000000 -0500
+@@ -22,7 +22,7 @@ cd ../..
+ # in your Simics 3 install
+ echo "Making symlink for import directory..."
+ #ln -s /simics-3.0.11/import import
+-ln -s /p/multifacet/projects/simics/simics-3.0.11/import import
++ln -s ${SIMICS_INSTALL}/import import
+ 
+ echo "Making symlinks for modules..."
+ cd modules
