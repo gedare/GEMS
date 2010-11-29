@@ -366,12 +366,14 @@ public:
   void           SetStage(enum stage_t stage);
 
 
+/** reference to sequencer which owns this inst. */
+pseq_t		  *m_pseq;
+
+
 protected:
   /** sequence number for this instruction */
   uint64         seq_num;
 
-  /** reference to sequencer which owns this inst. */
-  pseq_t        *m_pseq;
 
   /** The logical proc number which is running this instr, SMT chip specific */
   uint32         m_proc;

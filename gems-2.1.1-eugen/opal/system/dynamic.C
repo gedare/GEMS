@@ -1021,6 +1021,7 @@ dynamic_inst_t::Retire( abstract_pc_t *a )
 #endif
 
   SetStage(RETIRE_STAGE);
+  m_pseq->getContainerOpal()->Retire(this);
   retireRegisters();
 
   // NOTE: you could just call "nextPC_execute" here, if it wasn't for mops
@@ -1207,6 +1208,12 @@ void dynamic_inst_t::Wakeup( void )
 //**************************************************************************
 void dynamic_inst_t::SetStage(enum stage_t stage)
 {
+#ifdef DEBUG_GICA2
+			char buf[128];
+  			s->printDisassemble(buf);
+			DEBUG_OUT("%s %d PC=%llx %d stage=%s %s\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC(), printStage(stage),buf);
+#endif
+
 #ifdef PIPELINE_VIS
   if (stage != WAIT_2ND_STAGE && stage != WAIT_3RD_STAGE)
     m_pseq->out_log("stage %d %s\n", getWindowIndex(),

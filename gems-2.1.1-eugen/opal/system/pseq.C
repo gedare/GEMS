@@ -101,7 +101,9 @@
 #include "ptrace.h"
 #include "Vector.h"    
 
+#include "containerOpal.h"
 #include "pseq.h"
+
 
 /*------------------------------------------------------------------------*/
 /* Macro declarations                                                     */
@@ -423,6 +425,10 @@ pseq_t::pseq_t( int32 id )
     dl1_mshr = new mshr_t("DL1.mshr", l2_cache, m_scheduler,
                           DL1_BLOCK_BITS, L2_LATENCY, L1_FILL_BUS_CYCLES,
                           DL1_MSHR_ENTRIES, DL1_STREAM_BUFFERS);
+
+    pl1_mshr = new mshr_t("PL1.mshr", l2_cache, m_scheduler,
+                          PL1_BLOCK_BITS, L2_LATENCY, L1_FILL_BUS_CYCLES,
+                          PL1_MSHR_ENTRIES, PL1_STREAM_BUFFERS);
     
     /* first level instruction caches */  
     l1_inst_cache = new generic_cache_template<generic_cache_block_t>(
@@ -433,6 +439,14 @@ pseq_t::pseq_t( int32 id )
     l1_data_cache = new generic_cache_template<generic_cache_block_t>(
                       "L1.data", dl1_mshr, m_scheduler, DL1_SET_BITS,
                       DL1_ASSOC, DL1_BLOCK_BITS, (DL1_IDEAL != 0) );
+
+	/* first level permission cache */ 
+    l1_perm_cache = new generic_cache_template<generic_cache_block_t>(
+                      "L1.perm", pl1_mshr, m_scheduler, PL1_SET_BITS,
+                      PL1_ASSOC, PL1_BLOCK_BITS, (PL1_IDEAL != 0) );
+	
+	m_containeropal= new containeropal(l1_inst_cache,l1_data_cache,l1_perm_cache);
+	
   } else {
     /* CONFIG_WITH_RUBY  */
     m_ruby_cache = new rubycache_t( m_id, L2_BLOCK_BITS, m_scheduler );
@@ -1530,13 +1544,26 @@ void pseq_t::fetchInstrSimple( )
            #ifdef DEBUG_PSEQ
                DEBUG_OUT("\tWe hit in the L1-Icache!\n");
            #endif
-             if(! l1_inst_cache->same_line(m_last_fetch_physical_address[proc], fetchPhysicalPC)) {
-                  #ifdef DEBUG_PSEQ
+
+		       #ifdef GICACONTAINER
+				if(! m_containeropal->CacheSameLine(m_last_fetch_physical_address[proc],fetchPhysicalPC,this)) {
+			   #else
+               	if(! l1_inst_cache->same_line(m_last_fetch_physical_address[proc], fetchPhysicalPC)) {
+			   #endif
+             
+
+				  #ifdef DEBUG_PSEQ
                      DEBUG_OUT("\tUpdating our line buffer...\n");
                    #endif
                      // Modified to take in the logical proc's waiter object:
-               hit = l1_inst_cache->Read( fetchPhysicalPC, m_proc_waiter[proc], false );
 
+			   #ifdef GICACONTAINER
+				hit = m_containeropal->Fetch( fetchPhysicalPC, m_proc_waiter[proc], false,NULL);
+			   #else
+               	hit = l1_inst_cache->Read( fetchPhysicalPC, m_proc_waiter[proc], false );
+			   #endif
+
+			   
                 /* WATTCH power */
                if(WATTCH_POWER){
                  getPowerStats()->incrementICacheAccess();
@@ -2496,7 +2523,7 @@ void pseq_t::retireInstruction( )
     ireg_t pstate;
     ireg_t cwp;
     ireg_t gset;
-     #ifdef DEBUG_DYNAMIC
+     #ifdef DEBUG_GICA1
     //only print out those instruction that are NOT in trap handler
     if(d->getTrapGroup() == Trap_NoTrap){
       char buf[128];
@@ -2507,9 +2534,9 @@ void pseq_t::retireInstruction( )
         //print out memory instructions
         DEBUG_OUT("%s seqnum[ %d ] VPC[ 0x%llx ] PC[ 0x%llx ] virtual_addr[ 0x%llx ] physical_addr[ 0x%llx ] lineaddr[ 0x%llx ] iscacheable[ %d ]", buf,d->getSequenceNumber(), d->getVPC(), d->getPC(), (static_cast<memory_inst_t *>(d)->getAddress()), static_cast<memory_inst_t *>(d)->getPhysicalAddress(), ((static_cast<memory_inst_t *> (d)->getPhysicalAddress()) & ~( (1 << 6) - 1) ), static_cast<memory_inst_t *>(d)->isCacheable() );
         //print out ASI, if this instruction is not NAV
-        if(d->getInstrNAV() == false){
-          DEBUG_OUT(" ASI[ 0x%x ]", static_cast<memory_inst_t *>(d)->getASI());
-        }
+        //if(d->getInstrNAV() == false){
+        //  DEBUG_OUT(" ASI[ 0x%x ]", static_cast<memory_inst_t *>(d)->getASI());
+        //}
         //print out data
         int access_size_8bytes = ( (static_cast<memory_inst_t *>(d)->getAccessSize()) + 7)/8;
         DEBUG_OUT(" Data (%d bytes) [ ", static_cast<memory_inst_t *>(d)->getAccessSize());
@@ -2539,14 +2566,14 @@ void pseq_t::retireInstruction( )
       for(int i=0; i < SI_MAX_SOURCE; ++i){
         reg_id_t & source = d->getSourceReg(i);
         if(!source.isZero()){
-          DEBUG_OUT("( [%d] V: %d P: %d Arf: %s NAV: %d )", i,source.getVanilla(), source.getPhysical(), source.rid_type_menomic( source.getRtype() ), source.getARF()->getNAV(source, d->getProc()) );
+          DEBUG_OUT("( [%d] V: %d P: %d Arf: %s )", i,source.getVanilla(), source.getPhysical(), source.rid_type_menomic( source.getRtype() ) );
         }
       }
       DEBUG_OUT(" DESTS: ");
       for(int i=0; i < SI_MAX_DEST; ++i){
         reg_id_t & dest = d->getDestReg(i);
         if(!dest.isZero()){
-          DEBUG_OUT("( [%d] V: %d P: %d Arf: %s NAV: %d )", i,dest.getVanilla(), dest.getPhysical(), dest.rid_type_menomic( dest.getRtype() ), dest.getARF()->getNAV(dest, d->getProc()) );
+          DEBUG_OUT("( [%d] V: %d P: %d Arf: %s )", i,dest.getVanilla(), dest.getPhysical(), dest.rid_type_menomic( dest.getRtype() ) );
         }
       }
       DEBUG_OUT("\n");
@@ -2559,6 +2586,10 @@ void pseq_t::retireInstruction( )
       gset = pstate_t::getGlobalSet( pstate );
       DEBUG_OUT("\tBEGIN TL[ %d ] CWP[ 0x%x ] GSET[ 0x%x ] PSTATE[ 0x%x ]\n", tl, cwp, gset, pstate);
     }  //end instrs NOT in trap handler
+
+
+    m_iwin[proc].printDetail();
+	
     #endif
   //*****************END DEBUG instruction print
 

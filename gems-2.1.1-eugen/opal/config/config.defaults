@@ -115,6 +115,16 @@ DL1_BLOCK_BITS: 6         // 64  byte L1 cache line
 DL1_MSHR_ENTRIES: 256
 DL1_STREAM_BUFFERS: 0
 
+// L1 perm cache
+PL1_IDEAL: 0              // 1 -> ideal I cache
+PL1_ASSOC: 2              // direct mapped
+PL1_SET_BITS: 8           // 256 sets
+PL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+PL1_MSHR_ENTRIES: 256
+PL1_STREAM_BUFFERS: 0
+PL1_NL_TYPE: 0            // default no next line prefetcher
+PL1_NL_LINES: 0
+
 // L2 unified cache
 L2_IDEAL: 0              // 1 -> ideal L2 cache
 L2_ASSOC: 4             // 4 way set associative

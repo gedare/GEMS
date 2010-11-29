@@ -25,7 +25,8 @@ include $(GEMS_ROOT)/common/Makefile.common
 #DEBUG_FLAGS += -DUSE_DIRENT -DNO_FSR -DSWAP_ENDIAN
 #TESTER_LDFLAGS := -lCstd
 #OPT_FLAGS := -g -c -xO0
-OPT_FLAGS := -ggdb -g3 -O2 -fPIC -finline-functions
+#OPT_FLAGS := -ggdb -g3 -O2 -fPIC -finline-functions
+OPT_FLAGS := -ggdb -g3 -O2 -fPIC -finline-functions -w
 #OPT_FLAGS := -xCC  -fast -xarch=v8plusa -xO4 -ftrap=%all,no%inexact -xs -xprefetch=yes
 
 # if compiling to run standalone with ruby, specify a protocol here
@@ -61,6 +62,9 @@ DEBUG_FLAGS += -DDEBUG_FILTER
 
 #    defines a lot of verbosity in pseq
 #DEBUG_FLAGS += -DDEBUG_PSEQ
+#DEBUG_FLAGS += -DDEBUG_GICA21 -DDEBUG_GICA2 -DDEBUG_GICA3 -DDEBUG_GICA4 -DGICACONTAINER 
+#DEBUG_FLAGS += -DDEBUG_GICA21 -DDEBUG_GICA2 -DDEBUG_GICA3 -DDEBUG_GICA4
+DEBUG_FLAGS += -DDEBUG_GICA4 -DGICACONTAINER 
 #    defines debugging of the ruby interface
 #DEBUG_FLAGS += -DDEBUG_RUBY
 #    defines a lot of verbosity in the cache
@@ -218,7 +222,9 @@ SRC_CPP := \
 	utimer.C \
 	wait.C \
 	yags.C \
-	writebuffer.C
+	writebuffer.C \
+	containerOpal.C \
+	containers/traceFCalls.C
 
 SRC_C 	:= \
 	ccops.c \

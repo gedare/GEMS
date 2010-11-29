@@ -64,6 +64,7 @@
 
 #include "Vector.h"
 #include "Map.h"
+#include "containerOpal.h"
 
 /// The status of the fetch unit: ready to fetch instructions, or stalled
 enum pseq_fetch_status_t {
@@ -419,6 +420,10 @@ public:
   /** get the l1 instruction cache interface */
   cache_t *getInstructionCache( void ) {
     return (l1_inst_cache);
+  }
+  /** get the container opal */
+  containeropal *getContainerOpal( void ) {
+    return (m_containeropal);
   }
   /** get the ruby cache interface */
   // for SMT, all logical procs should see same Ruby interface
@@ -1219,12 +1224,19 @@ private:
   /// L1 miss status holding register structure
   mshr_t      *il1_mshr;
   mshr_t      *dl1_mshr;
+  mshr_t      *pl1_mshr;
 
   /// L1 instruction cache
   generic_cache_template<generic_cache_block_t> *l1_inst_cache;
   /// L1 data cache
   generic_cache_template<generic_cache_block_t> *l1_data_cache;
+  /// L1 permission cache
+  generic_cache_template<generic_cache_block_t> *l1_perm_cache;
 
+	
+
+  containeropal *m_containeropal;
+	
   /// L2 miss status holding register structure
   mshr_t      *l2_mshr;
   /// L2 (unified) cache
@@ -1983,10 +1995,11 @@ class proc_waiter_t: public waiter_t{
     m_pseq = pseq;  
     m_logical_proc = proc;
   }
+   //The pointer to the pseq object (which you need in order to call its Wakeup()
+   pseq_t * m_pseq;
 
  private:
-    //The pointer to the pseq object (which you need in order to call its Wakeup()
-    pseq_t * m_pseq;
+
     uint32 m_logical_proc;
 
 };

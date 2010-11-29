@@ -2870,6 +2870,7 @@ static_inst_t::decodeInstructionInfo( pa_t physical_address,
 
     case 55:  // impdep2
       m_opcode = i_impdep2;
+	  DEBUG_OUT("\n### gicadebug::impdep2\n");
       break;
 
     case 56:  // jmpl

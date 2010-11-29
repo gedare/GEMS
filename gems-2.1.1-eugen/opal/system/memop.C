@@ -73,6 +73,7 @@
 #include "writebuffer.h"
 #include "memtrace.h"
 #include "memop.h"
+#include "containerOpal.h"
 
 /*------------------------------------------------------------------------*/
 /* Macro declarations                                                     */
@@ -1071,10 +1072,17 @@ load_inst_t::accessCache( void ) {
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
+	bool primary_bool = false;
+
+	#ifdef GICACONTAINER
+	containeropal * contOpal = m_pseq->getContainerOpal();
+	if ( !contOpal->CacheRead(m_physical_addr, this, true, &primary_bool )) {
+    #else
     cache_t *dcache = m_pseq->getDataCache();
-    bool primary_bool = false;
     if ( !dcache->Read( m_physical_addr, this, true, &primary_bool )) {
-      markEvent( EVENT_DCACHE_MISS );
+	#endif
+
+	  markEvent( EVENT_DCACHE_MISS );
       STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
       SetStage(CACHE_MISS_STAGE);
       return false;
@@ -1196,10 +1204,16 @@ load_inst_t::doCacheRetirement(void){
     if(WATTCH_POWER){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
-
+	bool primary_bool = false;
+	
+    #ifdef GICACONTAINER
+	containeropal * contOpal = m_pseq->getContainerOpal();
+	if ( !contOpal->CacheRead(m_physical_addr, this, true, &primary_bool )) {
+    #else
     cache_t *dcache = m_pseq->getDataCache();
-    bool primary_bool = false;
     if ( !dcache->Read( m_physical_addr, this, true, &primary_bool )) {
+	#endif
+	
       markEvent( EVENT_DCACHE_MISS );
       STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
       SetStage(CACHE_MISS_RETIREMENT_STAGE);
@@ -1472,6 +1486,10 @@ store_inst_t::~store_inst_t() {
 //***************************************************************************
 bool
 store_inst_t::storeDataToCache( void ) {
+#ifdef DEBUG_GICA2
+		  DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
 
   // The data to store is in Source Reg 2 (IRD_3)
   reg_id_t &source = getSourceReg(2);
@@ -1549,6 +1567,11 @@ store_inst_t::storeDataToCache( void ) {
 //***************************************************************************
 bool
 store_inst_t::addToWriteBuffer(){
+#ifdef DEBUG_GICA2
+			  DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
   rubycache_t *rcache = m_pseq->getRubyCache();
   writebuffer_status_t status = m_pseq->getWriteBuffer()->addToWriteBuffer(this, m_address, m_physical_addr, getVPC(), (m_pstate >> 2) & 0x1, m_pseq->getLocalCycle(), m_proc);
   if(status == WB_OK){
@@ -1579,6 +1602,11 @@ store_inst_t::addToWriteBuffer(){
 //**************************************************************************
 void 
 store_inst_t::Execute() {
+
+#ifdef DEBUG_GICA2
+	DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
 
   #ifdef DEBUG_DYNAMIC
   char buf[128];
@@ -1673,6 +1701,11 @@ store_inst_t::Execute() {
 //*****************************************************************
 void 
 store_inst_t::continueExecution(){
+#ifdef DEBUG_GICA2
+		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
   m_event_times[EVENT_TIME_CONTINUE_EXECUTE] = m_pseq->getLocalCycle() - m_fetch_cycle;
   if( isCacheable() ){
     // are all registers ready
@@ -1735,6 +1768,11 @@ store_inst_t::continueExecution(){
 //**************************************************************************
 void 
 store_inst_t::storeDataWakeup( void ) {
+#ifdef DEBUG_GICA2
+		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
   if ( storeDataToCache() ) {
     // hit in cache -- we can complete
     //   be careful: this could be atomic_inst_t complete!
@@ -1765,6 +1803,12 @@ store_inst_t::wakeupOverlapLoads() {
 //**************************************************************************
 bool
 store_inst_t::accessCache( void ) {
+#ifdef DEBUG_GICA2
+		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
+
   if (CONFIG_WITH_RUBY) {
 #ifdef DEBUG_RUBY
     m_pseq->out_log("PC: 0x%0llx DATASTORE: 0x%0llx\n",
@@ -1855,9 +1899,15 @@ store_inst_t::accessCache( void ) {
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
-    cache_t *dcache = m_pseq->getDataCache();
 
-    if ( !dcache->Write( m_physical_addr, this ) ) {
+	#ifdef GICACONTAINER
+		containeropal * contOpal = m_pseq->getContainerOpal();
+		if ( !contOpal->CacheWrite(m_physical_addr, this )) {
+    #else
+		cache_t *dcache = m_pseq->getDataCache();
+    	if ( !dcache->Write( m_physical_addr, this ) ) {
+	#endif
+    
       /* we missed: the cache is requesting a fill,
        *            we'll wait in CACHE_MISS_STAGE for the wakeup,
        *            update statistics, return */
@@ -1874,6 +1924,11 @@ store_inst_t::accessCache( void ) {
 //   The same as accessCache() except it is called at Retirement
 bool
 store_inst_t::accessCacheRetirement( void ) {
+#ifdef DEBUG_GICA2
+		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
  //IMPORTANT: We should check whether instruction is cacheable and no traps occurred
   if( (getTrapType() == Trap_NoTrap) && (m_physical_addr != (pa_t) -1) && (!isIOAccess( m_physical_addr ) ) ) {
     if( isCacheable() ) {
@@ -1890,7 +1945,12 @@ store_inst_t::accessCacheRetirement( void ) {
  
 //**************************************************************************
 bool
-store_inst_t::doCacheRetirement(void){ 
+store_inst_t::doCacheRetirement(void){
+#ifdef DEBUG_GICA2
+		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
   if (CONFIG_WITH_RUBY) {
 #ifdef DEBUG_RUBY
     m_pseq->out_log("PC: 0x%0llx DATASTORE: 0x%0llx\n",
@@ -1946,9 +2006,13 @@ store_inst_t::doCacheRetirement(void){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 
-    cache_t *dcache = m_pseq->getDataCache();
-
+    #ifdef GICACONTAINER
+	containeropal * contOpal = m_pseq->getContainerOpal();
+	if ( !contOpal->CacheWrite(m_physical_addr, this )) {
+    #else
+	cache_t *dcache = m_pseq->getDataCache();
     if ( !dcache->Write( m_physical_addr, this ) ) {
+	#endif
       /* we missed: the cache is requesting a fill,
        *            we'll wait in CACHE_MISS_STAGE for the wakeup,
        *            update statistics, return */
@@ -1965,6 +2029,13 @@ store_inst_t::doCacheRetirement(void){
 //**************************************************************************
 void
 store_inst_t::Retire( abstract_pc_t *a ) {
+
+#if defined(DEBUG_GICA2) || defined(DEBUG_GICA21)
+	DEBUG_OUT("%s %d PC=%llx VPC=%llx VA=%llx PA=%llx\n",
+		__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC(),this->getVPC(), m_address ,m_physical_addr );
+#endif
+
+
   // make sure we have the correct permissions
   
   ASSERT(m_retirement_permission == true);
@@ -1993,6 +2064,12 @@ store_inst_t::Retire( abstract_pc_t *a ) {
 //**************************************************************************
 void 
 store_inst_t::Complete() {
+
+#ifdef DEBUG_GICA2
+	DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#endif
+
+
   // update the ASI access statistics in the sequencer
   if (s->getFlag( SI_ISASI )) {
     m_pseq->m_asi_wr_stat[m_asi]++;
