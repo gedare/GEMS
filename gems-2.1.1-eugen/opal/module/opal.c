@@ -357,6 +357,8 @@ void hfa_init_local( void )
   OPAL_COMMAND( "install-snoop" );
   OPAL_COMMAND( "mlp-trace" );
   // ADD_SIMCOMMAND
+  OPAL_COMMAND( "trace_load_DecodedAccessList" );
+  OPAL_COMMAND( "trace_load_ContainerCallList" );
 
   // check for errors
   hfa_checkerr("class regististration");
