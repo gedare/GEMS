@@ -38,4 +38,9 @@ private:
 
 };
 
+void LoadDecodedAccessListFile(const char *);
+void LoadContainerCallListFile(const char *);
+
+
+
 #endif  /* _CONTAINEROPALH_ */

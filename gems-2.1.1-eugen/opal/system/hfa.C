@@ -74,6 +74,8 @@
 #include "rubycache.h"
 #include "checkresult.h"
 #include "initvar.h"
+#include "containerOpal.h"
+
 
 /*------------------------------------------------------------------------*/
 /* Macro declarations                                                     */
@@ -772,7 +774,21 @@ set_error_t hfa_dispatch_set( void *id, conf_object_t *obj,
 
   } else if (!strcmp(attr_fn, "mlp-trace")) {
     return system_t::inst->commandSetDispatch( val );
-  } else {
+  } 
+  else if (!strcmp(attr_fn, "trace_load_DecodedAccessList")) {
+
+	if (val->kind == Sim_Val_String)
+      LoadDecodedAccessListFile( val->u.string );
+    else
+      return Sim_Set_Need_String;
+  } 
+  else if(!strcmp(attr_fn, "trace_load_ContainerCallList")) {
+	if (val->kind == Sim_Val_String)
+      LoadContainerCallListFile( val->u.string );
+    else
+      return Sim_Set_Need_String;
+  }
+  	else {
     ERROR_OUT( "error: hfa: hfa_dispatch_set: unknown command: %s\n",
                attr_fn );
   }
