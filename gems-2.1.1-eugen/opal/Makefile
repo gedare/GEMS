@@ -241,9 +241,11 @@ default_rule: module
 all: tester usd readipage makeipage regtest memscan module
 
 module:
+	mkdir -p $(OBJ_DIR)/containers
 	@echo "Opal: building module"
 	${MAKE} $(GENERATED_DIR)/generated
 	${MAKE} BUILD_FLAGS=-DSIMICS module_go
+	cp $(OBJ_DIR)/containers/*.o $(OBJ_DIR)
 	@echo "Opal: Linking simics module"
 ifeq ($(SIMICS_VERSION),2.2.X)
 	cd $(SIMICS_ROOT)/$(HOST_TYPE)/lib; $(MAKE) opal
