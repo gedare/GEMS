@@ -415,7 +415,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwpq-dev/opal/syst
  DX_RETURNT dx_membar( DX_PLIST ) {
 diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/system/hwpq.C
 --- gems-2.1.1/opal/system/hwpq.C	1969-12-31 19:00:00.000000000 -0500
-+++ gems-2.1.1-hwpq-dev/opal/system/hwpq.C	2011-02-09 16:23:17.000000000 -0500
++++ gems-2.1.1-hwpq-dev/opal/system/hwpq.C	2011-02-09 16:44:17.000000000 -0500
 @@ -0,0 +1,156 @@
 +/*
 + * FileName:  hwpq.C
@@ -508,8 +508,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/sy
 +  ASSERT( !getEvent( EVENT_FINALIZED ) );
 +  ASSERT(m_stage != RETIRE_STAGE);
 +
-+  STAT_INC( m_pseq->m_stat_hwds_retired[m_proc] );
-+
 +  // adjust any of the 'soft' state of this instruction
 +
 +
@@ -528,6 +526,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/sy
 +}
 +
 +void hwpq_inst_t::Retire( abstract_pc_t *a ) {
++
++  STAT_INC( m_pseq->m_stat_hwds_retired[m_proc] );
 +
 +  // generic dynamic_inst_t::Retire() actions
 +  // record when execution takes place
