@@ -476,8 +476,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hfa.C gems-2.1.1-hwpq-dev/opal/sys
                                    sizeof(control_inst_t), 100 );
 diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/system/hwpq.C
 --- gems-2.1.1/opal/system/hwpq.C	1969-12-31 19:00:00.000000000 -0500
-+++ gems-2.1.1-hwpq-dev/opal/system/hwpq.C	2011-02-13 18:59:44.000000000 -0500
-@@ -0,0 +1,259 @@
++++ gems-2.1.1-hwpq-dev/opal/system/hwpq.C	2011-02-13 19:05:19.000000000 -0500
+@@ -0,0 +1,268 @@
 +/*
 + * FileName:  hwpq.C
 + * Synopsis:  Implements a hardware priority queue
@@ -508,8 +508,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/sy
 +  bool hit = false;
 +  vector<hwpq_node_t *>::iterator i;
 +
++#ifdef GAB_HWDS_DEBUG
 +  printf("*******************************************Before spill\n");
 +  print_queue();
++#endif
 +
 +  assert(!m_spill_count);
 +
@@ -533,8 +535,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/sy
 +  }
 +  m_pq.clear(); // probably unnecessary.
 +
++#ifdef GAB_HWDS_DEBUG
 +  printf("*******************************************After spill\n");
 +  print_queue();
++#endif
 +
 +}
 +
@@ -547,8 +551,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/sy
 +  int value;
 +  hwpq_node_t *new_node;
 +
++#ifdef GAB_HWDS_DEBUG
 +  printf("*******************************************Before fill\n");
 +  print_queue();
++#endif
 +
 +  for( nodes_read = 0; nodes_read < m_spill_count; ++nodes_read) {
 +  //  hit = insn->m_pseq->getHwdsCache()->Read(addr, insn->m_pseq);
@@ -593,8 +599,11 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/sy
 +    insert(new_node);
 +  }
 +  m_spill_count = 0;
++
++#ifdef GAB_HWDS_DEBUG
 +  printf("*******************************************After fill\n");
 +  print_queue();
++#endif
 +}
 +
 +void hwpq_t::print_queue() {
