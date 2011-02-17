@@ -70,7 +70,7 @@ then
 
   # apply pre-build patch.
   cd $GEMS
-  patch -p1 < ../gems-patches/gems-2.1.1-pre-build.diff
+  patch -p1 < ../patches/gems-2.1.1-pre-build.diff
 fi
 
 #cd $GEMS/ruby
