@@ -362,7 +362,7 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
   }
  
   //currently IGNORE the system_breakpoint (parameter = 0x4000)...
-  #if 0
+  #if 1
   ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
 
   sprintf( system_t::inst->m_sim_message_buffer,
@@ -517,6 +517,7 @@ void system_t::printMemoryStats( void )
   dynamic_inst_t::m_myalloc.print( log );
   load_inst_t::m_myalloc.print( log );
   store_inst_t::m_myalloc.print( log );
+  pcd_inst_t::m_myalloc.print( log );
   atomic_inst_t::m_myalloc.print( log );
   prefetch_inst_t::m_myalloc.print( log );
   control_inst_t::m_myalloc.print( log );

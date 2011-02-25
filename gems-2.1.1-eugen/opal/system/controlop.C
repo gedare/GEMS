@@ -150,7 +150,7 @@ control_inst_t::Execute()
      #ifdef DEBUG_DYNAMIC
         char buf[128];
         s->printDisassemble(buf);
-        DEBUG_OUT("[ %d ] control_inst_t: EXECUTE %s NAV[ %d ] seqnum[ %lld ] fetched[ %lld ] cycle[ %lld ]", m_pseq->getID(), buf, getInstrNAV(), seq_num, m_fetch_cycle, m_pseq->getLocalCycle());
+        DEBUG_OUT("[ %d ] control_inst_t: EXECUTE %s seqnum[ %lld ] fetched[ %lld ] cycle[ %lld ]", m_pseq->getID(), buf,  seq_num, m_fetch_cycle, m_pseq->getLocalCycle());
         //print source and dest regs
         DEBUG_OUT(" SOURCES: ");
         for(int i=0; i < SI_MAX_SOURCE; ++i){
@@ -194,9 +194,9 @@ control_inst_t::Execute()
   SetStage(COMPLETE_STAGE);
 
   #ifdef DEBUG_DYNAMIC
-     char buf[128];
+     //char buf[128];
      s->printDisassemble(buf);
-     DEBUG_OUT("control_inst_t: AFTER Execute %s NAV[ %d ] seqnum[ %lld ] fetched[ %lld ] cycle[ %lld ] PredPC[ 0x%llx ] ActualPC[ 0x%llx ] PredNPC[ 0x%llx ] ActualNPC[ 0x%llx ] PredCWP[ 0x%x ] ActualCWP[ 0x%x ] PredTL[ 0x%x ] ActualTL[ 0x%x ] PredPstate[ 0x%x ] ActualPstate[ 0x%x ]\n", buf, getInstrNAV(), seq_num, m_fetch_cycle, m_pseq->getLocalCycle(), m_predicted.pc, m_actual.pc, m_predicted.npc, m_actual.npc, m_predicted.cwp, m_actual.cwp, m_predicted.tl, m_actual.tl, m_predicted.pstate, m_actual.pstate);
+     DEBUG_OUT("control_inst_t: AFTER Execute %s seqnum[ %lld ] fetched[ %lld ] cycle[ %lld ] PredPC[ 0x%llx ] ActualPC[ 0x%llx ] PredNPC[ 0x%llx ] ActualNPC[ 0x%llx ] PredCWP[ 0x%x ] ActualCWP[ 0x%x ] PredTL[ 0x%x ] ActualTL[ 0x%x ] PredPstate[ 0x%x ] ActualPstate[ 0x%x ]\n", buf, seq_num, m_fetch_cycle, m_pseq->getLocalCycle(), m_predicted.pc, m_actual.pc, m_predicted.npc, m_actual.npc, m_predicted.cwp, m_actual.cwp, m_predicted.tl, m_actual.tl, m_predicted.pstate, m_actual.pstate);
   #endif
 
       
@@ -213,7 +213,7 @@ control_inst_t::Execute()
      #ifdef DEBUG_DYNAMIC
          char buf[128];
          s->printDisassemble(buf);
-         DEBUG_OUT("[ %d ] control_inst_t: MISPREDICT %s NAV[ %d ] seqnum[ %lld ] fetched[ %lld ] cycle[ %lld ] PredPC[ 0x%llx ] ActualPC[ 0x%llx ] PredNPC[ 0x%llx ] ActualNPC[ 0x%llx ] PredCWP[ 0x%x ] ActualCWP[ 0x%x ] PredTL[ 0x%x ] ActualTL[ 0x%x ] PredPstate[ 0x%x ] ActualPstate[ 0x%x ]\n", m_pseq->getID(), buf, getInstrNAV(), seq_num, m_fetch_cycle, m_pseq->getLocalCycle(), m_predicted.pc, m_actual.pc, m_predicted.npc, m_actual.npc, m_predicted.cwp, m_actual.cwp, m_predicted.tl, m_actual.tl, m_predicted.pstate, m_actual.pstate);
+         DEBUG_OUT("[ %d ] control_inst_t: MISPREDICT %s  seqnum[ %lld ] fetched[ %lld ] cycle[ %lld ] PredPC[ 0x%llx ] ActualPC[ 0x%llx ] PredNPC[ 0x%llx ] ActualNPC[ 0x%llx ] PredCWP[ 0x%x ] ActualCWP[ 0x%x ] PredTL[ 0x%x ] ActualTL[ 0x%x ] PredPstate[ 0x%x ] ActualPstate[ 0x%x ]\n", m_pseq->getID(), buf, seq_num, m_fetch_cycle, m_pseq->getLocalCycle(), m_predicted.pc, m_actual.pc, m_predicted.npc, m_actual.npc, m_predicted.cwp, m_actual.cwp, m_predicted.tl, m_actual.tl, m_predicted.pstate, m_actual.pstate);
      #endif
 
     // This preformatted debugging information is left for your convenience
@@ -495,6 +495,7 @@ control_inst_t::Retire( abstract_pc_t *a )
   // no need to update call&return, since we used checkpointed RAS
   // no update on traps right now
   SetStage(RETIRE_STAGE);
+  m_pseq->getContainerOpal()->Retire(this);
 
   /* retire any register overwritten by link register */
   retireRegisters(); 

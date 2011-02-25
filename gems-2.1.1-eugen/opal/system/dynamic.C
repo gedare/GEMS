@@ -1182,7 +1182,7 @@ dynamic_inst_t::Squash() {
   }
   UnwindRegisters( );
   m_pseq->decrementSequenceNumber(m_proc);  
-
+ 
 #ifdef PIPELINE_VIS
   m_pseq->out_log("squash %d\n", getWindowIndex());
 #endif
@@ -1195,12 +1195,18 @@ dynamic_inst_t::Squash() {
 //**************************************************************************
 void dynamic_inst_t::Wakeup( void )
 {
-  #ifdef DEBUG_WAIT
-  DEBUG_OUT("dynamic_inst_t: Wakeup BEGIN seqnum[%d] proc[%d]\n",seq_num,m_proc);
+  #ifdef DEBUG_GICA2STORE_DISABLE
+  	char buf[128];
+	dynamic_inst_t * w = this;
+	w->getStaticInst()->printDisassemble(buf);
+	DEBUG_OUT("dynamic_inst_t: Wakeup BEGIN seqnum[%d] proc[%d]\n",seq_num,m_proc);
+	DEBUG_OUT("\t%s %s %lld %llx %s \n",__PRETTY_FUNCTION__, w->printStage(w->getStage()), w->m_pseq->getLocalCycle(),w->getPC(), buf);
   #endif
   Schedule();
-   #ifdef DEBUG_WAIT
-  DEBUG_OUT("dynamic_inst_t: Wakeup END seqnum[%d] proc[%d]\n",seq_num,m_proc);
+   #ifdef DEBUG_GICA2STORE_DISABLE
+	w->getStaticInst()->printDisassemble(buf);
+    DEBUG_OUT("dynamic_inst_t: Wakeup END seqnum[%d] proc[%d]\n",seq_num,m_proc);
+	DEBUG_OUT("\t%s %s %lld %llx %s \n",__PRETTY_FUNCTION__, w->printStage(w->getStage()), w->m_pseq->getLocalCycle(),w->getPC(), buf);
   #endif
 }
 
@@ -1284,6 +1290,11 @@ bool dynamic_inst_t::isRetireReady()  {
              (m_stage == COMPLETE_STAGE) && (m_pseq->getLocalCycle() >= m_complete_cycle) );
   }
 
+  #ifdef GICACONTAINER
+	if (ready)
+		ready = m_pseq->getContainerOpal()->AllowRetire(this);
+  #endif
+  	
   if(!ready){
     // prints out the instruction at head of ROB
       #ifdef DEBUG_PSEQ

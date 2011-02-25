@@ -499,6 +499,7 @@ void   static_inst_t::setNextPC( void )
     
   case DYN_LOAD:
   case DYN_STORE:
+  case DYN_PCD:
   case DYN_PREFETCH:
   case DYN_ATOMIC:
     // now that we're running production, we always want a nextPC function
@@ -2869,8 +2870,12 @@ static_inst_t::decodeInstructionInfo( pa_t physical_address,
       break;
 
     case 55:  // impdep2
+      m_type   = DYN_PCD;
       m_opcode = i_impdep2;
-	  DEBUG_OUT("\n### gicadebug::impdep2\n");
+	  //REG_TWO_ALU( FU_CONTAINER );
+	  REG_TWO_ALU( FU_INTALU);
+  
+	  DEBUG_OUT("\n### decode gicadebug::impdep2\n");
       break;
 
     case 56:  // jmpl

@@ -201,6 +201,8 @@ void hfa_allocate( void )
                                 sizeof(store_inst_t), 100 );
   atomic_inst_t::m_myalloc.init( "atomic_inst_t",
                                  sizeof(atomic_inst_t), 100 );
+  pcd_inst_t::m_myalloc.init( "pcd_inst_t",
+                                sizeof(pcd_inst_t), 100 );
   prefetch_inst_t::m_myalloc.init( "prefetch_inst_t",
                                    sizeof(prefetch_inst_t), 100 );
   /// memory allocator for branch, etc. instructions (controlop.C)

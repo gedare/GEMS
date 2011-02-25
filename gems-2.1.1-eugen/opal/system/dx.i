@@ -3425,6 +3425,19 @@ DX_RETURNT dx_impdep1( DX_PLIST ) {
 }
 
 DX_RETURNT dx_impdep2( DX_PLIST ) {
+WATTCH_READ_SOURCE;
+  WATTCH_READ_SOURCE;
+  //IREGISTER result = (SOURCE1 + S2ORI);
+  (static_cast<pcd_inst_t *>(this))->m_startaddr = SOURCE1;
+  (static_cast<pcd_inst_t *>(this))->m_size = maskBits64(SOURCE2,0,61);
+  (static_cast<pcd_inst_t *>(this))->m_perm =(byte_t) maskBits64(SOURCE2,62,63);
+  
+  //m_pseq->getContainerOpal()->AddDynamicRange(SOURCE1, maskBits64(SOURCE2,0,61), (byte_t) maskBits64(SOURCE2,62,63),this);
+  //m_pseq->out_info("   source1 0x%0llx\n", (SOURCE1));
+  //m_pseq->out_info("   source2 0x%0llx\n",  S2ORI);
+  //m_pseq->out_info("   result == 0x%0llx\n", result );
+  //WATTCH_WRITE_DEST(result);            
+  //WRITE_DEST(result);
 }
 
 DX_RETURNT dx_membar( DX_PLIST ) {

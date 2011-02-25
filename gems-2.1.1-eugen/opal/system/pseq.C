@@ -447,6 +447,7 @@ pseq_t::pseq_t( int32 id )
 	
 	m_containeropal= new containeropal(l1_inst_cache,l1_data_cache,l1_perm_cache);
 	
+	
   } else {
     /* CONFIG_WITH_RUBY  */
     m_ruby_cache = new rubycache_t( m_id, L2_BLOCK_BITS, m_scheduler );
@@ -1347,6 +1348,12 @@ void pseq_t::advanceCycle( void )
     // then tick L1
     il1_mshr->Tick();
     dl1_mshr->Tick();
+	
+	#ifdef GICACONTAINER
+		pl1_mshr->Tick();
+		m_containeropal->Tick();
+		
+	#endif
   }
 
   // advance local time one cycle (do this only after all threads have finished going through pipeline)
@@ -2067,6 +2074,12 @@ dynamic_inst_t* pseq_t::createInstruction( static_inst_t *s_instr,
        #endif
       break;
 
+   	case DYN_PCD:
+        
+      d_instr = new pcd_inst_t(s_instr, index, this, fetch_at, physicalPC,  m_last_traptype[proc][m_last_traplevel[proc]], proc);
+       
+      break;
+
     case DYN_PREFETCH:
         #ifdef DEBUG_PSEQ
              DEBUG_OUT("\tDYN_PREFETCH type proc[%d]\n",proc);
@@ -2456,6 +2469,7 @@ void pseq_t::retireInstruction( )
           // detect deadlock- issue a forward progress error if it takes too long
           // between retiring instructions
           if ( getLocalCycle() > m_fwd_progress_cycle ) {
+		  	printf("\n\nLack of forward progress detected \n\n");fflush(stdout);
             ERROR_OUT( "*** Lack of forward progress detected ***\n" );
             ERROR_OUT( "    Cycle = %d\n", getLocalCycle() );
             ERROR_OUT("     Fwd Progress Cycle = %d\n", m_fwd_progress_cycle);
@@ -2617,7 +2631,10 @@ void pseq_t::retireInstruction( )
          #ifdef DEBUG_DYNAMIC_RET
             DEBUG_OUT("calling Retire (1) proc[%d]\n",proc);
          #endif
-            dyn_execute_type_t type = d->getStaticInst()->getType();            
+            dyn_execute_type_t type = d->getStaticInst()->getType();   
+
+			//GICA check here for instruction permission
+			DEBUG_OUT("\n RETIRE 1 \n");
             d->Retire( m_inorder_at[proc] );
       }
     } else if ( traptype == Trap_Use_Functional ) {
@@ -2668,11 +2685,15 @@ void pseq_t::retireInstruction( )
           // if no interrupts were posted, retire 'd' normally
           if ( m_posted_interrupt[proc] == Trap_NoTrap ) {    
             if (traptype == Trap_NoTrap) {
-              d->Retire( m_inorder_at[proc] );
+			  //GICA 
+			  //DEBUG_OUT("\n RETIRE 2 \n");	
+			  d->Retire( m_inorder_at[proc] );
             } else if (traptype == Trap_Use_Functional) {
               // read register from simics
               updateInstructionState( d, proc );         
-              d->Retire( m_inorder_at[proc] );
+			  //GICA 
+			  //DEBUG_OUT("\n RETIRE 3 \n"); 
+			  d->Retire( m_inorder_at[proc] );
             } else {
               if (TLB_IS_IDEAL &&
                   ((traptype == Trap_Fast_Instruction_Access_MMU_Miss) ||
@@ -2718,7 +2739,9 @@ void pseq_t::retireInstruction( )
           if (traptype == Trap_Use_Functional) {
             // read register from simics
             updateInstructionState( d, proc );       
-            d->Retire( m_inorder_at[proc] );
+			//GICA 
+			DEBUG_OUT("\n RETIRE 4 \n");
+			d->Retire( m_inorder_at[proc] );
           }
         }
 
@@ -7364,6 +7387,8 @@ void pseq_t::printStats( void )
     l2_mshr->printStats( this );
     l1_data_cache->printStats( this );
     dl1_mshr->printStats( this );
+	l1_perm_cache->printStats( this );
+    pl1_mshr->printStats( this );
     l1_inst_cache->printStats( this );
     il1_mshr->printStats( this );
   }

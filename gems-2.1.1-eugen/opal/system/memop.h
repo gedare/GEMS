@@ -322,6 +322,14 @@ public:
    *  access size _late_ in the game (in the setASI() function in memop.C).
    */
   byte_t         m_access_size;
+
+  //GICA containers: 
+  //supplemental state for load and stores, check if need to wait for permission checks
+  //the situations are : 
+  // 0 - no miss, all data is cached , proceed
+  // 1 - permission miss OR cache miss 
+  // 2 - permission miss AND cache miss
+  int cache_permission_holds;
 };
 
 /**
@@ -849,6 +857,8 @@ uint16 memop_getASI( uint32 inst, reg_id_t asi_reg, bool *is_block_load, uint32 
 /*------------------------------------------------------------------------*/
 /* Global functions                                                       */
 /*------------------------------------------------------------------------*/
+
+
 
 
 #endif  /* _MEMOP_H_ */

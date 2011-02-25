@@ -255,6 +255,7 @@ memory_inst_t::Retire( abstract_pc_t *a )
 
   retireRegisters();
   SetStage(RETIRE_STAGE);
+  m_pseq->getContainerOpal()->Retire(this);
   nextPC_execute( a );
   markEvent( EVENT_FINALIZED );
 
@@ -1050,7 +1051,7 @@ load_inst_t::accessCache( void ) {
       SetStage(CACHE_NOTREADY_STAGE);
 
       #ifdef DEBUG_DYNAMIC
-        char buf[128];
+//        char buf[128];
         s->printDisassemble(buf);
         DEBUG_OUT("load_inst_t::accessCache CACHE_NOTREADY_STAGE %s cycle[ %lld ] proc[ %d] seqnum[ %lld mshr_hit[ %d ]]\n", buf, m_pseq->getLocalCycle(), m_proc, seq_num, mshr_hit);
         rcache->print();
@@ -1603,8 +1604,8 @@ store_inst_t::addToWriteBuffer(){
 void 
 store_inst_t::Execute() {
 
-#ifdef DEBUG_GICA2
-	DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#ifdef DEBUG_GICA2STORE
+	DEBUG_OUT("%s %s %d PC=%llx\n",__PRETTY_FUNCTION__,this->printStage(this->getStage()),m_pseq->getLocalCycle(),this->getPC());
 #endif
 
 
@@ -1803,8 +1804,10 @@ store_inst_t::wakeupOverlapLoads() {
 //**************************************************************************
 bool
 store_inst_t::accessCache( void ) {
-#ifdef DEBUG_GICA2
-		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#ifdef DEBUG_GICA2STORE
+		char buf[128];
+		this->getStaticInst()->printDisassemble(buf);
+		DEBUG_OUT("%s %s %lld PC=%llx %s\n",__PRETTY_FUNCTION__, this->printStage(this->getStage()) , this->m_pseq->getLocalCycle(),this->getPC(),buf);
 #endif
 
 
@@ -1902,19 +1905,23 @@ store_inst_t::accessCache( void ) {
 
 	#ifdef GICACONTAINER
 		containeropal * contOpal = m_pseq->getContainerOpal();
-		if ( !contOpal->CacheWrite(m_physical_addr, this )) {
+		if(!contOpal->CacheWrite(m_physical_addr, this )) //cache miss
+		{
+			SetStage( CACHE_MISS_STAGE );
+		    STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
+		    return false;
+		}
     #else
 		cache_t *dcache = m_pseq->getDataCache();
     	if ( !dcache->Write( m_physical_addr, this ) ) {
+			    /* we missed: the cache is requesting a fill,
+       			* we'll wait in CACHE_MISS_STAGE for the wakeup,
+       			* update statistics, return */
+			SetStage( CACHE_MISS_STAGE );
+      		STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
+      		return false;
+    	}
 	#endif
-    
-      /* we missed: the cache is requesting a fill,
-       *            we'll wait in CACHE_MISS_STAGE for the wakeup,
-       *            update statistics, return */
-      SetStage( CACHE_MISS_STAGE );
-      STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
-      return false;
-    }
   }
 
   return true;
@@ -1924,8 +1931,8 @@ store_inst_t::accessCache( void ) {
 //   The same as accessCache() except it is called at Retirement
 bool
 store_inst_t::accessCacheRetirement( void ) {
-#ifdef DEBUG_GICA2
-		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#ifdef DEBUG_GICA2STORE
+		DEBUG_OUT("%s %s %d PC=%llx\n",__PRETTY_FUNCTION__,this->printStage(this->getStage()),m_pseq->getLocalCycle(),this->getPC());
 #endif
 
 
@@ -1946,8 +1953,8 @@ store_inst_t::accessCacheRetirement( void ) {
 //**************************************************************************
 bool
 store_inst_t::doCacheRetirement(void){
-#ifdef DEBUG_GICA2
-		DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#ifdef DEBUG_GICA2STORE
+		DEBUG_OUT("%s %s %d PC=%llx\n",__PRETTY_FUNCTION__,this->printStage(this->getStage()),m_pseq->getLocalCycle(),this->getPC());
 #endif
 
 
@@ -2030,9 +2037,9 @@ store_inst_t::doCacheRetirement(void){
 void
 store_inst_t::Retire( abstract_pc_t *a ) {
 
-#if defined(DEBUG_GICA2) || defined(DEBUG_GICA21)
-	DEBUG_OUT("%s %d PC=%llx VPC=%llx VA=%llx PA=%llx\n",
-		__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC(),this->getVPC(), m_address ,m_physical_addr );
+#if defined(DEBUG_GICA2STORE)
+	DEBUG_OUT("%s %s %d PC=%llx VPC=%llx VA=%llx PA=%llx\n",
+		__PRETTY_FUNCTION__,this->printStage(this->getStage()),m_pseq->getLocalCycle(),this->getPC(),this->getVPC(), m_address ,m_physical_addr );
 #endif
 
 
@@ -2065,27 +2072,27 @@ store_inst_t::Retire( abstract_pc_t *a ) {
 void 
 store_inst_t::Complete() {
 
-#ifdef DEBUG_GICA2
-	DEBUG_OUT("%s %d PC=%llx\n",__PRETTY_FUNCTION__,m_pseq->getLocalCycle(),this->getPC());
+#ifdef DEBUG_GICA2STORE
+	DEBUG_OUT("%s %s %d PC=%llx\n",__PRETTY_FUNCTION__, this->printStage(this->getStage()),m_pseq->getLocalCycle(),this->getPC());
 #endif
 
+	  // update the ASI access statistics in the sequencer
+	  if (s->getFlag( SI_ISASI )) {
+	    m_pseq->m_asi_wr_stat[m_asi]++;
+	  }
+	  
+	  /* this function can get called when both a store's address and data
+	     are available */
+	  //  ASSERT(m_physical_addr != (my_addr_t ) -1);
+	  memory_inst_t::Execute(); 
 
-  // update the ASI access statistics in the sequencer
-  if (s->getFlag( SI_ISASI )) {
-    m_pseq->m_asi_wr_stat[m_asi]++;
-  }
+	  /* must call wakeup _after_ execute:
+	   *      wakeup checks the store stage (must be completed)
+	   *      before bypassing the value */
+	  wakeupDependentLoads();
+	  // Also wakeup any loads that are predicted to cause load-store ordering violations
+	  wakeupPredictedDependentLoads();
   
-  /* this function can get called when both a store's address and data
-     are available */
-  //  ASSERT(m_physical_addr != (my_addr_t ) -1);
-  memory_inst_t::Execute(); 
-
-  /* must call wakeup _after_ execute:
-   *      wakeup checks the store stage (must be completed)
-   *      before bypassing the value */
-  wakeupDependentLoads();
-  // Also wakeup any loads that are predicted to cause load-store ordering violations
-  wakeupPredictedDependentLoads();
 }
 
 //***************************************************************************
