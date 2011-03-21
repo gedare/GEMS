@@ -1,0 +1,1787 @@
+diff -X dontdiff -uprN gems-2.1.1/common/Makefile.common gems-2.1.1-hwpq-dev/common/Makefile.common
+--- gems-2.1.1/common/Makefile.common	2010-09-01 14:06:12.000000000 -0400
++++ gems-2.1.1-hwpq-dev/common/Makefile.common	2011-01-10 12:48:37.000000000 -0500
+@@ -56,11 +56,11 @@ ifeq ($(SIMICS_VERSION),2.2.X)
+   SIMICS_INCLUDE_ROOT := /dev/null22
+ else
+ ifeq ($(SIMICS_VERSION),3.0)
+-  SIMICS_ROOT := /dev/null30
++  SIMICS_ROOT := $(GEMS_ROOT)/simics
+   SIMICS_EXEC_ROOT := $(GEMS_ROOT)/simics
+   # NOTE: This variable must be updated to point to the src/include directory
+   # of your Simics 3.0 installation
+-  SIMICS_INCLUDE_ROOT := $(GEMS_ROOT)/simics/src/include
++  SIMICS_INCLUDE_ROOT := $(SIMICS_INSTALL)/src/include
+ else
+   SIMICS_ROOT := /dev/blah
+   SIMICS_EXEC_ROOT := /dev/foo
+@@ -98,7 +98,7 @@ LFLAGS := 
+ CC_VERSION=3.4.4
+ 
+ ifeq ($(HOST_TYPE),amd64-linux)
+-  CC =  /s/gcc-3.4.4/bin/g++
++  CC =  /usr/bin/g++
+   #CC =  /usr/bin/g++
+   OPT_FLAGS = -m64 -march=opteron -fPIC
+   LDFLAGS += -ggdb -g3 -Wl,-R/s/gcc-3.4.4/lib64 
+@@ -106,14 +106,14 @@ ifeq ($(HOST_TYPE),amd64-linux)
+ 
+ else
+ ifeq ($(HOST_TYPE),v9-sol8-64)
+-  # CC = purify -best-effort -leaks-at-exit=yes -chain-length="15" /s/gcc-3.4.1/bin/g++ -static
++  # CC = purify -best-effort -leaks-at-exit=yes -chain-length="15" /usr/bin/g++ -static
+   # CC = /s/gcc-3.4.3/bin/g++ -I/s/getopt-0/include
+   CC = g++ -I/s/getopt-0/include
+   OPT_FLAGS = -m64 -mcpu=v9 -DUSE_DIRENT
+   LDFLAGS += -m64 -L/s/getopt-0/lib -lgetopt
+ else
+ ifeq ($(HOST_TYPE),x86-linux)
+-  CC =  /s/gcc-3.4.1/bin/g++
++  CC =  /usr/bin/g++
+   #CC =  /usr/bin/g++
+   OPT_FLAGS = -march=i686
+   LDFLAGS += -ggdb -g3
+diff -X dontdiff -uprN gems-2.1.1/opal/common/hfacore.h gems-2.1.1-hwpq-dev/opal/common/hfacore.h
+--- gems-2.1.1/opal/common/hfacore.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/common/hfacore.h	2011-02-08 15:59:31.000000000 -0500
+@@ -112,6 +112,7 @@ typedef struct _predictor_state_t {
+ #include "iwindow.h"
+ #include "scheduler.h"
+ #include "cache.h"
++#include "hwpq.h"
+ #include "pseq.h"
+ #include "system.h"
+ #include "power.h"
+diff -X dontdiff -uprN gems-2.1.1/opal/common/hfatypes.h gems-2.1.1-hwpq-dev/opal/common/hfatypes.h
+--- gems-2.1.1/opal/common/hfatypes.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/common/hfatypes.h	2011-02-09 16:05:45.000000000 -0500
+@@ -142,6 +142,7 @@ enum dyn_execute_type_t {
+   DYN_STORE,                 // store
+   DYN_PREFETCH,              // prefetch memory operation
+   DYN_ATOMIC,                // atomic memory operation (atomic swap, etc)
++  DYN_HWPQ,                  // hardware priority queue
+   DYN_NUM_EXECUTE_TYPES
+ };
+ 
+@@ -162,6 +163,7 @@ enum fu_type_t {
+   FU_FLOATSQRT,            // floating point square root
+   FU_RDPORT,               // memory read port
+   FU_WRPORT,               // memory write port
++  FU_IMPDEP2,              // impdep2 functional unit
+   FU_NUM_FU_TYPES          // total functional unit classes
+ };
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/config/config.defaults gems-2.1.1-hwpq-dev/opal/config/config.defaults
+--- gems-2.1.1/opal/config/config.defaults	2010-09-01 14:06:14.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/config/config.defaults	2011-02-21 16:45:03.000000000 -0500
+@@ -3,7 +3,7 @@
+ // specifies number of logical processors per physical processor
+ CONFIG_LOGICAL_PER_PHY_PROC:  1
+ // specifies how many threads to fetch from in each cycle
+-CONFIG_FETCH_THREADS_PER_CYCLE:  2
++CONFIG_FETCH_THREADS_PER_CYCLE:  1
+ 
+ //
+ // Processor "Width" (issue, decode, retire width)
+@@ -48,20 +48,22 @@ CONFIG_ALU_MAPPING: (
+     6, // FU_FLOATDIV,             // floating point divider
+     6, // FU_FLOATSQRT,            // floating point square root
+     7, // FU_RDPORT,               // memory read port
+-    8  // FU_WRPORT,               // memory write port
++    8,  // FU_WRPORT,               // memory write port
++    9 // FU_IMPDEP2,               // implementation dependent FU
+        // FU_NUM_FU_TYPES          // total functional unit classes
+ )
+ 
+ CONFIG_NUM_ALUS: (
+-  127, // inst does not use a functional unit
+-    4, // integer ALU (fused multiply/add)
+-    2, // integer divisor
+-    2, // compare branch units
+-    4, // FP ALU
+-    2, // FP multiply
+-    2, // FP divisor / square-root
+-    10, // load unit (memory read)
+-    10, // store unit (memory write)
++  127, // inst does not use a functional unit (0)
++    4, // integer ALU (fused multiply/add)    (1)
++    2, // integer divisor                     (2)
++    2, // compare branch units                (3)
++    4, // FP ALU                              (4)
++    2, // FP multiply                         (5)
++    2, // FP divisor / square-root            (6)
++    10, // load unit (memory read)            (7)
++    10, // store unit (memory write)          (8)
++    1, // impdep2                             (9)
+     0,
+     0,
+     0,
+@@ -81,7 +83,8 @@ CONFIG_ALU_LATENCY: (
+    12, // FU_FLOATDIV,             // floating point divider
+    24, // FU_FLOATSQRT,            // floating point square root
+     1, // FU_RDPORT,               // memory read port
+-    1  // FU_WRPORT,               // memory write port
++    1,  // FU_WRPORT,               // memory write port
++    1  // FU_IMPDEP2,               // implementation dependent FU
+        // FU_NUM_FU_TYPES          // total functional unit classes
+ )
+ 
+@@ -123,6 +126,16 @@ L2_BLOCK_BITS: 6         // 64 byte cach
+ L2_MSHR_ENTRIES: 128
+ L2_STREAM_BUFFERS: 0
+ 
++// GAB: HWDS
++// L1 hwds cache
++HL1_IDEAL: 0              // 1 -> ideal H cache
++HL1_ASSOC: 2              // direct mapped
++HL1_SET_BITS: 8           // 256 sets
++HL1_BLOCK_BITS: 6         // 64  byte L1 cache line
++HL1_MSHR_ENTRIES: 256
++HL1_STREAM_BUFFERS: 0
++CONFIG_NUM_HWPQS: 10
++
+ // supported TLB sizes
+ TLB_NUM_ENTRIES: 64
+ TLB_NUM_PAGE_SIZES: 4
+diff -X dontdiff -uprN gems-2.1.1/opal/Makefile gems-2.1.1-hwpq-dev/opal/Makefile
+--- gems-2.1.1/opal/Makefile	2010-09-01 14:06:15.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/Makefile	2011-02-08 14:00:02.000000000 -0500
+@@ -180,6 +180,7 @@ SRC_CPP := \
+ 	flow.C \
+ 	flatarf.C \
+ 	gshare.C \
++	hwpq.C \
+ 	igshare.C \
+ 	hfa.C \
+ 	histogram.C \
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.C gems-2.1.1-hwpq-dev/opal/system/cache.C
+--- gems-2.1.1/opal/system/cache.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/cache.C	2011-03-14 13:15:23.000000000 -0400
+@@ -188,39 +188,6 @@ generic_cache_template<BlockType>::~gene
+ 
+ //**************************************************************************
+ template <class BlockType>
+-bool generic_cache_template<BlockType>::TagSearch(pa_t a, bool setMRU, bool setDirty,
+-    BlockType** block_ptr, uint32 *way) {
+-
+-  uint32 index = Set(a);
+-  pa_t   ba = BlockAddress(a);
+-  bool   cachehit = false;
+-  ASSERT(index < n_sets);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    // if it is found in the cache ...
+-    if ( (IsValid(set[i]) && getBlockAddress(set[i]) == ba) ) {
+-      if(setMRU)
+-        set[i].last_access = m_eventQueue->getCycle();
+-      if(setDirty)
+-        set[i].address_state |= CACHE_BLK_DIRTY;
+-      cachehit = true;
+-      if(block_ptr) *block_ptr = &set[i];
+-      if(way) *way = i;
+-      break;
+-    }
+-  }
+-  
+-#ifdef DEBUG_CACHE
+-  DEBUG_OUT( "%s TagSearch 0x%0llx (TagSearch: index: 0x%0x) ... %d\n",
+-             name, a, index, cachehit);
+-#endif
+-  return cachehit;
+-}
+-
+-//**************************************************************************
+-template <class BlockType>
+ void generic_cache_template<BlockType>::DoBeforeReplace(BlockType *b, uint32 way) {
+   /* update stats */
+   if(IsValid(*b)) {
+@@ -360,57 +327,6 @@ pa_t generic_cache_template<BlockType>::
+ 
+ #endif
+ 
+-//**************************************************************************
+-template <class BlockType>
+-void generic_cache_template<BlockType>::Warmup(pa_t a) {
+-
+-  uint32 index = Set(a);
+-  pa_t ba = BlockAddress(a);
+-  ASSERT(index < n_sets);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+-    if (hit) { 
+-      return;
+-    }
+-  }
+-  int replace_set = random() % m_assoc;
+-  /* write new block into the cache */
+-  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+-}
+-
+-//**************************************************************************
+-template <class BlockType>
+-void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
+-  /* used when we want the execution of a particular load or store to
+-   * be prefetched perfectly.
+-   */
+-  uint32 index = Set(a);
+-  pa_t ba = BlockAddress(a);
+-  ASSERT(index < n_sets);
+-  STAT_INC(reads);
+-
+-  /* search all sets until we find a match */
+-  BlockType *set = &cache[index * m_assoc];
+-  int replace_set = 0;
+-  for (uint32 i = 0 ; i < m_assoc ; i ++) {
+-    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
+-    if (hit) { 
+-      STAT_INC(read_hit);
+-      return;
+-    } 
+-    if (set[i].last_access < set[replace_set].last_access) {
+-      replace_set = i;
+-    }
+-  }
+-
+-  /* write new block into the cache */
+-  STAT_INC(read_miss);
+-  set[replace_set].address_state = ba | CACHE_BLK_VALID;
+-  set[replace_set].last_access = m_eventQueue->getCycle();
+-}
+ 
+ //**************************************************************************
+ /* this function is called when a store is retired.  If the address
+@@ -568,18 +484,6 @@ set_error_t generic_cache_template<Block
+   return Sim_Set_Ok;
+ }
+ 
+-//**************************************************************************
+-template <class BlockType>
+-int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
+-{
+-  int rc;
+-
+-  rc = conf->register_attribute( name,
+-                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
+-                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
+-  return rc;
+-}
+-
+ /*------------------------------------------------------------------------*/
+ /* Accessor(s) / mutator(s)                                               */
+ /*------------------------------------------------------------------------*/
+diff -X dontdiff -uprN gems-2.1.1/opal/system/cache.h gems-2.1.1-hwpq-dev/opal/system/cache.h
+--- gems-2.1.1/opal/system/cache.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/cache.h	2011-03-14 13:15:24.000000000 -0400
+@@ -59,6 +59,7 @@
+ 
+ #include "mshr.h"
+ #include "scheduler.h"
++#include "confio.h"
+ 
+ /*------------------------------------------------------------------------*/
+ /* Macro declarations                                                     */
+@@ -473,4 +474,105 @@ protected:
+ /* Global functions                                                       */
+ /*------------------------------------------------------------------------*/
+ 
++/* workaround see: https://lists.cs.wisc.edu/archive/gems-users/2009-March/msg00116.shtml */
++//**************************************************************************
++template <class BlockType>
++int generic_cache_template<BlockType>::registerCheckpoint( confio_t *conf )
++{
++  int rc;
++
++  rc = conf->register_attribute( name,
++                                 generic_cache_template<BlockType>::get_cache_data, (void *) this,
++                                 generic_cache_template<BlockType>::set_cache_data, (void *) this );
++  return rc;
++}
++
++//**************************************************************************
++template <class BlockType>
++void generic_cache_template<BlockType>::OracleAccess(pa_t a) {
++  /* used when we want the execution of a particular load or store to
++   * be prefetched perfectly.
++   */
++  uint32 index = Set(a);
++  pa_t ba = BlockAddress(a);
++  ASSERT(index < n_sets);
++  STAT_INC(reads);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  int replace_set = 0;
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
++    if (hit) { 
++      STAT_INC(read_hit);
++      return;
++    } 
++    if (set[i].last_access < set[replace_set].last_access) {
++      replace_set = i;
++    }
++  }
++
++  /* write new block into the cache */
++  STAT_INC(read_miss);
++  set[replace_set].address_state = ba | CACHE_BLK_VALID;
++  set[replace_set].last_access = m_eventQueue->getCycle();
++}
++
++//**************************************************************************
++template <class BlockType>
++void generic_cache_template<BlockType>::Warmup(pa_t a) {
++
++  uint32 index = Set(a);
++  pa_t ba = BlockAddress(a);
++  ASSERT(index < n_sets);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    bool hit = IsValid(set[i]) && (getBlockAddress(set[i]) == ba);
++    if (hit) { 
++      return;
++    }
++  }
++  int replace_set = random() % m_assoc;
++  /* write new block into the cache */
++  set[replace_set].address_state = ba | CACHE_BLK_VALID;
++}
++
++//**************************************************************************
++template <class BlockType>
++bool generic_cache_template<BlockType>::TagSearch(pa_t a, bool setMRU, bool setDirty,
++    BlockType** block_ptr, uint32 *way) {
++
++  uint32 index = Set(a);
++  pa_t   ba = BlockAddress(a);
++  bool   cachehit = false;
++  ASSERT(index < n_sets);
++
++  /* search all sets until we find a match */
++  BlockType *set = &cache[index * m_assoc];
++  for (uint32 i = 0 ; i < m_assoc ; i ++) {
++    // if it is found in the cache ...
++    if ( (IsValid(set[i]) && getBlockAddress(set[i]) == ba) ) {
++      if(setMRU)
++        set[i].last_access = m_eventQueue->getCycle();
++      if(setDirty)
++        set[i].address_state |= CACHE_BLK_DIRTY;
++      cachehit = true;
++      if(block_ptr) *block_ptr = &set[i];
++      if(way) *way = i;
++      break;
++    }
++  }
++  
++#ifdef DEBUG_CACHE
++  DEBUG_OUT( "%s TagSearch 0x%0llx (TagSearch: index: 0x%0x) ... %d\n",
++             name, a, index, cachehit);
++#endif
++  return cachehit;
++}
++
++
++
++
+ #endif  /* _CACHE_H_ */
+diff -X dontdiff -uprN gems-2.1.1/opal/system/config.include gems-2.1.1-hwpq-dev/opal/system/config.include
+--- gems-2.1.1/opal/system/config.include	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/config.include	2011-02-08 16:02:19.000000000 -0500
+@@ -90,6 +90,18 @@ PARAM_UINT( L2_STREAM_BUFFERS );
+ PARAM_UINT( L2_LATENCY );
+ PARAM_UINT( L2_IDEAL );
+ 
++// GAB: HWDS
++// L1 hwds cache
++PARAM_UINT( HL1_ASSOC );
++PARAM_UINT( HL1_SET_BITS );
++PARAM_UINT( HL1_BLOCK_BITS );
++PARAM_UINT( HL1_MSHR_ENTRIES );
++PARAM_UINT( HL1_STREAM_BUFFERS );
++PARAM_UINT( HL1_IDEAL );
++
++// Number of configured priority queues
++PARAM_UINT( CONFIG_NUM_HWPQS );
++
+ // Memory Latency
+ PARAM_UINT( MEMORY_DRAM_LATENCY );
+ PARAM_UINT( MEMORY_OUTSTANDING_REQUESTS );
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.C gems-2.1.1-hwpq-dev/opal/system/dx.C
+--- gems-2.1.1/opal/system/dx.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/dx.C	2011-02-13 16:52:38.000000000 -0500
+@@ -89,6 +89,10 @@
+ #define  STORE_OP_TYPE store_inst_t
+ #define  STORE_OP_GET  static_cast<store_inst_t *>( this )
+ 
++//***************************************************************************
++#define  HWDS_OP_TYPE hwpq_inst_t
++#define  HWDS_OP_GET  static_cast<hwpq_inst_t *>( this )
++
+ // toggle the floating point status register bit (not implemented currently)
+ //***************************************************************************
+ #define  UPDATE_FSR
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwpq-dev/opal/system/dx.i
+--- gems-2.1.1/opal/system/dx.i	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/dx.i	2011-02-17 15:21:02.000000000 -0500
+@@ -3424,6 +3424,8 @@ DX_RETURNT dx__trap( DX_PLIST ) {
+ DX_RETURNT dx_impdep1( DX_PLIST ) {
+ }
+ 
++// GAB: hw priority queue impdep2 instruction
++// This has been moved to hwpq.C
+ DX_RETURNT dx_impdep2( DX_PLIST ) {
+ }
+ 
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwpq-dev/opal/system/dynamic.C
+--- gems-2.1.1/opal/system/dynamic.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/dynamic.C	2011-02-17 16:10:23.000000000 -0500
+@@ -601,6 +601,14 @@ dynamic_inst_t::Schedule() { 
+         }
+       }
+     }
++    // GAB: Stall hwpq. It will be woken later when the instruction window
++    // reaches this instruction. This ensures in-order execution semantics
++    if (s->getType() == DYN_HWPQ) {
++      if (!(static_cast<hwpq_inst_t *> (this))->isInOrder()) {
++        stall = true;
++      }
++    }
++
+     if(!stall){
+       m_pseq->getScheduler()->schedule(this);
+     }
+@@ -732,6 +740,10 @@ dynamic_inst_t::Schedule() { 
+     static_cast<memory_inst_t *> (this)->Complete(); 
+     break;
+ 
++  case HWDS_CACHE_MISS_STAGE:
++    static_cast<hwpq_inst_t *> (this)->Complete();
++    break;
++
+   case CACHE_NOTREADY_STAGE:
+       #ifdef DEBUG_REG
+              DEBUG_OUT("CACHE_NOTREADY_STAGE, cycle[ %lld ] seqnum[ %d ] proc[ %d ] %s\n", m_pseq->getLocalCycle(), seq_num, m_proc, buf);
+@@ -1490,6 +1502,8 @@ const char *dynamic_inst_t::printStage( 
+     return ("EARLY_ATOMIC_STAGE");
+   case CACHE_MISS_STAGE:
+     return ("CACHE_MISS_STAGE");
++  case HWDS_CACHE_MISS_STAGE:
++    return ("HWDS_CACHE_MISS_STAGE");
+   case CACHE_NOTREADY_STAGE:
+     return ("CACHE_NOTREADY_STAGE");
+   case CACHE_MISS_RETIREMENT_STAGE:
+@@ -1529,6 +1543,7 @@ const char *dynamic_inst_t::printStageAb
+   case EARLY_STORE_STAGE:
+   case EARLY_ATOMIC_STAGE:
+   case CACHE_MISS_STAGE:
++  case HWDS_CACHE_MISS_STAGE:
+   case CACHE_NOTREADY_STAGE:
+   case CACHE_MISS_RETIREMENT_STAGE:
+   case CACHE_NOTREADY_RETIREMENT_STAGE:
+diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.h gems-2.1.1-hwpq-dev/opal/system/dynamic.h
+--- gems-2.1.1/opal/system/dynamic.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/dynamic.h	2011-02-17 15:43:24.000000000 -0500
+@@ -175,6 +175,7 @@ public:
+     EARLY_STORE_STAGE,
+     EARLY_ATOMIC_STAGE,
+     CACHE_MISS_STAGE,
++    HWDS_CACHE_MISS_STAGE,
+     CACHE_NOTREADY_STAGE,
+     CACHE_MISS_RETIREMENT_STAGE,
+     CACHE_NOTREADY_RETIREMENT_STAGE,
+diff -X dontdiff -uprN gems-2.1.1/opal/system/hfa.C gems-2.1.1-hwpq-dev/opal/system/hfa.C
+--- gems-2.1.1/opal/system/hfa.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/hfa.C	2011-02-12 15:51:44.000000000 -0500
+@@ -201,6 +201,9 @@ void hfa_allocate( void )
+                                  sizeof(atomic_inst_t), 100 );
+   prefetch_inst_t::m_myalloc.init( "prefetch_inst_t",
+                                    sizeof(prefetch_inst_t), 100 );
++  /// memory allocator for hwpq instructions (hwpq.C)
++  hwpq_inst_t::m_myalloc.init( "hwpq_inst_t",
++                                  sizeof(hwpq_inst_t), 100 );
+   /// memory allocator for branch, etc. instructions (controlop.C)
+   control_inst_t::m_myalloc.init( "control_inst_t",
+                                   sizeof(control_inst_t), 100 );
+diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-dev/opal/system/hwpq.C
+--- gems-2.1.1/opal/system/hwpq.C	1969-12-31 19:00:00.000000000 -0500
++++ gems-2.1.1-hwpq-dev/opal/system/hwpq.C	2011-03-21 14:56:16.000000000 -0400
+@@ -0,0 +1,557 @@
++/*
++ * FileName:  hwpq.C
++ * Synopsis:  Implements a hardware priority queue
++ * Author:    gedare
++ * Version:   $Id$
++ */
++
++/*------------------------------------------------------------------------*/
++/* Includes                                                               */
++/*------------------------------------------------------------------------*/
++
++#include "hfa.h"
++#include "hfacore.h"
++
++#include "hwpq.h"
++#include <stdio.h>
++#include <vector>
++
++#define M_PSTATE \
++  system_t::inst->m_state[insn->m_pseq->getID()/CONFIG_LOGICAL_PER_PHY_PROC]
++
++//#define GAB_HWDS_DEBUG
++
++/// memory allocator for hwpq.C
++listalloc_t hwpq_inst_t::m_myalloc;
++
++// spill the head node to the spill area at index'th slot
++bool hwpq_t::spill_at(hwpq_inst_t *insn, uint64 index) {
++  hwpq_node_t *node = NULL;
++  bool hit = true;
++
++#ifdef GAB_HWDS_DEBUG
++  if (!m_spill_count) {
++    printf("*******************************************Before spill\n");
++    print_queue();
++  }
++#endif
++
++  // spill node
++  node = m_pq.front();
++  m_spill_count++;
++  insn->m_addr = (la_t)get_spill_base();
++  insn->m_addr += index*(sizeof(int) + sizeof(uint64));
++  hit = insn->m_pseq->getHwdsCache()->Write(insn->m_addr,insn);
++  return hit;
++}
++
++void hwpq_t::finish_spill(hwpq_inst_t *insn) {
++  uint64 reg = 0;
++  m_pq.erase(m_pq.begin());
++  if (is_ascending())
++    make_heap( m_pq.begin(), m_pq.end(), hwpq_node_heap_min_compare() );
++  else
++    make_heap( m_pq.begin(), m_pq.end(), hwpq_node_heap_max_compare() );
++
++#ifdef GAB_HWDS_DEBUG
++  if (m_pq.empty()) { 
++    printf("*******************************************After spill\n");
++    print_queue();
++  }
++#endif
++  /* **This has no effect **
++  insn->setTrapType(Trap_Interrupt_Level_1);
++  insn->m_pseq->postException(
++      Trap_Interrupt_Level_1, 
++      SIM_get_proc_no( SIM_current_processor() ) 
++  );
++  reg = SIM_read_register(
++    M_PSTATE->getSimicsProcessor(insn->getProc()), 
++    CONTROL_SOFTINT
++  );
++  reg |= (1<<1);
++  SIM_write_register(
++    M_PSTATE->getSimicsProcessor(insn->getProc()), 
++    CONTROL_SOFTINT, 
++    reg
++  );
++  */
++}
++
++// fill from the index'th slot in the spill region
++bool hwpq_t::fill_at(hwpq_inst_t *insn, uint64 index) {
++  bool hit = true;
++
++#ifdef GAB_HWDS_DEBUG
++  if (m_pq.empty()) {
++    printf("*******************************************Before fill\n");
++    print_queue();
++  }
++#endif
++  insn->m_addr = (la_t)get_spill_base();
++  insn->m_addr += index*(sizeof(int) + sizeof(uint64));
++  hit = insn->m_pseq->getHwdsCache()->Read(insn->m_addr, insn);
++  return hit;
++}
++
++void hwpq_t::finish_fill(hwpq_inst_t *insn) {
++  physical_address_t paddr;
++  hwpq_node_t *new_node;
++  uint64 pointer;
++  int value;
++
++
++  // read value (priority) from memory
++  paddr = SIM_logical_to_physical(
++      (processor_t *) M_PSTATE->getSimicsProcessor(insn->getProc()),
++      Sim_DI_Data,
++      insn->m_addr
++      );
++  value = SIM_read_phys_memory(
++      (processor_t *) M_PSTATE->getSimicsProcessor(insn->getProc()),
++      paddr, 
++      sizeof(int)
++      );
++
++  // read pointer (payload) from memory
++  paddr = SIM_logical_to_physical(
++      (processor_t *) M_PSTATE->getSimicsProcessor(insn->getProc()),
++      Sim_DI_Data,
++      insn->m_addr + sizeof(int)
++      );
++  pointer = SIM_read_phys_memory(
++      (processor_t *) M_PSTATE->getSimicsProcessor(insn->getProc()),
++      paddr, 
++      sizeof(uint64)
++      );
++
++  // instantiate and insert node
++  new_node = new hwpq_node_t(value, pointer);
++  if (!new_node) {
++    printf("Unable to allocate space for new pq node\n");
++    return; // should raise exception?
++  }
++  insert(new_node);
++  --m_spill_count;
++#ifdef GAB_HWDS_DEBUG
++  if (!m_spill_count) {
++    printf("*******************************************After fill\n");
++    print_queue();
++  }
++#endif
++}
++
++void hwpq_t::fill(hwpq_node_t* node) {
++  // insert node to hwpq
++  insert(node);
++
++  // update count
++  --m_spill_count;
++
++  // TODO: fix valid bits (should be done while inserting, but this is easy)
++
++  // TODO: handle special case for when fill last element from SW spill area.
++  if (!m_spill_count) {
++
++  }
++}
++
++uint64 hwpq_t::spill( ) {
++  hwpq_node_t* last;
++  uint64 payload;
++
++  // remove last element from hwpq
++  payload = extract_last();
++
++  // update count
++  ++m_spill_count;
++
++  // TODO: update valid
++
++  return payload;
++}
++
++void hwpq_t::print_queue() {
++  vector<hwpq_node_t *>::iterator i;
++  for (i = m_pq.begin(); i != m_pq.end(); i++ )
++    (*i)->print_node();
++}
++
++hwpq_node_t* hwpq_t::first() {
++#ifdef GAB_DEBUG
++  printf("pq_first:\n");
++  print_queue();
++#endif
++  return m_pq.front();
++}
++
++hwpq_node_t* hwpq_t::last() {
++  hwpq_node_t* node;
++
++  // this is a bit hard with the heap representation
++  if (is_ascending()) {
++    sort_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_min_compare());
++  } else {
++    sort_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_max_compare());
++  }
++
++  node = m_pq.back();
++
++  if (is_ascending()) {
++    make_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_min_compare());
++  } else {
++    make_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_max_compare());
++  }
++
++  return node;
++}
++
++// returns the last nodes payload
++uint64 hwpq_t::extract_last( )
++{
++  hwpq_node_t* node = NULL;
++  uint64 payload = 0;
++
++  // this is a bit hard with the heap representation
++  // first sort the elements by priority
++  if (is_ascending()) {
++    sort_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_min_compare());
++  } else {
++    sort_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_max_compare());
++  }
++
++  // now pop the least priority element
++  node = m_pq.back();
++  payload = node->payload;
++  m_pq.pop_back();
++
++  // and recreate the heap
++  if (is_ascending()) {
++    make_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_min_compare());
++  } else {
++    make_heap(m_pq.begin(),m_pq.end(),hwpq_node_heap_max_compare());
++  }
++
++  return payload;
++}
++
++hwpq_node_t* hwpq_t::extract(uint64 data)
++{
++  vector< hwpq_node_t * >::iterator i;
++  hwpq_node_t *node = NULL;
++
++  /* search for data in pq */
++  for ( i = m_pq.begin(); i != m_pq.end(); i++ ) {
++    if ((*i)->payload == data) break;
++  }
++
++  if (i != m_pq.end()) { /* found data */
++    node = *i;
++    m_pq.erase( i );
++    if (is_ascending())
++      make_heap( m_pq.begin(), m_pq.end(), hwpq_node_heap_min_compare() );
++    else
++      make_heap( m_pq.begin(), m_pq.end(), hwpq_node_heap_max_compare() );
++  }
++#ifdef GAB_DEBUG
++  printf("pq_extract:\n");
++  print_queue();
++#endif
++  return node;
++}
++
++void hwpq_t::insert(hwpq_node_t *node) 
++{
++  m_pq.push_back(node);
++  if (is_ascending())
++    push_heap( m_pq.begin(), m_pq.end(), hwpq_node_heap_min_compare() );
++  else
++    push_heap( m_pq.begin(), m_pq.end(), hwpq_node_heap_max_compare() );
++#ifdef GAB_DEBUG
++  printf("pq_insert\n");
++  print_queue();
++#endif
++}
++
++hwpq_inst_t::hwpq_inst_t( static_inst_t *s_inst,
++      int32 window_index,
++      pseq_t *pseq,
++      abstract_pc_t *at,
++      pa_t physicalPC,
++      trap_type_t trapgroup,
++      uint32 proc) 
++  : dynamic_inst_t( s_inst, window_index, pseq, at, physicalPC, trapgroup, proc) {
++    // default dynamic_inst_t constructor
++
++    m_in_order = false;
++}
++
++hwpq_inst_t::~hwpq_inst_t() {
++
++}
++
++void hwpq_inst_t::Squash() {
++  // sanity
++  ASSERT(m_proc < CONFIG_LOGICAL_PER_PHY_PROC);
++  ASSERT( !getEvent( EVENT_FINALIZED ) );
++  ASSERT(m_stage != RETIRE_STAGE);
++
++  // adjust any of the 'soft' state of this instruction
++
++  // generic dynamic_inst_t::Squash() actions
++  if (Waiting())
++    RemoveWaitQueue();
++
++  UnwindRegisters();
++
++  m_pseq->decrementSequenceNumber(m_proc);
++
++  markEvent( EVENT_FINALIZED );
++#ifdef PIPELINE_VIS
++    m_pseq->out_log("squash %d\n", getWindowIndex());
++#endif
++}
++
++void hwpq_inst_t::Retire( abstract_pc_t *a ) {
++
++  STAT_INC( m_pseq->m_stat_hwds_retired[m_proc] );
++
++  // generic dynamic_inst_t::Retire() actions
++  // record when execution takes place
++  m_event_times[EVENT_TIME_RETIRE] = m_pseq->getLocalCycle() - m_fetch_cycle;
++
++  ASSERT( !getEvent( EVENT_FINALIZED ) );
++  ASSERT( !s->getFlag( SI_FETCH_BARRIER ) );
++
++  retireRegisters();
++  SetStage(RETIRE_STAGE);
++  nextPC_execute( a );
++  markEvent( EVENT_FINALIZED );
++
++}
++
++void hwpq_inst_t::Execute() {
++  STAT_INC( m_pseq->m_stat_hwds_exec[m_proc] );
++
++  // generic dynamic_inst_t::Execute() actions
++  // record when execution takes place
++  m_event_times[EVENT_TIME_EXECUTE_DONE] = 
++    m_pseq->getLocalCycle() - m_fetch_cycle;
++
++  // call the appropriate function
++  static_inst_t *si = getStaticInst();
++
++  /**
++   * The next chunk used to be in dx.i, but works better here.
++   */
++
++  // check the immediate bit
++  if (si->getFlag(SI_ISIMMEDIATE)) {
++    // the old hwpq implementation used the immediate insn encoding
++    // the new implementation uses two source registers.
++    m_pseq->out_info("Unimplemented instruction: 0x%0x\n", si->getInst());
++    SetStage(COMPLETE_STAGE);
++    return; // throw exception?
++  }
++
++  hwpq_t *queue = NULL;
++  hwpq_node_t *node;
++  hwpq_node_t *new_node = NULL;
++  uint32 queue_idx = 0;
++  int operation = 0;
++  int value = 0;
++  uint64 pointer = 0;
++  
++  static uint64 context = 0;
++
++  // dx.i macros
++#define IREGISTER ireg_t
++
++#define SOURCE1    getSourceReg(0).getARF()->readInt64( getSourceReg(0), getProc() )
++
++#define SOURCE2    getSourceReg(1).getARF()->readInt64( getSourceReg(1), getProc() )
++
++#define S2ORI     (getStaticInst()->getFlag(SI_ISIMMEDIATE) ? \
++    getStaticInst()->getImmediate() :   \
++    SOURCE2)
++
++  // slightly modified
++#define WRITE_DEST(A)         \
++  getDestReg(0).getARF()->writeInt64( getDestReg(0), (A), getProc() ); 
++
++  // dx.C
++#define  HWDS_OP_GET  static_cast<hwpq_inst_t *>( this )
++
++  // propagates across HWDS calls.
++  context = ((context<<32)|S2ORI);
++  
++  queue_idx = maskBits32(S2ORI,31,20);
++  value = maskBits32(S2ORI,19,4);
++  operation = maskBits32(S2ORI,3,0);
++
++  if (queue_idx > CONFIG_NUM_HWPQS) {
++    m_pseq->out_info("Invalid queue_idx: %d\n", queue_idx);
++    m_pseq->out_info("Instruction: 0x%0x\n",
++        getStaticInst()->getInst());
++    return;
++  }
++  queue = &m_pseq->getHardwarePriorityQueue()[queue_idx];
++
++  // TODO: check if requested queue is resident
++
++  // TODO: get the current size and limit of queue
++
++  m_hwpq = queue;
++  m_type = HWDS_INST_UNUSED;
++#ifdef GAB_DEBUG
++  static tick_t cycles_store = 0;
++  tick_t cycles_diff = 0;
++  static uint64 sn_store = 0;
++  uint64 sn_diff = 0;
++#endif
++
++  switch ( operation ) {
++
++    case 1: // first
++      node = queue->first();
++      if (node) {
++        IREGISTER result = node->payload;
++        WRITE_DEST(result);
++      } else {
++        WRITE_DEST(0);
++      }
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 2: // enqueue
++      pointer = SOURCE1;
++      new_node = new hwpq_node_t(value, pointer);
++      //        new_node = (pq_node*)malloc(sizeof(pq_node));
++      if (!new_node) {
++        printf("Unable to allocate space for new pq node\n");
++        break; // should throw exception
++      }
++      queue->insert(new_node);
++      new_node = NULL;
++
++      /* check for overflow condition */
++
++      WRITE_DEST(0);
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 3: // extract
++      pointer = SOURCE1;
++      node = queue->extract(pointer);
++      if (node) {
++        delete node;
++        /* check for underflow condition */
++      } else {
++        /* failed to extract, raise to SW */
++      }
++      WRITE_DEST(0);
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 4: // setrange
++      queue->set_spill_base(SOURCE1);
++      queue->set_spill_bounds(value);
++      WRITE_DEST(0);
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 5: // get context
++      WRITE_DEST(context);
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 6: // extract last
++      WRITE_DEST(queue->extract_last());
++      /* check for underflow condition */
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 7: // spill_at
++      WRITE_DEST(queue->spill());
++      SetStage(COMPLETE_STAGE);
++      /*
++      m_type = HWDS_INST_SPILL_AT;
++#ifdef GAB_DEBUG
++      cycles_diff = m_pseq->getLocalCycle() - cycles_store;
++      sn_diff = m_pseq->getSequenceNumber(0) - sn_store;
++      sn_store = m_pseq->getSequenceNumber(0);
++      cycles_store = m_pseq->getLocalCycle();
++      printf("Cycles since last spill_at: %lld\n", cycles_diff);
++      printf("Instructions (seq. nums)  : %lld\n", sn_diff);
++#endif
++      if(queue->spill_at(HWDS_OP_GET, pointer))
++        Complete();
++      else
++        SetStage(HWDS_CACHE_MISS_STAGE);
++      */
++      break;
++
++    case 8: // fill_at
++      new_node = new hwpq_node_t(value, SOURCE1);
++      queue->fill(new_node);
++      WRITE_DEST(0);
++      SetStage(COMPLETE_STAGE);
++      /*
++      m_type = HWDS_INST_FILL_AT;
++      if(queue->fill_at(HWDS_OP_GET, pointer))
++        Complete();
++      else
++        SetStage(HWDS_CACHE_MISS_STAGE);
++        */
++      break;
++
++    case 9: // last prio
++      node = queue->last();
++      if (node) {
++        WRITE_DEST(node->priority);
++      } else {
++        WRITE_DEST(0);
++      }
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 10: // get pointer
++      WRITE_DEST(pointer);
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    case 11: // check underflow
++      // HACK: This is only called by software extract, assume
++      // extract succeeded, so update spill count
++      queue->dec_spill_count();
++      /* check for underflow */
++      WRITE_DEST(0);
++      SetStage(COMPLETE_STAGE);
++      break;
++
++    default:
++      printf("Unknown operation: %d\n", operation);
++      break; // should throw exception
++  }
++}
++
++void hwpq_inst_t::Complete() {
++
++  switch (m_type) {
++    case HWDS_INST_SPILL_AT:
++      m_hwpq->finish_spill(this);
++      break;
++
++    case HWDS_INST_FILL_AT:
++      m_hwpq->finish_fill(this);
++      break;
++
++    default:
++      printf("Invalid instruction type at Complete: %d\n", m_type);
++      break;
++  }
++  WRITE_DEST(0);
++  SetStage(COMPLETE_STAGE);
++}
++
++
+diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-dev/opal/system/hwpq.h
+--- gems-2.1.1/opal/system/hwpq.h	1969-12-31 19:00:00.000000000 -0500
++++ gems-2.1.1-hwpq-dev/opal/system/hwpq.h	2011-03-21 14:56:06.000000000 -0400
+@@ -0,0 +1,300 @@
++/*
++ * hwpq.h
++ *
++ * A priority queue supporting:
++ *  enqueue
++ *  extract
++ *  first (peek)
++ * For modelling a HW PQ.  
++ */
++
++#ifndef _HWPQ_H_
++#define _HWPQ_H_
++
++/*------------------------------------------------------------------------*/
++/* Includes                                                               */
++/*------------------------------------------------------------------------*/
++
++#include <vector>
++#include <stdio.h>
++
++#include "dynamic.h"
++
++/*------------------------------------------------------------------------*/
++/* Macro declarations                                                     */
++/*------------------------------------------------------------------------*/
++
++//#define GAB_DEBUG
++
++/*------------------------------------------------------------------------*/
++/* Class declaration(s)                                                   */
++/*------------------------------------------------------------------------*/
++
++class hwpq_t;
++
++// types of hwpq instructions
++enum hwds_inst_type_t {
++  HWDS_INST_UNUSED = 0,
++  HWDS_INST_FIRST,
++  HWDS_INST_ENQUEUE,
++  HWDS_INST_EXTRACT,
++  HWDS_INST_SETRANGE,
++  HWDS_INST_SPILL,
++  HWDS_INST_FILL,
++  HWDS_INST_SPILL_AT,
++  HWDS_INST_FILL_AT
++};
++
++/**
++ * An "in-flight" hwpq instruction in the processor model.
++ * This will probably change to a hwds interface and hwpq implementation.
++ *
++ * @see     dynamic_inst_t, waiter_t
++ * @author  gedare
++ * @version $Id$
++ */
++//**************************************************************************
++class hwpq_inst_t : public dynamic_inst_t {
++  friend class hwpq_t;
++public:
++  /** @name Constructor(s) / Destructor */
++  //@{
++  //  /** Constructor: uses default constructor */
++  hwpq_inst_t( static_inst_t *s_inst,
++      int32 window_index,
++      pseq_t *pseq,
++      abstract_pc_t *at,
++      pa_t physicalPC,
++      trap_type_t trapgroup,
++      uint32 proc
++      );
++
++  /** Destructor: uses default destructor. */
++  ~hwpq_inst_t();
++  //@}
++
++  /** complete a hwds operation that has missed in the cache */
++  void Complete( void );
++
++  /** Allocates object throuh allocator interface */
++  void *operator new( size_t size ) {
++    return ( m_myalloc.memalloc( size ) );
++  }
++  
++  /** frees object through allocator interface */
++  void operator delete( void *obj ) {
++    m_myalloc.memfree( obj );
++  }
++
++  /** dynamic_inst_t virtual functions */
++  /** squash an instruction in the pipe, after it has been renamed.
++   *  As it rolls back the state it is implemented differently by control,
++   *  exec, mem, hwds instrs. */
++  void Squash();
++  /** retire: change the machines in-order architected state according
++   *  to an instruction.
++   *  (implemented differently by control, exec, mem, hwds instrs).
++   *  @param a   The next in-order pc, when this instruction is retired.
++   */
++  void Retire( abstract_pc_t *a );
++
++  /** do the generic execution stuff for hwds operations */
++  void Execute();
++
++  bool isInOrder() { return m_in_order; }
++  void setInOrder() { m_in_order = true; }
++
++  /** @name memory allocation:: */
++  //@{
++  static listalloc_t m_myalloc;
++  //@}
++
++ //TODO: private? // for fill/spill insns, the addr of the slot
++  la_t m_addr;
++private:
++  // flag set true when the hwpq instruction is in order (at least 
++  // wrt other hwpq instructions and branches). This is used to control
++  // when the hwpq fires.
++  bool m_in_order;
++
++  // the hwpq for this instruction
++  hwpq_t *m_hwpq;
++
++  // the type of this instruction
++  hwds_inst_type_t m_type;
++
++};
++ 
++/**
++ *  A simulated hardware priority queue
++ *
++ * @see     hwpq_inst_t
++ * @author  gedare
++ * @version $Id$
++ */
++//**************************************************************************
++
++class hwpq_node_t {
++  public:
++    hwpq_node_t(int priority, uint64 payload) {
++      this->priority = priority;
++      this->payload = payload;
++    }
++
++    /** Print a node */
++    void print_node() { printf("%d\t%llu\n",priority,payload); }
++
++    /**
++     * @name Accessor(s) / mutator(s)
++     */
++    void set_priority(int p) { priority = p; }
++    int get_priority() { return priority; }
++
++    void set_payload(uint64 p) { payload = p; }
++    uint64 get_payload() { return payload; }
++
++    // should be private, but makes comparisons harder.
++    int priority;
++    uint64 payload;
++
++};
++
++/**
++* A priority queue implemented in hardware. It is a heap built with the 
++* vector STL.
++*
++* @see    
++* @author  gedare
++* @version $Id$
++*/
++class hwpq_t {
++public:
++  /**
++   * @name Constructor(s) / destructor
++   */
++  //@{
++
++  /** Constructor */
++  hwpq_t() {
++    m_pq_is_ascending = true;
++    m_spill_count = 0;
++  }
++
++  /**
++   * Constructor: creates object
++   * @param is_ascending true if low priority value means high priority level
++   */
++  hwpq_t(bool is_ascending) {
++    m_pq_is_ascending = is_ascending;    
++  }
++
++  /**
++   * Destructor: frees object.
++   */
++  ~hwpq_t() { ; };
++  //@}
++
++  /**
++   * @name Methods
++   */
++  //@{
++
++  /**
++   * Spill/fill related functions and fields would probably be inherited.
++   */
++  
++  /** Spill head node to index'th slot */
++  bool spill_at(hwpq_inst_t*, uint64);
++  void finish_spill(hwpq_inst_t*);
++
++  /** Fill node from index'th slot */
++  bool fill_at(hwpq_inst_t*, uint64);
++  void finish_fill(hwpq_inst_t*);
++
++  /** Spill the tail of queue to backing store */
++  uint64 spill();
++
++  /** Fill the queue from backing store */
++  void fill(hwpq_node_t*);
++
++  /** Retrieve first (highest priority) element */
++  hwpq_node_t* first();
++
++  /** Retrieve last (lowest priority) element */
++  hwpq_node_t* last();
++  
++  /** Remove the last (lowest priority) element */
++  uint64 extract_last( );
++
++  /** Extract an element with given payload */
++  hwpq_node_t* extract(uint64 payload);
++
++  /** Insert an element with given priority and payload */
++  void insert(hwpq_node_t* node);
++
++  /** Print the queue */
++  void print_queue();
++
++  /** Compare two elements on the queue (used to create a max heap with STL) */
++  class hwpq_node_heap_max_compare {
++    public:
++      bool operator() ( const hwpq_node_t *a, const hwpq_node_t *b ) const {
++        return a->priority < b->priority;
++      }
++  };
++
++  /** Compare two elements on the queue (used to create a min heap with STL) */
++  class hwpq_node_heap_min_compare {
++    public:
++      bool operator() ( const hwpq_node_t *a, const hwpq_node_t *b ) const {
++        return a->priority > b->priority;
++      }
++  };
++
++  bool is_ascending() {
++    return m_pq_is_ascending;
++  }
++
++  //@}
++
++  /**
++   * @name Accessor(s) / mutator(s)
++   */
++  //@{
++
++  void set_spill_base(uint64 base) { m_spill_base = base; }
++  uint64 get_spill_base() { return m_spill_base; }
++
++  void set_spill_bounds(int bounds) { m_spill_bounds = bounds; }
++  int get_spill_bounds() { return m_spill_bounds; }
++
++  void dec_spill_count() {--m_spill_count;}
++
++private:
++  // priority queue as a heap
++  vector<hwpq_node_t *> m_pq; 
++
++  // true if low priority value means higher priority level
++  bool m_pq_is_ascending;
++
++  // allocated region for spilling/filling the hw PQ
++  uint64 m_spill_base;
++  int m_spill_bounds;
++  int m_spill_count;
++
++  /** pointer to the owning sequencer */
++  pseq_t       *m_pseq;
++};
++ 
++
++
++
++/*------------------------------------------------------------------------*/
++/* Global variables                                                       */
++/*------------------------------------------------------------------------*/
++
++/*------------------------------------------------------------------------*/
++/* Global functions                                                       */
++/*------------------------------------------------------------------------*/
++
++#endif /* _HWPQ_H_ */
+diff -X dontdiff -uprN gems-2.1.1/opal/system/iwindow.C gems-2.1.1-hwpq-dev/opal/system/iwindow.C
+--- gems-2.1.1/opal/system/iwindow.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/iwindow.C	2011-02-12 15:56:33.000000000 -0500
+@@ -232,6 +232,19 @@ dynamic_inst_t *iwindow_t::retireInstruc
+   }
+   */
+ 
++  // GAB: Hack to ensure in-order execution for hwpq instructions
++  if (dinst && dinst->getStaticInst()->getType() == DYN_HWPQ) {
++    // if not already in order, then set in order (and schedule).
++    // if in order is already set, then instruction has already 
++    // been scheduled / executed, so fall through
++    if (!(static_cast<hwpq_inst_t *> (dinst))->isInOrder()) {
++      (static_cast<hwpq_inst_t *> (dinst))->setInOrder();
++      if (!dinst->Waiting()) {
++        dinst->Schedule();
++      }
++    }
++  }
++
+   if (dinst && dinst->isRetireReady()) {
+     m_last_retired = nextslot;
+     m_window[m_last_retired] = NULL;
+diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwpq-dev/opal/system/ix.i
+--- gems-2.1.1/opal/system/ix.i	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/ix.i	2011-01-10 12:48:11.000000000 -0500
+@@ -3426,6 +3426,7 @@ DX_RETURNT dx_impdep1( DX_PLIST ) {
+ }
+ 
+ DX_RETURNT dx_impdep2( DX_PLIST ) {
++  DEBUG_OUT("ix:dx_impdep2\n");
+ }
+ 
+ DX_RETURNT dx_membar( DX_PLIST ) {
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-dev/opal/system/pseq.C
+--- gems-2.1.1/opal/system/pseq.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/pseq.C	2011-02-13 16:38:44.000000000 -0500
+@@ -101,6 +101,8 @@
+ #include "ptrace.h"
+ #include "Vector.h"    
+ 
++#include "hwpq.h"
++
+ #include "pseq.h"
+ 
+ /*------------------------------------------------------------------------*/
+@@ -196,7 +198,13 @@ pseq_t::pseq_t( int32 id )
+   l1_inst_cache         = NULL;
+   l1_data_cache         = NULL;
+   m_ruby_cache          = NULL;
+-  
++ 
++  // GAB: HWPQ
++  hl1_mshr              = NULL;
++  l1_hwds_cache         = NULL;
++  m_hwpq                = NULL;
++  m_hwpq_count          = 0;
++ 
+  /* WATTCH power */
+   m_power_stats = NULL;
+   if(WATTCH_POWER){
+@@ -424,6 +432,10 @@ pseq_t::pseq_t( int32 id )
+                           DL1_BLOCK_BITS, L2_LATENCY, L1_FILL_BUS_CYCLES,
+                           DL1_MSHR_ENTRIES, DL1_STREAM_BUFFERS);
+     
++    hl1_mshr = new mshr_t("HL1.mshr", l2_cache, m_scheduler,
++                          HL1_BLOCK_BITS, L2_LATENCY, L1_FILL_BUS_CYCLES,
++                          HL1_MSHR_ENTRIES, HL1_STREAM_BUFFERS);
++    
+     /* first level instruction caches */  
+     l1_inst_cache = new generic_cache_template<generic_cache_block_t>(
+                       "L1.inst", il1_mshr, m_scheduler, IL1_SET_BITS,
+@@ -433,6 +445,11 @@ pseq_t::pseq_t( int32 id )
+     l1_data_cache = new generic_cache_template<generic_cache_block_t>(
+                       "L1.data", dl1_mshr, m_scheduler, DL1_SET_BITS,
+                       DL1_ASSOC, DL1_BLOCK_BITS, (DL1_IDEAL != 0) );
++
++    /* first level hwds caches */  
++    l1_hwds_cache = new generic_cache_template<generic_cache_block_t>(
++                      "L1.hwds", hl1_mshr, m_scheduler, HL1_SET_BITS,
++                      HL1_ASSOC, HL1_BLOCK_BITS, (HL1_IDEAL != 0) );
+   } else {
+     /* CONFIG_WITH_RUBY  */
+     m_ruby_cache = new rubycache_t( m_id, L2_BLOCK_BITS, m_scheduler );
+@@ -440,6 +457,9 @@ pseq_t::pseq_t( int32 id )
+     m_write_buffer = new writebuffer_t( m_id, L2_BLOCK_BITS, m_scheduler );
+   }
+ 
++  m_hwpq_count = CONFIG_NUM_HWPQS;
++  m_hwpq = new hwpq_t[CONFIG_NUM_HWPQS];
++
+   // set MMU related fields
+   m_primary_ctx = new context_id_t[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_itlb_physical_address = new pa_t[CONFIG_LOGICAL_PER_PHY_PROC];
+@@ -777,7 +797,17 @@ pseq_t::~pseq_t() {
+     delete dl1_mshr;
+   if (l2_mshr)
+     delete l2_mshr;
+-  
++ 
++  // GAB
++  // free the hwds
++  if (l1_hwds_cache)
++    delete l1_hwds_cache;
++  if (hl1_mshr)
++    delete hl1_mshr;
++
++  if (m_hwpq)
++    delete [] m_hwpq;
++
+   for(uint k=0; k <  CONFIG_LOGICAL_PER_PHY_PROC; ++k){
+     if(m_imap[k])
+       delete m_imap[k];
+@@ -1019,6 +1049,8 @@ pseq_t::~pseq_t() {
+     delete [] m_stat_prefetches_retired;
+   if(m_stat_control_retired)
+     delete [] m_stat_control_retired;
++  if(m_stat_hwds_retired)
++    delete [] m_stat_hwds_retired;
+ 
+   if(m_stat_fetched)
+     delete [] m_stat_fetched;
+@@ -1039,6 +1071,8 @@ pseq_t::~pseq_t() {
+     delete [] m_stat_prefetches_exec;
+   if(m_stat_control_exec)
+     delete [] m_stat_control_exec;
++  if(m_stat_hwds_exec)
++    delete [] m_stat_hwds_exec;
+ 
+   if(m_stat_loads_found)
+     delete [] m_stat_loads_found;
+@@ -1333,6 +1367,7 @@ void pseq_t::advanceCycle( void )
+     // then tick L1
+     il1_mshr->Tick();
+     dl1_mshr->Tick();
++    hl1_mshr->Tick();
+   }
+ 
+   // advance local time one cycle (do this only after all threads have finished going through pipeline)
+@@ -2060,6 +2095,16 @@ dynamic_inst_t* pseq_t::createInstructio
+        #endif
+       break;
+ 
++    case DYN_HWPQ:
++      #ifdef DEBUG_PSEQ
++        DEBUG_OUT("\tDYN_HWPQ type proc[%d]\n",proc);
++      #endif
++      d_instr = new hwpq_inst_t(s_instr, index, this, fetch_at, physicalPC,  m_last_traptype[proc][m_last_traplevel[proc]], proc);
++      #ifdef DEBUG_PSEQ
++        DEBUG_OUT("\tDYN_HWPQ creation success proc[%d]\n",proc);
++      #endif
++    break;
++
+     default:
+       ERROR_OUT("error: unimplemented instruction type %d\n", 
+                 (int) s_instr->getType());
+@@ -7139,6 +7184,7 @@ void pseq_t::printStats( void )
+   out_info("  %-50.50s %10llu\n", "total number of atomics executed:", m_stat_atomics_exec[k]);
+   out_info("  %-50.50s %10llu\n", "total number of prefetches executed:", m_stat_prefetches_exec[k]);
+   out_info("  %-50.50s %10llu\n", "total number of control insts executed:", m_stat_control_exec[k]);
++  out_info("  %-50.50s %10llu\n", "total number of hwds insts executed:", m_stat_hwds_exec[k]);
+ 
+   out_info("  %-50.50s %10llu\n", "total number of loads retired:",
+            m_stat_loads_retired[k]);
+@@ -7157,7 +7203,8 @@ void pseq_t::printStats( void )
+   out_info("  %-50.50s %10llu\n", "total number of prefetches retired:",
+            m_stat_prefetches_retired[k]);
+   out_info("  %-50.50s %10llu\n", "total number of control instrs committed:", m_stat_control_retired[k]);
+-
++  out_info("  %-50.50s %10llu\n", "total number of hwds instrs committed:", m_stat_hwds_retired[k]);
++  
+   out_info("  %-50.50s %10llu\n", "loads with valid data at execute:", m_stat_loads_found[k]);
+   out_info("  %-50.50s %10llu\n", "loads with invalid data at execute:", m_stat_loads_notfound[k]);
+   out_info("  %-50.50s %10llu\n", "total number of spill traps:", m_stat_spill[k]);
+@@ -7335,6 +7382,9 @@ void pseq_t::printStats( void )
+     dl1_mshr->printStats( this );
+     l1_inst_cache->printStats( this );
+     il1_mshr->printStats( this );
++    l1_hwds_cache->printStats( this );
++    hl1_mshr->printStats( this );
++
+   }
+ 
+   //print out SMT icount stats
+@@ -7840,6 +7890,7 @@ pseq_t::initializeStats(void) {
+   m_stat_atomics_retired = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_prefetches_retired = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_control_retired = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
++  m_stat_hwds_retired = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_fetched = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_mini_itlb_misses = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_decoded = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+@@ -7850,6 +7901,7 @@ pseq_t::initializeStats(void) {
+   m_stat_atomics_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_prefetches_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_control_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
++  m_stat_hwds_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_loads_found = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_loads_notfound = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+   m_stat_total_squash = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
+@@ -7946,6 +7998,7 @@ pseq_t::initializeStats(void) {
+     m_stat_atomics_retired[k] = 0;
+     m_stat_prefetches_retired[k] = 0;
+     m_stat_control_retired[k] = 0;
++    m_stat_hwds_retired[k] = 0;
+     m_stat_fetched[k] = 0;
+     m_stat_mini_itlb_misses[k] = 0;
+     m_stat_decoded[k] = 0;
+@@ -7956,6 +8009,7 @@ pseq_t::initializeStats(void) {
+     m_stat_atomics_exec[k] = 0;
+     m_stat_prefetches_exec[k] = 0;
+     m_stat_control_exec[k] = 0;
++    m_stat_hwds_exec[k] = 0;
+     m_stat_loads_found[k] = 0;
+     m_stat_loads_notfound[k] = 0;
+     m_stat_total_squash[k] = 0;
+diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-dev/opal/system/pseq.h
+--- gems-2.1.1/opal/system/pseq.h	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/pseq.h	2011-02-13 16:32:34.000000000 -0500
+@@ -420,12 +420,20 @@ public:
+   cache_t *getInstructionCache( void ) {
+     return (l1_inst_cache);
+   }
++  /** get the l1 hwds cache interface */
++  cache_t *getHwdsCache( void ) { 
++    return (l1_hwds_cache);
++  }
+   /** get the ruby cache interface */
+   // for SMT, all logical procs should see same Ruby interface
+   rubycache_t *getRubyCache( void ) {
+     return (m_ruby_cache);
+   }
+ 
++  hwpq_t *getHardwarePriorityQueue( void ) {
++    return (m_hwpq);
++  }
++
+   /* returns the current fetch PC */
+   abstract_pc_t * getFetchPC(int proc) {
+     return m_fetch_at[proc];
+@@ -1233,6 +1241,22 @@ private:
+   rubycache_t *m_ruby_cache;
+   //@}
+ 
++  // GAB:
++  /** @name HWPQ support: HW priority queues, hwpq caches */
++  //@{
++  /// L1 miss status holding register (hwpq)
++  mshr_t      *hl1_mshr;
++  /// L1 hwds cache
++  generic_cache_template<generic_cache_block_t> *l1_hwds_cache;
++
++  /// an array of hardware priority queues
++  hwpq_t      *m_hwpq;
++  /// number of hardware priority queues
++  int          m_hwpq_count;
++
++  //@}
++
++
+   /** @name MMU support: I/D-TLB, contexts */
+   //@{
+ 
+@@ -1825,6 +1849,8 @@ public:
+   uint64  *  m_stat_prefetches_retired;
+   /// total number of control insts committed
+   uint64  *  m_stat_control_retired;
++  /// total number of hwds insts committed
++  uint64  *  m_stat_hwds_retired;
+ 
+   /// total number of instructions fetched
+   uint64  *  m_stat_fetched;
+@@ -1845,6 +1871,8 @@ public:
+   uint64   * m_stat_prefetches_exec;
+   /// total number of control insts executed
+   uint64   * m_stat_control_exec;
++  /// total number of hwds insts executed
++  uint64   * m_stat_hwds_exec;
+ 
+   /// loads which are found in the trace
+   uint64   * m_stat_loads_found;
+diff -X dontdiff -uprN gems-2.1.1/opal/system/statici.C gems-2.1.1-hwpq-dev/opal/system/statici.C
+--- gems-2.1.1/opal/system/statici.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/statici.C	2011-02-09 16:09:26.000000000 -0500
+@@ -501,6 +501,7 @@ void   static_inst_t::setNextPC( void )
+   case DYN_STORE:
+   case DYN_PREFETCH:
+   case DYN_ATOMIC:
++  case DYN_HWPQ:
+     // now that we're running production, we always want a nextPC function
+   case DYN_NONE:
+     nextPC = &dynamic_inst_t::nextPC_execute;
+@@ -743,6 +744,7 @@ int static_inst_t::printDisassemble( cha
+   case DYN_ATOMIC:
+     return (printMemoryDis(str));
+     break;
++  case DYN_HWPQ:
+   default:
+     return (printNormalDis(str));
+   }
+@@ -2869,7 +2871,12 @@ static_inst_t::decodeInstructionInfo( pa
+       break;
+ 
+     case 55:  // impdep2
+-      m_opcode = i_impdep2;
++      // GAB: Interpret the impdep2 instruction
++      m_type    = DYN_HWPQ;
++      REG_TWO_I( 12 );    // decode two-reg with either rs2 or imm
++      m_futype  = FU_IMPDEP2; // need a function unit to order accesses..
++
++      m_opcode  = i_impdep2;
+       break;
+ 
+     case 56:  // jmpl
+diff -X dontdiff -uprN gems-2.1.1/opal/system/system.C gems-2.1.1-hwpq-dev/opal/system/system.C
+--- gems-2.1.1/opal/system/system.C	2010-09-01 14:06:13.000000000 -0400
++++ gems-2.1.1-hwpq-dev/opal/system/system.C	2011-03-14 15:01:11.000000000 -0400
+@@ -183,6 +183,9 @@ static void system_exception_handler( vo
+ static void system_exception_tracer( void *obj, conf_object_t *proc,
+                                      uint64 exception );
+ 
++#include <signal.h>
++static void system_signalint(int sig);
++
+ // C++ Template: explicit instantiation
+ template class map<breakpoint_id_t, breakpoint_action_t *>;
+ 
+@@ -218,6 +221,9 @@ system_t::system_t( const char *configur
+   m_sim_status = SIMSTATUS_BREAK;
+   sprintf( m_sim_message_buffer, "situation nominal" );
+ 
++  // register sigint handler
++  signal( SIGINT, system_signalint );
++
+   // establish opal ruby api (see ruby/interfaces/mf_api.h & ruby/interfaces/OpalInterface.C)
+   m_opal_api = &hfa_ruby_interface;
+   m_opal_api->hitCallback    = &system_t::rubyCompletedRequest;
+@@ -362,7 +368,7 @@ system_breakpoint( void *data, conf_obje
+   }
+  
+   //currently IGNORE the system_breakpoint (parameter = 0x4000)...
+-  #if 0
++  #if 1
+   ERROR_OUT("system_t::system_breakpoint REACHED param[ 0x%x ]\n", parameter);
+ 
+   sprintf( system_t::inst->m_sim_message_buffer,
+@@ -373,6 +379,15 @@ system_breakpoint( void *data, conf_obje
+ }
+ 
+ //***************************************************************************
++static void
++system_signalint( int sig )
++{
++   signal( sig, SIG_IGN ); //ignore the signal
++   HALT_SIMULATION;
++   signal( SIGINT, system_signalint ); // re-register signal
++}
++
++//***************************************************************************
+ void system_t::simulate( uint64 instrCount )
+ {
+   //  
+diff -X dontdiff -uprN gems-2.1.1/ruby/common/Debug.C gems-2.1.1-hwpq-dev/ruby/common/Debug.C
+--- gems-2.1.1/ruby/common/Debug.C	2010-09-01 14:06:10.000000000 -0400
++++ gems-2.1.1-hwpq-dev/ruby/common/Debug.C	2011-01-10 12:47:58.000000000 -0500
+@@ -66,6 +66,7 @@
+ #include "Debug.h"
+ #include "EventQueue.h"
+ 
++#include "string.h"
+ class Debug;
+ extern Debug* g_debug_ptr;
+ std::ostream * debug_cout_ptr;
+diff -X dontdiff -uprN gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C gems-2.1.1-hwpq-dev/ruby/log_tm/LazyTransactionVersionManager.C
+--- gems-2.1.1/ruby/log_tm/LazyTransactionVersionManager.C	2010-09-01 14:06:10.000000000 -0400
++++ gems-2.1.1-hwpq-dev/ruby/log_tm/LazyTransactionVersionManager.C	2011-01-10 12:47:58.000000000 -0500
+@@ -280,8 +280,9 @@ void LazyTransactionVersionManager::issu
+       should_escape = true;
+     }
+ 
+-    CacheMsg storeMsg(Address(request_address),
+-                      Address(request_address),
++    Address ad(request_address);
++    CacheMsg storeMsg(ad,
++                      ad,
+                       CacheRequestType_ST_XACT,    
+                       SIMICS_get_program_counter(getLogicalProcID(thread)),
+                       AccessModeType_UserMode,
+diff -X dontdiff -uprN gems-2.1.1/ruby/system/CacheMemory.h gems-2.1.1-hwpq-dev/ruby/system/CacheMemory.h
+--- gems-2.1.1/ruby/system/CacheMemory.h	2010-09-01 14:06:10.000000000 -0400
++++ gems-2.1.1-hwpq-dev/ruby/system/CacheMemory.h	2011-01-10 12:47:58.000000000 -0500
+@@ -78,6 +78,7 @@
+ #include "PseudoLRUPolicy.h"
+ #include "LRUPolicy.h"
+ #include <vector>
++#include "string.h"
+ 
+ template<class ENTRY>
+ class CacheMemory {
+diff -X dontdiff -uprN gems-2.1.1/scripts/makesymlinks.sh gems-2.1.1-hwpq-dev/scripts/makesymlinks.sh
+--- gems-2.1.1/scripts/makesymlinks.sh	2010-09-01 14:06:12.000000000 -0400
++++ gems-2.1.1-hwpq-dev/scripts/makesymlinks.sh	2011-01-10 12:48:37.000000000 -0500
+@@ -22,7 +22,7 @@ cd ../..
+ # in your Simics 3 install
+ echo "Making symlink for import directory..."
+ #ln -s /simics-3.0.11/import import
+-ln -s /p/multifacet/projects/simics/simics-3.0.11/import import
++ln -s ${SIMICS_INSTALL}/import import
+ 
+ echo "Making symlinks for modules..."
+ cd modules
