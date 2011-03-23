@@ -5,6 +5,8 @@
 
 #include "trace.h"
 #include "traceFCalls.h"
+#include "debugio.h"
+
 
 #define CONTAINERMAX 6000
 #define PRINTBUFFMAX 100000
@@ -322,6 +324,7 @@ container* container_add(md_addr_t addr, char * name)
 	
 	newContainer->addressAccessList = NULL;
 	newContainer->addressAccessListInstance = NULL;
+	newContainer->addressAccessListWithoutLocalStackAccesses = NULL;
 	newContainer->addressAccessListPenalty = 0;
 
 	newContainer->staticAddressCount = 0;
@@ -515,6 +518,25 @@ struct loadingPenalties container_traceFunctioncall(md_addr_t addr, mem_tp * mem
 	return loadPenalty;
 }
 
+bool isLocalStackAccess(md_addr_t addr, int nbytes)
+{
+	uint64 sp = getSP();
+	uint64 fp = getFP();
+	if(sp < fp) //the stack might grow different ways
+	{
+		uint64 t = fp;
+		fp = sp;
+		sp = t;
+	}
+	
+	if( fp < addr && addr + nbytes < sp)
+	{
+		printf("%llx %llx is local stack [%llx %llx]\n",addr, addr +nbytes, fp, sp);
+		return true;
+	}
+	return false;
+}
+
 void container_MemoryCall(mem_tp cmd,md_addr_t addr, int nbytes)
 {
     
@@ -535,6 +557,9 @@ void container_MemoryCall(mem_tp cmd,md_addr_t addr, int nbytes)
 		UpdateAddressList(&( t.containerObj->addressAccessList), addr, nbytes);
 		UpdateAddressList(&( t.containerObj->addressAccessListInstance), addr, nbytes);
 
+		if(!isLocalStackAccess(addr, nbytes)){
+			UpdateAddressList(&( t.containerObj->addressAccessListWithoutLocalStackAccesses), addr, nbytes);
+		}
 
 		if(cmd == Read)
 		{
@@ -611,7 +636,7 @@ void container_printDecodedMemoryRanges(int bAll )
 	
 	for (int i=0 ; i < containerSize; i++)
 	{
-		addressList l = containerTable[i].addressAccessList;
+		addressList l = containerTable[i].addressAccessListWithoutLocalStackAccesses;
 		addressList m = containerTable[i].instructionFetches;
 		
 		int bUsed = containerTable[i].totalStackPushes > 0;
@@ -876,6 +901,17 @@ void container_printStatistics (int bAll)
 
 }
 
+void MergeAddressList(addressList *listA, addressList listB)
+{
+	addressList l = listB;
+	if(*listA == NULL) *listA = listB;
+	else
+		while(l!= NULL){
+			UpdateAddressList(listA, l->startAddress, l->startAddress-l->endAddress);
+			l=l->next;
+		}
+}
+
 void UpdateAddressList(addressList *list,md_addr_t addr,int nbytes)
 {
 
@@ -989,6 +1025,15 @@ void joinAddress(addressList future, addressList present)
 	free(l);
 
 }
+
+void printAddressList(addressList l){
+	while(l!=NULL)
+	{
+		DEBUG_OUT("[%llx,%llx) ",l->startAddress, l->endAddress);
+		l = l->next;
+	}
+}
+
 
 void printAddressList(char * printbuff,addressList l){
 	printbuff[0] = 0;
@@ -1435,6 +1480,9 @@ uint64 myMemoryRead(generic_address_t vaddr, int lenght)
 		tt <<= 8;
 		tt |= 0x000000FF & whatdidread;
 	}
+	#ifdef DEBUG_GICA5
+		DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, tt);
+	#endif
 	return tt;
 }
 
@@ -1444,8 +1492,9 @@ void myMemoryWrite(generic_address_t vaddr,uint64 value, int lenght)
 	SIM_clear_exception();
 	conf_object_t * cpu_mem;
 
-	//printf("\n GICADEBUG myMemoryRead vaddr=%llx length=%d\n",vaddr, lenght);
-	//SIM_break_simulation("GICADEBUG break_simulation\n");
+	#ifdef DEBUG_GICA5
+		DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, value);
+	#endif
 
 	physical_address_t physaddr = SIM_logical_to_physical(SIM_current_processor(),Sim_DI_Data, vaddr);
 	cpu_mem = SIM_get_object("phys_mem");
@@ -1454,8 +1503,7 @@ void myMemoryWrite(generic_address_t vaddr,uint64 value, int lenght)
    		uint8 toWrite =  0x000000FF & value;
 		value >>= 8;
 		SIM_write_byte(cpu_mem, addrt, toWrite);
-	}
-	
+	}	
 }
 
 

@@ -43,6 +43,7 @@ struct container_def
 	
 	addressList addressAccessList;  //keeps the global access list for mem Regions that this function accesses
 	addressList addressAccessListInstance;  //keeps the access list for mem Regions that this function accesses, only for the last instance called
+	addressList addressAccessListWithoutLocalStackAccesses;	//do not record local stack accesses in this list
 
 
 	addressList opalCodeAccessList; //use in the opal module.
@@ -99,6 +100,9 @@ extern addressList consAddressList(md_addr_t startAddress, md_addr_t endAddress,
 extern addressList freeAddressList(addressList l);
 void UpdateAddressList(addressList *l,md_addr_t addr,int nbytes);
 void joinAddress(addressList future, addressList present);
+void MergeAddressList(addressList *listA, addressList listB);
+
+void printAddressList(addressList l);
 void printAddressList(char* printbuff, addressList l);
 void printCountMemoryAccesses(char * printbuff,addressList l);
 decodedMemRange decodeMemoryRange(md_addr_t base, md_addr_t bound);
