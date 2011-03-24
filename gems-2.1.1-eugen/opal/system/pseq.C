@@ -7532,6 +7532,11 @@ void pseq_t::printStats( void )
 #endif
   setDebugTime( filterTime );
 
+
+	#ifdef GICACONTAINER
+		m_containeropal->PrintStats();
+	#endif
+
   #ifdef DEBUG_PSEQ
   DEBUG_OUT("pseq_t:printStats END\n");
   #endif

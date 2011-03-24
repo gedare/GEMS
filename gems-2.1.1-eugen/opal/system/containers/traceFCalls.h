@@ -6,6 +6,9 @@
 //#include "trace.h"
 
 #define STRINGTABLEID 24
+#define STACK_BIAS (2047)
+
+
 
 typedef enum mem_cmd {
   Read,			/* read memory from target (simulated prog) to host */
@@ -36,7 +39,9 @@ struct container_def
 	int traceLoadedAddressCount; //this value will be added from the trace file on the second run
 	int traceLoadeduniqueChildContainersCalled;//this value will be added from the trace file on the second run
 	int addressAccessListPenalty;
-	char isCalledWithHeapData; //counts the number of heap regions used. I will use it to recognize where in the code should I put ASSIGN directives
+	int maximumHeapRanges; //maximum number of heap memory regions accessed. I will use it to recognize where in the code should I put ASSIGN directives
+	int totalHeapRanges; //accumulates all heap memory regions accessed, divide this by totalStackPushes to get the average. I will use it to recognize where in the code should I put ASSIGN directives
+	
 
 	llist childFunctions; 			//keep the id of the child function ( or the entire container )
 	addressList instructionFetches; //all the instruction fetches made from within one container
@@ -102,7 +107,7 @@ void UpdateAddressList(addressList *l,md_addr_t addr,int nbytes);
 void joinAddress(addressList future, addressList present);
 void MergeAddressList(addressList *listA, addressList listB);
 
-void printAddressList(addressList l);
+//void printAddressListDEBUG(addressList l);
 void printAddressList(char* printbuff, addressList l);
 void printCountMemoryAccesses(char * printbuff,addressList l);
 decodedMemRange decodeMemoryRange(md_addr_t base, md_addr_t bound);

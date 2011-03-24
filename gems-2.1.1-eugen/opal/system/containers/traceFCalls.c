@@ -5,7 +5,7 @@
 
 #include "trace.h"
 #include "traceFCalls.h"
-#include "debugio.h"
+//#include "debugio.h"
 
 
 #define CONTAINERMAX 6000
@@ -331,7 +331,8 @@ container* container_add(md_addr_t addr, char * name)
 	newContainer->traceLoadedAddressCount= 0;
 	newContainer->traceLoadeduniqueChildContainersCalled = 0;
 
-	newContainer->isCalledWithHeapData = 0;
+	newContainer->maximumHeapRanges = 0;
+	newContainer->totalHeapRanges = 0;
 
 	newContainer->nonFunction = 0;
 
@@ -406,11 +407,11 @@ struct loadingPenalties container_traceFunctioncall(md_addr_t addr, mem_tp * mem
 			myprint(printBuffer);
 
 			//for heap acceses we need to update the parent container with that call as well ( heap memory accesses are passed from parent to child)
-			if(!stack_empty(returnAddressStack)){
-				updateHeapCalls(stack_top(returnAddressStack).containerObj,t.containerObj->addressAccessListInstance);
-				loadPenalty.containerStaticListSize = stack_top(returnAddressStack).containerObj->traceLoadedAddressCount + stack_top(returnAddressStack).containerObj->traceLoadeduniqueChildContainersCalled + 3; //all static memory + code + stacksize + timeout
-			    loadPenalty.containerDynamicListSize = stack_top(returnAddressStack).containerObj->isCalledWithHeapData;
-			}
+			//if(!stack_empty(returnAddressStack)){
+			//	updateHeapCalls(stack_top(returnAddressStack).containerObj,t.containerObj->addressAccessListInstance);
+			//	loadPenalty.containerStaticListSize = stack_top(returnAddressStack).containerObj->traceLoadedAddressCount + stack_top(returnAddressStack).containerObj->traceLoadeduniqueChildContainersCalled + 3; //all static memory + code + stacksize + timeout
+			//  loadPenalty.containerDynamicListSize = stack_top(returnAddressStack).containerObj->maximumHeapRanges;
+			//}
 			t.containerObj->addressAccessListInstance = NULL;
 
 			returned = 1;
@@ -468,7 +469,7 @@ struct loadingPenalties container_traceFunctioncall(md_addr_t addr, mem_tp * mem
 					int sizeOfAccessList = foundSearch->traceLoadedAddressCount + foundSearch->traceLoadeduniqueChildContainersCalled + 3; //all static memory + code + stacksize + timeout
 					loadPenalty.containerStaticListSize = sizeOfAccessList;
 					if(!stack_empty(returnAddressStack))
-						loadPenalty.containerDynamicListSize = (-1)*stack_top(returnAddressStack).containerObj->isCalledWithHeapData;
+						loadPenalty.containerDynamicListSize = (-1)*stack_top(returnAddressStack).containerObj->maximumHeapRanges;
 
 					stackObject t;
 					foundSearch->totalStackPushes ++;
@@ -518,10 +519,11 @@ struct loadingPenalties container_traceFunctioncall(md_addr_t addr, mem_tp * mem
 	return loadPenalty;
 }
 
-bool isLocalStackAccess(md_addr_t addr, int nbytes)
+int isLocalStackAccess(md_addr_t addr, int nbytes)
 {
-	uint64 sp = getSP();
-	uint64 fp = getFP();
+	uint64 sp = getSP() + STACK_BIAS;
+	uint64 fp = getFP() + STACK_BIAS;
+	//printf("%llx %llx is local ? stack [%llx %llx] stack limits[%llx %llx]\n",addr, addr +nbytes, fp, sp,ld_stack_base, ld_stack_base+ld_stack_size);
 	if(sp < fp) //the stack might grow different ways
 	{
 		uint64 t = fp;
@@ -529,12 +531,17 @@ bool isLocalStackAccess(md_addr_t addr, int nbytes)
 		sp = t;
 	}
 	
-	if( fp < addr && addr + nbytes < sp)
+	if( fp <= addr && addr <= sp)
 	{
-		printf("%llx %llx is local stack [%llx %llx]\n",addr, addr +nbytes, fp, sp);
-		return true;
+		//printf("\t %llx %llx is local stack [%llx %llx]\n",addr, addr +nbytes, fp, sp);
+		return 1;
 	}
-	return false;
+	return 0;
+}
+
+int isHypervisorRange(md_addr_t addr)
+{
+	return addr >= 0xf0000000;
 }
 
 void container_MemoryCall(mem_tp cmd,md_addr_t addr, int nbytes)
@@ -630,7 +637,7 @@ void container_printDecodedMemoryRanges(int bAll )
 {
 	sprintf(printBuffer,"data: %llx %llx stack: %llx %llx \n",ld_text_base,ld_text_bound,ld_stack_base ,ld_stack_base+ ld_stack_size);
 	myprint(printBuffer);
-	sprintf(printBuffer,"entryAddress endAddress\tname\tcount\tLIST\n");
+	sprintf(printBuffer,"entryAddress endAddress\tname\ttotalHeap\ttotalPushes\tcount\tLIST\n");
 	myprint(printBuffer);
 
 	
@@ -644,15 +651,21 @@ void container_printDecodedMemoryRanges(int bAll )
 			//count (we do not have a size of the list)
 			int jcnt = 0;
 			addressList jl = l;
-			while (jl) {jcnt++;jl=jl->next;}
+			while (jl) {
+				if(!isHypervisorRange(jl->startAddress)) jcnt++;
+				jl=jl->next;}
 			jl = m;
-			while (jl) {jcnt++;jl=jl->next;}
+			while (jl) {
+				if(!isHypervisorRange(jl->startAddress)) jcnt++;
+				jl=jl->next;}
 
 			
-			sprintf(printBuffer,"%llx %llx\t%s\t%d\t",
+			sprintf(printBuffer,"%llx %llx\t%s\t%d\t%d\t%d\t",
 							containerTable[i].entryAddress,
 							containerTable[i].endAddress,
 					(containerTable[i].name),
+					containerTable[i].totalHeapRanges,
+					containerTable[i].totalStackPushes,
 					jcnt);
 			myprint(printBuffer);
 			printDecodedInstructionFetchList(printBuffer,m);
@@ -868,17 +881,17 @@ void container_printStatistics (int bAll)
 			sprintf(printBuffer,"%llx\t%s\t\t\t\t\t%s\t",
 					containerTable[i].entryAddress,
 					(containerTable[i].name),
-					containerTable[i].isCalledWithHeapData ? "true":"false"
+					containerTable[i].maximumHeapRanges ? "true":"false"
 					);
 			myprint(printBuffer);
 			printDecodedAddressList(printBuffer,containerTable[i].staticAddressList);
 			sprintf(printBuffer,"\n");
 			myprint(printBuffer);
 
-			if(containerTable[i].isCalledWithHeapData){
+			if(containerTable[i].maximumHeapRanges){
 				sprintf(compilerPrintBuffer,"%s %d\n",
 						(containerTable[i].name),
-						containerTable[i].isCalledWithHeapData
+						containerTable[i].maximumHeapRanges
 						);
 				myprint(compilerPrintBuffer);
 			}
@@ -1025,15 +1038,15 @@ void joinAddress(addressList future, addressList present)
 	free(l);
 
 }
-
-void printAddressList(addressList l){
+/*
+void printAddressListDEBUG(addressList l){
 	while(l!=NULL)
 	{
 		DEBUG_OUT("[%llx,%llx) ",l->startAddress, l->endAddress);
 		l = l->next;
 	}
 }
-
+*/
 
 void printAddressList(char * printbuff,addressList l){
 	printbuff[0] = 0;
@@ -1087,7 +1100,8 @@ void printDecodedInstructionFetchList(char * printbuff,addressList l)
 	printbuff[0] = 0;
 	while(l!=NULL)
 	{
-		printbuff += sprintf(printbuff,"%c[%llx,%llx) ",'f',l->startAddress,l->endAddress);
+		if(!isHypervisorRange(l->startAddress))
+			printbuff += sprintf(printbuff,"%c[%llx,%llx) ",'f',l->startAddress,l->endAddress);
 		l = l->next;
 	}
 }
@@ -1098,8 +1112,10 @@ void printDecodedAddressList(char * printbuff,addressList l)
 	printbuff[0] = 0;
 	while(l!=NULL)
 	{
-		decodedMemRange md = decodeMemoryRange(l->startAddress, l->endAddress);
-		printbuff += sprintf(printbuff,"%c[%llx,%llx) ",md.type,md.base,md.bound);
+	 	if(!isHypervisorRange(l->startAddress)){
+			decodedMemRange md = decodeMemoryRange(l->startAddress, l->endAddress);
+			printbuff += sprintf(printbuff,"%c[%llx,%llx) ",md.type,md.base,md.bound);
+	 	}
 		l = l->next;
 	}
 }
@@ -1139,7 +1155,8 @@ void updateHeapCalls(container* c,addressList l)
 		}
 		l = l->next;
 	}
-	if(c->isCalledWithHeapData < heapAccessesInInstance) c->isCalledWithHeapData = heapAccessesInInstance;
+	if(c->maximumHeapRanges < heapAccessesInInstance) c->maximumHeapRanges = heapAccessesInInstance;
+	c->totalHeapRanges += heapAccessesInInstance;
 }
 
 decodedMemRange decodeMemoryRange(md_addr_t base, md_addr_t bound)
@@ -1481,7 +1498,7 @@ uint64 myMemoryRead(generic_address_t vaddr, int lenght)
 		tt |= 0x000000FF & whatdidread;
 	}
 	#ifdef DEBUG_GICA5
-		DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, tt);
+		//DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, tt);
 	#endif
 	return tt;
 }
@@ -1493,7 +1510,7 @@ void myMemoryWrite(generic_address_t vaddr,uint64 value, int lenght)
 	conf_object_t * cpu_mem;
 
 	#ifdef DEBUG_GICA5
-		DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, value);
+		//DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, value);
 	#endif
 
 	physical_address_t physaddr = SIM_logical_to_physical(SIM_current_processor(),Sim_DI_Data, vaddr);

@@ -7,6 +7,7 @@
 #include "pseq.h"
 #include "containers/traceFCalls.h"
 #include "dynamic.h"
+#include "containerOpalSimpleWaiter.h"
 
 
 
@@ -50,10 +51,14 @@ public:
 	uint64 permissionsStack_FP ; //Frame pointer for the permission cache
 
 	addressList m_dynamicPermissionBuffer; //ALLOW permissions accumulate here between container switches
-	
+	addressList m_dynamicContainerRuntimeRecord; 	//on call and returns dynamic ranges transfer from the dynamicPermissionBuffer here
+													//also these are saved on CALLS, and loaded on Returns
+
+	int m_dynamicContainerRuntimeRecordSize;
+	int	m_dynamicPermissionBufferSize;
 
 	//Runtime tracking of containers
-	void RunTimeContainerTracking(pa_t pc);
+	void RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w);
 	//A new container has been called
 	void NewCall(container * callee);
 	//A return from a container
@@ -68,8 +73,10 @@ public:
 	//FCalls : save dynamic ranges to stack, load static ranges
 	//Returns : load static ranges, load dynamic ranges from stack
 	enum container_stage_t {
-    BUSY,
 	WAITONCACHE,
+	SAVEDYN,
+	LDDYN,
+	LDSTATIC,
 	IDLE
   	};
 
@@ -83,7 +90,10 @@ public:
 	int m_pendingReadDynamicRequestsPending;
 	
 	
-	container_stage_t m_stage; 
+	container_stage_t m_stage;
+	int m_loadsPendingValidation;
+	int m_storesPendingValidation;
+	
 
 	void SetStage(container_stage_t);
 	container_stage_t GetStage(){return m_stage;};
@@ -94,60 +104,99 @@ public:
 	void LoadStaticPermissionsFromCache(container * c);
 	void LoadDynamicPermissionsFromCache(container * c);
 	void SavePermissionsToCache(container * c);
-	void PushPermissionStack();
-	void PopPermissionStack();
+	void PushPermissionStack(container * callee);
+	void PushPermissionStackAfter();
+	void PopPermissionStack(container * callee);
+	void PopPermissionStackAfter();
+	void transferDynPermBufferToDynContainerRunTimeRecord();
+	void PrintStats();
 
 	// load and stores will have to wait if the container list is not loaded.
 	// they get notified when everything is ready.
 	wait_list_t	m_wait_list; 
 
 
+
+	uint64 m_stat_numStalledLoads;
+	uint64 m_stat_numTotalLoads;
 	
+	uint64 m_stat_numStalledStores;
+	uint64 m_stat_numTotalStores;
+	
+	uint64 m_stat_numStalledCallContainerSwitches;
+	uint64 m_stat_numStalledReturnContainerSwitches;
+
+	uint64 m_stat_numTotalCallContainerSwitches;
+	uint64 m_stat_numTotalReturnContainerSwitches;
+
+	uint64 m_stat_numTotalCommitedCallContainerSwitches;
+	uint64 m_stat_numTotalCommitedReturnContainerSwitches;
+	
+	//uint64 m_stat_numStalledCyclesLoads;
+	//uint64 m_stat_numStalledCyclesStores;
+	//uint64 m_stat_numStalledCyclesContainerSwitches;
+	//uint64 m_stat_tempLoadStart;
+	//uint64 m_stat_tempLoadComplete;
+
+	uint64 m_stat_StageIDLE;
+	uint64 m_stat_StageLDDYN;
+	uint64 m_stat_StageLDSTATIC;
+	uint64 m_stat_StageSTDYN;
+	uint64 m_stat_StageWAITONCACHE;
+	
+	
+	
+	int m_debug_memleakNew;
+	int m_debug_memleakDelete;
 };
-
-
-
 
 void LoadDecodedAccessListFile(const char *);
 void LoadContainerCallListFile(const char *);
 
 
-class simple_waiter_t: public waiter_t{
-	public:
-	waiter_t *parent;
-	void Wakeup( void ){
-		parent->Wakeup();
-		delete this;
-	}
-	simple_waiter_t();
-	simple_waiter_t(waiter_t * p){ parent = p; }
-
-};
-
-
-class storeWrapper: public waiter_t{
+class memOpValidator: public waiter_t{
 	
 public:
-	storeWrapper();
-	storeWrapper(pa_t, store_inst_t *, containeropal *);
-	~storeWrapper();
+	memOpValidator();
+	memOpValidator(pa_t, memory_inst_t *, containeropal *, int type);
+	~memOpValidator();
 
-void Wakeup( void );
-store_inst_t * getStoreInst();
+	void Wakeup( void );
+	memory_inst_t * getMemoryInst();
 	int internalCounter;
 	
 	char dissasembled_instr_forDEBUG_buff[100];
 	wait_list_t	m_wait_list;
-	simple_waiter_t *perm_waiter;
-	simple_waiter_t *data_waiter;
-	
+	waiter_t *perm_waiter;
+	waiter_t *data_waiter;
+	containeropal * m_containerOpal;
 
 private:
-	store_inst_t * m_storeInst;	
-	containeropal * m_containerOpal;
+	memory_inst_t * m_memInst;	
+	int m_type; //0-LOAD ; 1-STORE
 	pa_t m_addr;
 	
 };
+
+class store_waiter_t: public waiter_t{
+	public:
+	void Wakeup( void );
+	waiter_t *parent;
+	store_waiter_t(){};
+	store_waiter_t(waiter_t * p){ parent = p;  }
+	~store_waiter_t(){};
+};
+
+class load_waiter_t: public waiter_t{
+	public:
+	void Wakeup( void );
+	waiter_t *parent;
+	load_waiter_t(){};
+	load_waiter_t(waiter_t * p){ parent = p;  }
+	~load_waiter_t(){};
+};
+
+
 
 
 class pcd_inst_t : public memory_inst_t {

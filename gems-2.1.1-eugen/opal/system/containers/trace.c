@@ -304,7 +304,7 @@ text_tracer(base_trace_t *bt, trace_entry_t *ent)
         case TR_Data:
                 //text_trace_data(bt, ent, s);
 				s[0] = 0;
-				container_MemoryCall(ent->read_or_write,ent->va,4);
+				container_MemoryCall(ent->read_or_write,ent->va,8);
                 break;
         case TR_Exception:
                 text_trace_exception(bt, ent, s);
