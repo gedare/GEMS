@@ -546,13 +546,16 @@ int isHypervisorRange(md_addr_t addr)
 
 void container_MemoryCall(mem_tp cmd,md_addr_t addr, int nbytes)
 {
-    
+	
+	
+	
 	mystack returnAddressStack = thread_active->container_runtime_stack;
 	
 	if(containerInitialized == 1 && !stack_empty(returnAddressStack))
 	{
 		
 		stackObject t = stack_top(returnAddressStack);
+		//printf("%s %s %llx %llx\n",__PRETTY_FUNCTION__, t.containerObj->name, addr,addr+nbytes );
 		//container_dumpRegisters(*regs);
 		//if(addr >= 0xf0000000ULL)  
 		//	{ printf("%s %s %llxn\n",__PRETTY_FUNCTION__, t.containerObj->name, addr); fflush(stdin);}
@@ -643,8 +646,8 @@ void container_printDecodedMemoryRanges(int bAll )
 	
 	for (int i=0 ; i < containerSize; i++)
 	{
-		addressList l = containerTable[i].addressAccessListWithoutLocalStackAccesses;
-		addressList m = containerTable[i].instructionFetches;
+		addressList l = invertAddressList(containerTable[i].addressAccessListWithoutLocalStackAccesses);
+		addressList m = invertAddressList(containerTable[i].instructionFetches);
 		
 		int bUsed = containerTable[i].totalStackPushes > 0;
 		if(bAll || bUsed){
@@ -668,9 +671,9 @@ void container_printDecodedMemoryRanges(int bAll )
 					containerTable[i].totalStackPushes,
 					jcnt);
 			myprint(printBuffer);
-			printDecodedInstructionFetchList(printBuffer,m);
-			myprint(printBuffer);
 			printDecodedAddressList(printBuffer,l);
+			myprint(printBuffer);
+			printDecodedInstructionFetchList(printBuffer,m);
 			myprint(printBuffer);
 			sprintf(printBuffer,"\n");
 			myprint(printBuffer);
@@ -1048,6 +1051,15 @@ void printAddressListDEBUG(addressList l){
 }
 */
 
+void printAddressListStdout(addressList l){
+	while(l!=NULL)
+	{
+		printf("[%llx,%llx) ",l->startAddress, l->endAddress);
+		l = l->next;
+	}
+}
+
+
 void printAddressList(char * printbuff,addressList l){
 	printbuff[0] = 0;
 	while(l!=NULL)
@@ -1248,6 +1260,20 @@ addressList freeAddressList(addressList l)
 	addressList temp = l -> next;
     free(l);
     return temp;
+}
+
+addressList invertAddressList(addressList l)
+{
+	addressList prev = NULL;
+	addressList next = l;
+	while(next)
+	{
+		addressList save = next->next ;
+		next->next = prev;
+		prev = next;
+		next = save;
+	}
+	return prev;
 }
 
 
@@ -1498,7 +1524,7 @@ uint64 myMemoryRead(generic_address_t vaddr, int lenght)
 		tt |= 0x000000FF & whatdidread;
 	}
 	#ifdef DEBUG_GICA5
-		//DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, tt);
+		printf("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, tt);
 	#endif
 	return tt;
 }
@@ -1510,7 +1536,7 @@ void myMemoryWrite(generic_address_t vaddr,uint64 value, int lenght)
 	conf_object_t * cpu_mem;
 
 	#ifdef DEBUG_GICA5
-		//DEBUG_OUT("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, value);
+		printf("%s adr=%llx size=%d val=%llx \n",__PRETTY_FUNCTION__, vaddr, lenght, value);
 	#endif
 
 	physical_address_t physaddr = SIM_logical_to_physical(SIM_current_processor(),Sim_DI_Data, vaddr);

@@ -8,6 +8,7 @@
 #define STRINGTABLEID 24
 #define STACK_BIAS (2047)
 
+extern char stdoutPrintBuffer[];
 
 
 typedef enum mem_cmd {
@@ -101,13 +102,16 @@ struct cell
 extern llist cons(stackObject element, llist l);
 extern llist cdr_and_free(llist l);
 
-extern addressList consAddressList(md_addr_t startAddress, md_addr_t endAddress, addressList l);
-extern addressList freeAddressList(addressList l);
+addressList consAddressList(md_addr_t startAddress, md_addr_t endAddress, addressList l);
+addressList freeAddressList(addressList l);
+addressList invertAddressList(addressList l);
+
 void UpdateAddressList(addressList *l,md_addr_t addr,int nbytes);
 void joinAddress(addressList future, addressList present);
 void MergeAddressList(addressList *listA, addressList listB);
 
-//void printAddressListDEBUG(addressList l);
+
+void printAddressListStdout(addressList l);
 void printAddressList(char* printbuff, addressList l);
 void printCountMemoryAccesses(char * printbuff,addressList l);
 decodedMemRange decodeMemoryRange(md_addr_t base, md_addr_t bound);
