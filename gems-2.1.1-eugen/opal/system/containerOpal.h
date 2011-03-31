@@ -148,6 +148,8 @@ public:
 	
 	int m_debug_memleakNew;
 	int m_debug_memleakDelete;
+
+	container* pContainerTable;
 };
 
 void LoadDecodedAccessListFile(const char *);

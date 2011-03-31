@@ -165,6 +165,7 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 
 	
 	globalreference = this;
+	pContainerTable = (container *)containerTable;
 }
 
 containeropal::~containeropal()
@@ -514,9 +515,11 @@ void containeropal::transferDynPermBufferToDynContainerRunTimeRecord()
 	#ifdef DEBUG_GICA8
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %d m_dynamicContainerRuntimeRecord = ",__PRETTY_FUNCTION__,m_dynamicContainerRuntimeRecordSize);
-		printAddressList(m_dynamicContainerRuntimeRecord);
+		printAddressList(stdoutPrintBuffer,m_dynamicContainerRuntimeRecord);
+		myprint(stdoutPrintBuffer);
 		DEBUG_OUT("m_dynamicPermissionBuffer = ");
-		printAddressList(m_dynamicPermissionBuffer);
+		printAddressList(stdoutPrintBuffer,m_dynamicPermissionBuffer);
+		myprint(stdoutPrintBuffer);
 		DEBUG_OUT("\n");
 	#endif
 
@@ -528,7 +531,8 @@ void containeropal::transferDynPermBufferToDynContainerRunTimeRecord()
 	#ifdef DEBUG_GICA8
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %d ",__PRETTY_FUNCTION__,m_dynamicContainerRuntimeRecordSize);
-		printAddressList(m_dynamicContainerRuntimeRecord);
+		printAddressList(stdoutPrintBuffer,m_dynamicContainerRuntimeRecord);
+		myprint(stdoutPrintBuffer);
 		DEBUG_OUT("\n");
 	#endif
 }
@@ -936,6 +940,10 @@ void LoadContainersChildContainers(const char * FileWithPrefix){
 
 void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 {
+	#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+			DEBUG_OUT("%s \n",__PRETTY_FUNCTION__);
+	#endif
+
 	FILE * file = fopen(FileWithPrefix,"r");
 
 	if(!file){ exit(printf("\n\n Runtime ERROR : unable to open symbol file %s",FileWithPrefix));}
@@ -956,7 +964,7 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 	#endif
 	//exit(0);
 	md_addr_t offset = 0;
-    
+    int i=0;
 	while(!feof(file)){
 		int ifetch=0,c = 0,s = 0,h = 0;
 		unsigned long long addrStart;
@@ -967,13 +975,16 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 		int totalStackPushes;
 		
 		
+		
 		fscanf(file,"%llx %llx\t%s\t%d\t%d\t%d\t",&addrStart,&addrEnd,name,&totalHeapCalls,&totalStackPushes,&listLength);
 		#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
 			DEBUG_OUT("%llx %llx\t%s\t%d\t%d\t%d ",addrStart,addrEnd,name,totalHeapCalls,totalStackPushes,listLength);
 			//DEBUG_OUT("%d \n",totalHeapCalls/totalStackPushes);
 		#endif
 		container * newcont = container_add(addrStart,name);
+		newcont->opalOffsetLocateContainerInPermissions = offset;
 		newcont->endAddress = addrEnd;
+		uint64 local_write_pointer = 0;
 		for(int i=0;i<listLength;i++){
 			
 			char type;
@@ -984,27 +995,61 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 				DEBUG_OUT("%c[%llx,%llx) ",type,rangeStart,rangeEnd);
 			#endif
 			if(type == 'f'){ ifetch++; consAddressList(rangeStart,rangeEnd,newcont->opalCodeAccessList);  }
-			else if (type == 'c') {c++;consAddressList(rangeStart,rangeEnd,newcont->opalStaticDataAccessList); }
-			else if (type == 's') {s++;consAddressList(rangeStart,rangeEnd,newcont->opalStackAccessList); }
+			else if (type == 'c') {
+				c++;
+				consAddressList(rangeStart,rangeEnd,newcont->opalStaticDataAccessList); 
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,rangeStart,8);
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,rangeEnd-rangeStart,8);
+				
+				local_write_pointer += PERMISSION_RECORD_SIZE;
+			}
+			else if (type == 's') {
+				s++;
+				consAddressList(rangeStart,rangeEnd,newcont->opalStackAccessList);
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,rangeStart,8);
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,rangeEnd-rangeStart,8);
+				
+				local_write_pointer += PERMISSION_RECORD_SIZE;
+				
+			}
 			else {h++;consAddressList(rangeStart,rangeEnd,newcont->opalHeapAccessList);}
 			consAddressList(rangeStart,rangeEnd,newcont->addressAccessList);
 
+			//#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+			//	DEBUG_OUT("\n %llx %llx %llx \n",globalreference->permissions_p,globalreference->permissions_p + globalreference->permissions_size, globalreference->permissions_p + newcont->opalOffsetLocateContainerInPermissions + local_write_pointer);
+			//#endif
+			assert(globalreference->permissions_p+ newcont->opalOffsetLocateContainerInPermissions + local_write_pointer <= globalreference->permissions_p + globalreference->permissions_size);
 			
 		}
 		newcont->opalSizeOfPermissionLists = c + s; //c for static S for stack
-		
-		newcont->opalOffsetLocateContainerInPermissions = offset;
 		offset += newcont->opalSizeOfPermissionLists * PERMISSION_RECORD_SIZE; 
-		
 		
 		#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
 			DEBUG_OUT("\n");
 		#endif
 
+		i++;
 	}
 	fclose(file);
 
 	//container_quickprint();
+	#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+		for (int i=0 ; i < containerSize; i++)
+		{
+			fprintf(stdout,"\n %llx %llx\t %s",
+							containerTable[i].entryAddress,
+							containerTable[i].endAddress,
+							containerTable[i].name
+			);
+
+			for(int j=0; j< containerTable[i].opalSizeOfPermissionLists;j++){
+				uint64 start = myMemoryRead(globalreference->permissions_p + containerTable[i].opalOffsetLocateContainerInPermissions + (2*j)*8 , 8);
+				uint64 size =  myMemoryRead(globalreference->permissions_p + containerTable[i].opalOffsetLocateContainerInPermissions + (2*j+1)*8 , 8);
+				fprintf(stdout,"[%llx %llx) ",start, start+size);
+			}
+			fprintf(stdout,"\n");
+		}
+	#endif
 }
 
 
