@@ -27,9 +27,11 @@ public:
 	bool CacheWrite(pa_t , memory_inst_t *);
 	//bool CacheWriteAfterPermissionCheck(pa_t a, storeWrapper *w);
 	bool CacheRead(pa_t , memory_inst_t *, bool ,  bool *);
+	bool AccessCacheThroughContainers(pa_t a, memory_inst_t *w, int operation /* 0=read; 1=write */);
 	bool Fetch(pa_t , waiter_t *, bool , bool *);
 	bool Retire(dynamic_inst_t *w);
 	bool AllowRetire(dynamic_inst_t *w);
+	bool CheckMemoryAccess(pa_t addr, size_t size);
 	bool m_allowRetire;
  
     void Wakeup( void );        
@@ -53,7 +55,8 @@ public:
 	addressList m_dynamicPermissionBuffer; //ALLOW permissions accumulate here between container switches
 	addressList m_dynamicContainerRuntimeRecord; 	//on call and returns dynamic ranges transfer from the dynamicPermissionBuffer here
 													//also these are saved on CALLS, and loaded on Returns
-
+	addressList m_staticContainerRuntimeRecord;
+													
 	int m_dynamicContainerRuntimeRecordSize;
 	int	m_dynamicPermissionBufferSize;
 
@@ -122,6 +125,8 @@ public:
 	
 	uint64 m_stat_numStalledStores;
 	uint64 m_stat_numTotalStores;
+
+	uint64 m_stat_LoadStoresFoundWithPartialLoadedContainer;
 	
 	uint64 m_stat_numStalledCallContainerSwitches;
 	uint64 m_stat_numStalledReturnContainerSwitches;

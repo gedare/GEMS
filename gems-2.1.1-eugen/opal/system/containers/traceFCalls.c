@@ -648,6 +648,8 @@ void container_printDecodedMemoryRanges(int bAll )
 	{
 		addressList l = invertAddressList(containerTable[i].addressAccessListWithoutLocalStackAccesses);
 		addressList m = invertAddressList(containerTable[i].instructionFetches);
+		//addressList l = containerTable[i].addressAccessListWithoutLocalStackAccesses;
+		//addressList m = containerTable[i].instructionFetches;
 		
 		int bUsed = containerTable[i].totalStackPushes > 0;
 		if(bAll || bUsed){
@@ -926,6 +928,24 @@ void MergeAddressList(addressList *listA, addressList listB)
 			UpdateAddressList(listA, l->startAddress, l->startAddress-l->endAddress);
 			l=l->next;
 		}
+}
+
+int FindInAddressList(addressList *list,md_addr_t addr, int nbytes)
+{
+	addressList l = *list;
+	
+	while(l!= NULL)
+	{
+		md_addr_t start = l->startAddress;
+		md_addr_t end = l->endAddress;
+		printf("start = %llx end = %llx addr = %llx addr+nbytes = %llx\n",start, end, addr, addr + nbytes);
+		if( start <= addr && end >= addr+nbytes)
+		{
+			return 1;
+		}
+		l = l->next;
+	}
+	return 0;
 }
 
 void UpdateAddressList(addressList *list,md_addr_t addr,int nbytes)

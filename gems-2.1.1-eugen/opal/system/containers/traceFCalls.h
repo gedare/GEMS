@@ -109,6 +109,8 @@ addressList invertAddressList(addressList l);
 void UpdateAddressList(addressList *l,md_addr_t addr,int nbytes);
 void joinAddress(addressList future, addressList present);
 void MergeAddressList(addressList *listA, addressList listB);
+int FindInAddressList(addressList *list,md_addr_t addr, int nbytes);
+
 
 
 void printAddressListStdout(addressList l);
