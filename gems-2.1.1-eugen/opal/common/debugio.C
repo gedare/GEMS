@@ -205,7 +205,7 @@ void debugio_t::out_info( const char *fmt, ... )
 #endif
   va_list args;
   va_start(args, fmt);
-  int error_rt = vfprintf(stdout, fmt, args);
+  int error_rt = vfprintf(stdout, fmt, args); fflush(stdout);
   va_end(args);
   assert(error_rt >= 0);   
   if (m_logfp) {
@@ -236,7 +236,7 @@ void debugio_t::out_error( const char *fmt, ... )
   // out_error should never be filtered: we must know if something goes wrong
   va_list args;
   va_start(args, fmt);
-  int error_rt = vfprintf(stderr, fmt, args);
+  int error_rt = vfprintf(stdout, fmt, args);fflush(stdout);
   va_end(args);
   assert(error_rt >= 0);
   if (m_logfp) {

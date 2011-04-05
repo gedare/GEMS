@@ -128,6 +128,7 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	m_stat_numStalledCallContainerSwitches = 0;
 	m_stat_numStalledReturnContainerSwitches = 0;
 	m_stat_LoadStoresFoundWithPartialLoadedContainer = 0;
+	m_stat_LoadStoresFoundWithCheckingWaiters = 0;
 
 
 	m_stat_numTotalLoads = 0;
@@ -221,14 +222,14 @@ bool containeropal::AccessCacheThroughContainers(pa_t a, memory_inst_t *w, int o
 		mptr_opsPendingValidations = &m_storesPendingValidation;
 		mptr_stat_numStalled = &m_stat_numStalledStores;
 		m_stat_numTotals = &m_stat_numTotalStores;
-		permWaiter = new store_waiter_t(masterWaiter);
+		permWaiter = new store_waiter_t(masterWaiter, a, 8);
 	}
 	else
 	{
 		mptr_opsPendingValidations = &m_loadsPendingValidation;
 		mptr_stat_numStalled = &m_stat_numStalledLoads;
 		m_stat_numTotals = &m_stat_numTotalLoads;
-		permWaiter = new load_waiter_t(masterWaiter);
+		permWaiter = new load_waiter_t(masterWaiter, a , 8);
 	}
 	
 	(*m_stat_numTotals)++;
@@ -259,6 +260,7 @@ bool containeropal::AccessCacheThroughContainers(pa_t a, memory_inst_t *w, int o
 		masterWaiter->internalCounter --;
 		m_debug_memleakDelete++;
 		delete masterWaiter->data_waiter;
+		masterWaiter->data_waiter = NULL;
 	}
 
 	if(masterWaiter->internalCounter != 0)
@@ -436,11 +438,14 @@ bool containeropal::AllowRetire(dynamic_inst_t *w)
 }
 
 void containeropal::NewCall(container * callee){
-	#ifdef DEBUG_GICA6
+	#ifdef DEBUG_GICA8
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %s %s\n",__PRETTY_FUNCTION__,callee->name, printStage(m_stage));
 	#endif
 	m_stat_numTotalCommitedCallContainerSwitches++;
+
+	m_staticContainerRuntimeRecord = freeAddressList(m_staticContainerRuntimeRecord);
+	m_dynamicContainerRuntimeRecord = freeAddressList(m_dynamicContainerRuntimeRecord);
 	
 	PushPermissionStack(callee);
 	SetStage(SAVEDYN);
@@ -469,6 +474,8 @@ void containeropal::PushPermissionStack(container * callee){
 	myMemoryWrite(newSP,this->permissionsStack_FP,8);
 	this->permissionsStack_FP = this->permissionsStack_SP;
 	this->permissionsStack_SP = newSP;
+
+
 
 	#ifdef DEBUG_GICA8
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
@@ -515,7 +522,7 @@ void containeropal::transferDynPermBufferToDynContainerRunTimeRecord()
 
 
 void containeropal::Return(container * callee){
-	#ifdef DEBUG_GICA6
+	#ifdef DEBUG_GICA8
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %s %s\n",__PRETTY_FUNCTION__,callee->name,  printStage(m_stage));
 	#endif
@@ -523,6 +530,8 @@ void containeropal::Return(container * callee){
 
 	m_stat_numTotalCommitedReturnContainerSwitches++;
 
+	m_staticContainerRuntimeRecord = freeAddressList(m_staticContainerRuntimeRecord);
+	m_dynamicContainerRuntimeRecord = freeAddressList(m_dynamicContainerRuntimeRecord);
 //	if(GetCurrentContainer()){
 
 		PopPermissionStack(callee);
@@ -607,17 +616,16 @@ void containeropal::LoadStaticPermissionsFromCache(container * c){
 	uint64 val1 = myMemoryRead(whereToLookForStaticPermissionList,8);
 	uint64 val2 = myMemoryRead(whereToLookForStaticPermissionList+8,8);
 
-	this->m_staticContainerRuntimeRecord = consAddressList(val1,val1+val2,this->m_staticContainerRuntimeRecord);
-	
-	
-#ifdef DEBUG_GICA8
-		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
-		DEBUG_OUT("%s %d %s ",__PRETTY_FUNCTION__, m_pendingReadStaticRequestsPending, c->name);
-		DEBUG_OUT("permissions_p %llx entryAddress %llx opalOffsetLocateContainerInPermissions %llx m_pendingReadRequests %d whereToLookForStaticPermissionList ",permissions_p, c->entryAddress, c->opalOffsetLocateContainerInPermissions, m_pendingReadStaticRequestsPending, whereToLookForStaticPermissionList);
-		DEBUG_OUT(" %llx %llx %lld \n", whereToLookForStaticPermissionList, val1, val2);
-#endif
+	#ifdef DEBUG_GICA8
+			for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+			DEBUG_OUT("%s %d %s ",__PRETTY_FUNCTION__, m_pendingReadStaticRequestsPending, c->name);
+			DEBUG_OUT("permissions_p %llx entryAddress %llx opalOffsetLocateContainerInPermissions %llx m_pendingReadRequests %d whereToLookForStaticPermissionList ",permissions_p, c->entryAddress, c->opalOffsetLocateContainerInPermissions, m_pendingReadStaticRequestsPending, whereToLookForStaticPermissionList);
+			DEBUG_OUT(" %llx %llx %lld \n", whereToLookForStaticPermissionList, val1, val2);
+	#endif
 
-	
+	this->m_staticContainerRuntimeRecord = consAddressList(val1,val1+val2,this->m_staticContainerRuntimeRecord);
+	CheckPedingWaiters(val1,val2);
+
 	m_pendingReadStaticRequests--;
 	
 	if(permissionHit) {
@@ -658,6 +666,8 @@ void containeropal::LoadDynamicPermissionsFromCache(container * c){
 
 	UpdateAddressList(&m_dynamicContainerRuntimeRecord,up.startaddr,up.endaddr-up.startaddr);
 	m_dynamicContainerRuntimeRecordSize = addressListSize(m_dynamicContainerRuntimeRecord);
+	CheckPedingWaiters(up.startaddr,up.endaddr-up.startaddr);
+
 	
 	#ifdef DEBUG_GICA6
 		DEBUG_OUT(" [%llx %llx] (%d) \n", up.startaddr, up.endaddr,up.perm);
@@ -791,9 +801,9 @@ void containeropal::SetStage(container_stage_t stage)
 
 
 //iterate the m_staticContainerRuntimeRecord and m_dynamicContainerRuntimeRecord return if found
-bool containeropal::CheckMemoryAccess(pa_t addr, size_t size)
+bool containeropal::CheckMemoryAccess(pa_t addr, uint64 size)
 {
-	#ifdef DEBUG_GICA8 
+	#ifdef DEBUG_GICA6 
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s Searching for %llx %llx ",__PRETTY_FUNCTION__,addr, addr + size);
 		addressList l = this->m_staticContainerRuntimeRecord;
@@ -813,12 +823,46 @@ bool containeropal::CheckMemoryAccess(pa_t addr, size_t size)
 	#endif
 
 
-	
-	bool found = FindInAddressList(&(this->m_staticContainerRuntimeRecord),addr,size);
-	if(!found) FindInAddressList(&(this->m_dynamicContainerRuntimeRecord),addr,size);
+	bool found = false;
+	if(!(found = FindInAddressList(this->m_staticContainerRuntimeRecord,addr,size)))
+		found = FindInAddressList(this->m_dynamicContainerRuntimeRecord,addr,size);
 
 	return found;
 }
+
+bool containeropal::CheckPedingWaiters(pa_t addr, uint64 size)
+{
+	#ifdef DEBUG_GICA9
+		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+		DEBUG_OUT("%s Searching for %llx %lld \n",__PRETTY_FUNCTION__,addr, size);
+	#endif
+
+	waiter_t* l;
+	
+	#ifdef DEBUG_GICA9
+		l = m_wait_list.next;
+		int cnt = 0;
+		while(l){ l=l->next;cnt ++;}
+		DEBUG_OUT("%s THERE ARE %d in the waitlist \n",__PRETTY_FUNCTION__,cnt);
+	#endif
+
+	l = m_wait_list.next;
+	while(l){
+		waiter_t *temp = l;
+		l= l->next;
+		if(temp->TryWake(addr,size)){
+			m_stat_LoadStoresFoundWithCheckingWaiters++;
+		}
+	}	
+
+	#ifdef DEBUG_GICA9
+		l = m_wait_list.next;
+		cnt = 0;
+		while(l){ l=l->next;cnt ++;}
+		DEBUG_OUT("%s THERE ARE %d in the waitlist \n",__PRETTY_FUNCTION__,cnt);
+	#endif
+}
+
 
 const char *containeropal::printStage( container_stage_t stage )
 {
@@ -849,6 +893,8 @@ void containeropal::PrintStats(){
 	DEBUG_OUT("numTotalStores :\t %lld \n", m_stat_numTotalStores);
 
 	DEBUG_OUT("LoadStoresFoundWithPartialLoadedContainer :\t %lld \n", m_stat_LoadStoresFoundWithPartialLoadedContainer);
+	DEBUG_OUT("LoadStoresFoundWithCheckingWaiters :\t %lld \n", m_stat_LoadStoresFoundWithCheckingWaiters);
+
 
 	DEBUG_OUT("numStalledCallContainerSwitches :\t %lld \n", m_stat_numStalledCallContainerSwitches);
 	DEBUG_OUT("numStalledReturnContainerSwitches :\t %lld \n", m_stat_numStalledReturnContainerSwitches);
@@ -1075,7 +1121,9 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 
 
 
-memOpValidator::memOpValidator(){}
+memOpValidator::memOpValidator(){
+
+}
 memOpValidator::memOpValidator(pa_t a,memory_inst_t * st, containeropal * c, int type)
 	{ 
 		this->m_addr = a; this->m_memInst = st; this->m_containerOpal = c;
@@ -1107,7 +1155,7 @@ memory_inst_t * memOpValidator::getMemoryInst(){return this->m_memInst;}
 
 void load_waiter_t::Wakeup( void ){
 	((memOpValidator *)parent)->m_containerOpal->m_loadsPendingValidation  = ((memOpValidator *)parent)->m_containerOpal->m_loadsPendingValidation - 1;
-	#ifdef DEBUG_GICA9x
+	#ifdef DEBUG_GICA9
 		DEBUG_OUT("%s %d \n", __PRETTY_FUNCTION__, ((memOpValidator *)parent)->m_containerOpal->m_loadsPendingValidation);
 	#endif
 	parent->Wakeup();
@@ -1115,15 +1163,40 @@ void load_waiter_t::Wakeup( void ){
 	delete this;
 }
 
+bool load_waiter_t::TryWake( pa_t addr, size_t size ){
+	#ifdef DEBUG_GICA9
+		DEBUG_OUT("%s [%llx %llx) \n", __PRETTY_FUNCTION__,this->m_addr , this->m_addr + this->m_size);
+	#endif
+	if(addr <= this->m_addr && addr+size >= this->m_addr + this->m_size){
+		RemoveWaitQueue();		
+		Wakeup();
+		return true;
+	}
+	return false;	
+}
+
 void store_waiter_t::Wakeup( void ){
 	((memOpValidator *)parent)->m_containerOpal->m_storesPendingValidation  = ((memOpValidator *)parent)->m_containerOpal->m_storesPendingValidation - 1;
-	#ifdef DEBUG_GICA9x
+	#ifdef DEBUG_GICA9
 		DEBUG_OUT("%s %d \n", __PRETTY_FUNCTION__, ((memOpValidator *)parent)->m_containerOpal->m_storesPendingValidation);
 	#endif
 	parent->Wakeup();
 	((memOpValidator *)parent)->m_containerOpal->m_debug_memleakDelete++;
 	delete this;
 }
+
+bool store_waiter_t::TryWake( pa_t addr, size_t size ){
+	#ifdef DEBUG_GICA9
+		DEBUG_OUT("%s [%llx %llx) \n", __PRETTY_FUNCTION__,this->m_addr , this->m_addr + this->m_size);
+	#endif
+	if(addr <= this->m_addr && addr+size >= this->m_addr + this->m_size){
+		RemoveWaitQueue();
+		Wakeup();
+		return true;
+	}
+	return false;	
+}
+
 
 void simple_waiter_t::Wakeup( void ){
 	parent->Wakeup();

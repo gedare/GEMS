@@ -96,6 +96,7 @@ class memory_inst_t;
 class control_inst_t;
 class load_inst_t;
 class store_inst_t;
+class pcd_inst_t;
 class abstract_pc_t;
 class static_inst_t;
 

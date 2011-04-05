@@ -31,7 +31,7 @@ public:
 	bool Fetch(pa_t , waiter_t *, bool , bool *);
 	bool Retire(dynamic_inst_t *w);
 	bool AllowRetire(dynamic_inst_t *w);
-	bool CheckMemoryAccess(pa_t addr, size_t size);
+	bool CheckMemoryAccess(pa_t addr, uint64 size);
 	bool m_allowRetire;
  
     void Wakeup( void );        
@@ -106,6 +106,9 @@ public:
 	container * GetCurrentContainer( );
 	void LoadStaticPermissionsFromCache(container * c);
 	void LoadDynamicPermissionsFromCache(container * c);
+	bool CheckPedingWaiters(pa_t addr, uint64 size);
+
+	
 	void SavePermissionsToCache(container * c);
 	void PushPermissionStack(container * callee);
 	void PushPermissionStackAfter();
@@ -127,6 +130,7 @@ public:
 	uint64 m_stat_numTotalStores;
 
 	uint64 m_stat_LoadStoresFoundWithPartialLoadedContainer;
+	uint64 m_stat_LoadStoresFoundWithCheckingWaiters;
 	
 	uint64 m_stat_numStalledCallContainerSwitches;
 	uint64 m_stat_numStalledReturnContainerSwitches;
@@ -182,16 +186,20 @@ private:
 	memory_inst_t * m_memInst;	
 	int m_type; //0-LOAD ; 1-STORE
 	pa_t m_addr;
+	uint64 size;
 	
 };
 
 class store_waiter_t: public waiter_t{
-	public:
+ public:
 	void Wakeup( void );
 	waiter_t *parent;
 	store_waiter_t(){};
-	store_waiter_t(waiter_t * p){ parent = p;  }
+	store_waiter_t(waiter_t * p,pa_t addr, uint64 sz ){ parent = p;m_addr = addr ;m_size = sz; }
 	~store_waiter_t(){};
+	pa_t m_addr;
+	uint64 m_size;
+	bool TryWake( pa_t addr, size_t size );
 };
 
 class load_waiter_t: public waiter_t{
@@ -199,8 +207,11 @@ class load_waiter_t: public waiter_t{
 	void Wakeup( void );
 	waiter_t *parent;
 	load_waiter_t(){};
-	load_waiter_t(waiter_t * p){ parent = p;  }
+	load_waiter_t(waiter_t * p,pa_t addr, uint64 sz ){ parent = p;m_addr = addr ;m_size = sz; }
 	~load_waiter_t(){};
+	pa_t m_addr;
+	uint64 m_size;
+	bool TryWake( pa_t addr, size_t size );
 };
 
 

@@ -142,7 +142,8 @@ enum dyn_execute_type_t {
   DYN_STORE,                 // store
   DYN_PREFETCH,              // prefetch memory operation
   DYN_ATOMIC,                // atomic memory operation (atomic swap, etc)
-  DYN_NUM_EXECUTE_TYPES
+  DYN_NUM_EXECUTE_TYPES,
+  DYN_PCD                    // pcd
 };
 
 /** classifications of different types of functional unit dependencies,
@@ -162,7 +163,8 @@ enum fu_type_t {
   FU_FLOATSQRT,            // floating point square root
   FU_RDPORT,               // memory read port
   FU_WRPORT,               // memory write port
-  FU_NUM_FU_TYPES          // total functional unit classes
+  FU_NUM_FU_TYPES,          // total functional unit classes
+  FU_CONTAINER				// GICA added this one for the container manager
 };
 
 /** classifications of different types of register identifiers in the system

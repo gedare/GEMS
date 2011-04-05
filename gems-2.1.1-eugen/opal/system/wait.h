@@ -99,7 +99,6 @@ public:
   /** print out the wait list */
   void print(ostream& out) const;
 
-protected:
   /// pointer to next waiter in the wait list.
   waiter_t *next;
 };
@@ -234,9 +233,15 @@ public:
   /// marks this request as aborted.
   virtual void setRequestAborted(int conflictingProcessor, int conflictingThread) { };
 
-private:
+  ///Eugen : IGNORE THIS, just some QUICKHACK
+  virtual bool TryWake(pa_t addr, size_t size){
+  }
+
   /// pointer to the previous waiter in the wait list
   wait_list_t *prev;
+
+private:
+ 
   /** scheduling priority for this instruction */
   uint64 priority; 
 };

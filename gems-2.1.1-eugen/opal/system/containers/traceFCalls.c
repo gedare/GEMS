@@ -930,15 +930,15 @@ void MergeAddressList(addressList *listA, addressList listB)
 		}
 }
 
-int FindInAddressList(addressList *list,md_addr_t addr, int nbytes)
+int FindInAddressList(addressList list,md_addr_t addr, int nbytes)
 {
-	addressList l = *list;
+	addressList l = list;
 	
-	while(l!= NULL)
+	while(l)
 	{
 		md_addr_t start = l->startAddress;
 		md_addr_t end = l->endAddress;
-		printf("start = %llx end = %llx addr = %llx addr+nbytes = %llx\n",start, end, addr, addr + nbytes);
+		//printf("start = %llx end = %llx addr = %llx addr+nbytes = %llx\n",start, end, addr, addr + nbytes);
 		if( start <= addr && end >= addr+nbytes)
 		{
 			return 1;
@@ -1275,11 +1275,15 @@ addressList consAddressList(md_addr_t startAddress, md_addr_t endAddress, addres
     temp -> next = l;
     return temp;
 }
+
 addressList freeAddressList(addressList l)
 {
-	addressList temp = l -> next;
-    free(l);
-    return temp;
+	while(l){
+		addressList temp = l;
+		l = l->next;
+		free(temp);
+	}
+    return NULL;
 }
 
 addressList invertAddressList(addressList l)

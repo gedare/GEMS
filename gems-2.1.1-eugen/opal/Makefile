@@ -26,7 +26,8 @@ include $(GEMS_ROOT)/common/Makefile.common
 #TESTER_LDFLAGS := -lCstd
 #OPT_FLAGS := -g -c -xO0
 #OPT_FLAGS := -ggdb -g3 -O2 -fPIC -finline-functions
-OPT_FLAGS := -ggdb -g3 -O2 -fPIC -finline-functions -w
+#OPT_FLAGS := -ggdb -g3 -O2 -fPIC -finline-functions -w
+OPT_FLAGS := -ggdb -g3 -fPIC -finline-functions -w
 #OPT_FLAGS := -xCC  -fast -xarch=v8plusa -xO4 -ftrap=%all,no%inexact -xs -xprefetch=yes
 
 # if compiling to run standalone with ruby, specify a protocol here
@@ -64,7 +65,18 @@ DEBUG_FLAGS += -DDEBUG_FILTER
 #DEBUG_FLAGS += -DDEBUG_PSEQ
 #DEBUG_FLAGS += -DDEBUG_GICA21 -DDEBUG_GICA2 -DDEBUG_GICA3 -DDEBUG_GICA4 -DGICACONTAINER 
 #DEBUG_FLAGS += -DDEBUG_GICA21 -DDEBUG_GICA2 -DDEBUG_GICA3 -DDEBUG_GICA4
-DEBUG_FLAGS += -DDEBUG_GICA4 -DGICACONTAINER 
+#DEBUG_FLAGS += -DDEBUG_GICA4 -DGICACONTAINER 
+#DEBUG_FLAGS += -DDEBUG_GICA2STORE -DGICACONTAINER
+#DEBUG_FLAGS += -DGICACONTAINER -DDEBUG_GICA5
+#DEBUG_FLAGS += -DDEBUG_GICA5
+#DEBUG_FLAGS += -DDEBUG_GICA6
+#DEBUG_FLAGS += -DDEBUG_GICA7
+DEBUG_FLAGS += -DDEBUG_GICA8
+DEBUG_FLAGS += -DDEBUG_GICA9
+DEBUG_FLAGS += -DGICACONTAINER
+#DEBUG_FLAGS += -DDEBUG_GICALoadContainersFromDecodedAccessListFile
+
+#DEBUG_FLAGS += -DDEBUG_DYNAMIC
 #    defines debugging of the ruby interface
 #DEBUG_FLAGS += -DDEBUG_RUBY
 #    defines a lot of verbosity in the cache
@@ -224,7 +236,8 @@ SRC_CPP := \
 	yags.C \
 	writebuffer.C \
 	containerOpal.C \
-	containers/traceFCalls.C
+	containers/traceFCalls.C 
+#	containers/trace.C
 
 SRC_C 	:= \
 	ccops.c \
@@ -245,6 +258,7 @@ module:
 	@echo "Opal: building module"
 	${MAKE} $(GENERATED_DIR)/generated
 	${MAKE} BUILD_FLAGS=-DSIMICS module_go
+#	gcc -std=c99 $(OPT_FLAGS) -o $(OBJ_DIR)/containers/trace.o -c system/containers/trace.c $(INCLUDES)
 	cp $(OBJ_DIR)/containers/*.o $(OBJ_DIR)
 	@echo "Opal: Linking simics module"
 ifeq ($(SIMICS_VERSION),2.2.X)
