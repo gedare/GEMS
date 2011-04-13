@@ -76,7 +76,13 @@ unpacked_permission_rec unpack_permrec(packed_permission_record p)
 {
 	unpacked_permission_rec up;
 	up.startaddr = p.startaddr;
-	up.endaddr = up.startaddr + maskBits64(p.permandsize,0,61);
+	uint64 size = maskBits64(p.permandsize,0,61);
+	//if(size > 1000) {
+	//	printf("there must be something wrong in %s startaddr=%llx size=%lld", __PRETTY_FUNCTION__,up.startaddr,size );
+	//	fflush(stdin);
+	//}
+	//assert(size < 1000);
+	up.endaddr = up.startaddr + size;
 	up.perm = (byte_t) maskBits64(p.permandsize,62,63);
 	return up;
 }
@@ -215,22 +221,20 @@ bool containeropal::AccessCacheThroughContainers(pa_t a, memory_inst_t *w, int o
 	int * mptr_opsPendingValidations = NULL;
 	uint64 * mptr_stat_numStalled = NULL;
 	uint64 * m_stat_numTotals = NULL;
-	waiter_t * permWaiter = NULL;
 	
 	if(operation == 1)
 	{
 		mptr_opsPendingValidations = &m_storesPendingValidation;
 		mptr_stat_numStalled = &m_stat_numStalledStores;
 		m_stat_numTotals = &m_stat_numTotalStores;
-		permWaiter = new store_waiter_t(masterWaiter, a, 8);
 	}
 	else
 	{
 		mptr_opsPendingValidations = &m_loadsPendingValidation;
 		mptr_stat_numStalled = &m_stat_numStalledLoads;
 		m_stat_numTotals = &m_stat_numTotalLoads;
-		permWaiter = new load_waiter_t(masterWaiter, a , 8);
 	}
+	
 	
 	(*m_stat_numTotals)++;
 	//access perm container if it is ready
@@ -244,9 +248,12 @@ bool containeropal::AccessCacheThroughContainers(pa_t a, memory_inst_t *w, int o
 	}
 	else{
 		permissionHit = false;
-		masterWaiter->perm_waiter = permWaiter;
+		if(operation == 1)
+			masterWaiter->perm_waiter = new store_waiter_t(masterWaiter, a, 8);
+		else 
+			masterWaiter->perm_waiter = new load_waiter_t(masterWaiter, a, 8);
+
 		m_debug_memleakNew++;
-		
 		(masterWaiter->perm_waiter)->InsertWaitQueue(m_wait_list);
 		(*mptr_stat_numStalled)++;
 		(*mptr_opsPendingValidations)++;
@@ -371,7 +378,7 @@ void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 				m_stat_numTotalCallContainerSwitches++;
 				//only allow containers to switch if the the container is not busy loading  permssions
   				// or if there are no pending load/stores
-  				if(m_loadsPendingValidation + m_storesPendingValidation == 0 
+  				if( m_stage != SAVEDYN && m_loadsPendingValidation + m_storesPendingValidation == 0 
 					&& m_pendingWriteRequests == 0 && m_pendingReadDynamicRequests == 0)
 					{
 						if (Waiting()) RemoveWaitQueue();
@@ -445,8 +452,7 @@ void containeropal::NewCall(container * callee){
 	m_stat_numTotalCommitedCallContainerSwitches++;
 
 	m_staticContainerRuntimeRecord = freeAddressList(m_staticContainerRuntimeRecord);
-	m_dynamicContainerRuntimeRecord = freeAddressList(m_dynamicContainerRuntimeRecord);
-	
+		
 	PushPermissionStack(callee);
 	SetStage(SAVEDYN);
 	Tick();
@@ -487,6 +493,7 @@ void containeropal::PushPermissionStack(container * callee){
 void containeropal::PushPermissionStackAfter(){
 
 	m_dynamicContainerRuntimeRecordSize = 0;
+	m_dynamicContainerRuntimeRecord = freeAddressList(m_dynamicContainerRuntimeRecord);
 	m_dynamicContainerRuntimeRecord = NULL;
 	transferDynPermBufferToDynContainerRunTimeRecord();
 }
@@ -495,28 +502,30 @@ void containeropal::PushPermissionStackAfter(){
 void containeropal::transferDynPermBufferToDynContainerRunTimeRecord()
 {
 
-	#ifdef DEBUG_GICA8
-		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
-		DEBUG_OUT("%s %d m_dynamicContainerRuntimeRecord = ",__PRETTY_FUNCTION__,m_dynamicContainerRuntimeRecordSize);
-		printAddressList(stdoutPrintBuffer,m_dynamicContainerRuntimeRecord);
-		myprint(stdoutPrintBuffer);
-		DEBUG_OUT("m_dynamicPermissionBuffer = ");
-		printAddressList(stdoutPrintBuffer,m_dynamicPermissionBuffer);
-		myprint(stdoutPrintBuffer);
-		DEBUG_OUT("\n");
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
+		if(m_dynamicContainerRuntimeRecordSize > 0 || m_dynamicPermissionBufferSize > 0) {
+			for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+			DEBUG_OUT("%s %d m_dynamicContainerRuntimeRecord = ",__PRETTY_FUNCTION__,m_dynamicContainerRuntimeRecordSize);
+			printAddressList(stdoutPrintBuffer,m_dynamicContainerRuntimeRecord);
+			DEBUG_OUT("m_dynamicPermissionBuffer = ");
+			printAddressList(stdoutPrintBuffer,m_dynamicPermissionBuffer);
+			DEBUG_OUT("\n");
+		}
 	#endif
 
 	MergeAddressList(&m_dynamicContainerRuntimeRecord, m_dynamicPermissionBuffer);
 	m_dynamicContainerRuntimeRecordSize = addressListSize(m_dynamicContainerRuntimeRecord);
+	freeAddressList(m_dynamicPermissionBuffer);
 	m_dynamicPermissionBuffer = NULL;
 	m_dynamicPermissionBufferSize = 0;
 
-	#ifdef DEBUG_GICA8
-		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
-		DEBUG_OUT("%s %d ",__PRETTY_FUNCTION__,m_dynamicContainerRuntimeRecordSize);
-		printAddressList(stdoutPrintBuffer,m_dynamicContainerRuntimeRecord);
-		myprint(stdoutPrintBuffer);
-		DEBUG_OUT("\n");
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
+		if(m_dynamicContainerRuntimeRecordSize > 0) {
+			for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+			DEBUG_OUT("%s %d ",__PRETTY_FUNCTION__,m_dynamicContainerRuntimeRecordSize);
+			printAddressList(stdoutPrintBuffer,m_dynamicContainerRuntimeRecord);
+			DEBUG_OUT("\n");
+		}
 	#endif
 }
 
@@ -532,6 +541,8 @@ void containeropal::Return(container * callee){
 
 	m_staticContainerRuntimeRecord = freeAddressList(m_staticContainerRuntimeRecord);
 	m_dynamicContainerRuntimeRecord = freeAddressList(m_dynamicContainerRuntimeRecord);
+	m_dynamicContainerRuntimeRecordSize = 0;
+	
 //	if(GetCurrentContainer()){
 
 		PopPermissionStack(callee);
@@ -547,9 +558,6 @@ void containeropal::PopPermissionStack(container * callee){
 
 	m_pendingReadStaticRequestsPending = callee->opalSizeOfPermissionLists;
 	m_pendingReadStaticRequests = m_pendingReadStaticRequestsPending;
-
-	m_dynamicContainerRuntimeRecordSize = 0;
-	m_dynamicContainerRuntimeRecord = NULL;
 
 	m_pendingReadDynamicRequestsPending = (permissionsStack_SP - permissionsStack_FP) / PERMISSION_RECORD_SIZE;
     m_pendingReadDynamicRequests = m_pendingReadDynamicRequestsPending;
@@ -586,18 +594,18 @@ container * containeropal::GetCurrentContainer( ){
 }
 
 void containeropal::AddDynamicRange(pa_t startAddress, uint64 size, byte_t perm, dynamic_inst_t *w){
-	#ifdef DEBUG_GICA8
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %llx %lld %d ",__PRETTY_FUNCTION__, startAddress, size, perm);
 		char printbuff[1000];
 	#endif
 	
 	UpdateAddressList( &m_dynamicPermissionBuffer,startAddress, size);
-	m_dynamicPermissionBufferSize++;
+	m_dynamicPermissionBufferSize= addressListSize(m_dynamicPermissionBuffer);
 
 
-	#ifdef DEBUG_GICA8
-		printAddressList(printbuff,m_dynamicPermissionBuffer);
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
+		printAddressList(stdoutPrintBuffer,m_dynamicPermissionBuffer);
 		DEBUG_OUT(" NEW SIZE = %d \n",addressListSize(m_dynamicPermissionBuffer) );
 	#endif
 }
@@ -646,7 +654,7 @@ void containeropal::LoadDynamicPermissionsFromCache(container * c){
 	
 //	whereToLookForStaticPermissionList += c->opalOffsetLocateContainerInPermissions;
 //	whereToLookForStaticPermissionList += (c->opalSizeOfPermissionLists - m_pendingReadRequests) * PERMISSION_RECORD_SIZE; 
-	#ifdef DEBUG_GICA6
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %d %s ",__PRETTY_FUNCTION__, m_pendingReadDynamicRequestsPending, c->name);
 		DEBUG_OUT("permissions_p %llx entryAddress %llx opalOffsetLocateContainerInPermissions %llx m_pendingReadRequests %d whereToLookForDynamicPermissionList %llx ",permissions_p, c->entryAddress, c->opalOffsetLocateContainerInPermissions, m_pendingReadDynamicRequests, whereToLookForDynamicPermissionList);
@@ -669,7 +677,7 @@ void containeropal::LoadDynamicPermissionsFromCache(container * c){
 	CheckPedingWaiters(up.startaddr,up.endaddr-up.startaddr);
 
 	
-	#ifdef DEBUG_GICA6
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
 		DEBUG_OUT(" [%llx %llx] (%d) \n", up.startaddr, up.endaddr,up.perm);
 	#endif	
 	
@@ -693,7 +701,7 @@ void containeropal::SavePermissionsToCache(container * c){
 	bool permissionHit;
 	pa_t whereToSaveDynamicPermissionList = this->permissionsStack_SP - m_pendingWriteRequests * PERMISSION_RECORD_SIZE ;
 	
-	#ifdef DEBUG_GICA6
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %d %s ",__PRETTY_FUNCTION__, m_pendingWriteRequestsPending, c->name);
 		DEBUG_OUT("permissions_p %llx entryAddress %llx opalOffsetLocateContainerInPermissions %llx m_pendingReadRequests %d whereToSaveDynamicPermissionList %llx ",permissions_p, c->entryAddress, c->opalOffsetLocateContainerInPermissions, m_pendingWriteRequestsPending, whereToSaveDynamicPermissionList);
@@ -703,13 +711,14 @@ void containeropal::SavePermissionsToCache(container * c){
 	packed_permission_rec p = create_permrec(m_dynamicContainerRuntimeRecord->startAddress,m_dynamicContainerRuntimeRecord->endAddress,0x3);
 	myMemoryWrite(whereToSaveDynamicPermissionList,p.startaddr,8);
 	myMemoryWrite(whereToSaveDynamicPermissionList+8,p.permandsize,8);
-	#ifdef DEBUG_GICA6
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE
 		DEBUG_OUT(" [%llx %llx] (%d) \n", m_dynamicContainerRuntimeRecord->startAddress, m_dynamicContainerRuntimeRecord->endAddress,0x3);
 	#endif
 
-	free(m_dynamicContainerRuntimeRecord);
+	addressList temp = m_dynamicContainerRuntimeRecord;
 	m_dynamicContainerRuntimeRecordSize--;
 	m_dynamicContainerRuntimeRecord = m_dynamicContainerRuntimeRecord->next;
+	free(temp);
     m_pendingWriteRequests --;
 
 	if(permissionHit) {

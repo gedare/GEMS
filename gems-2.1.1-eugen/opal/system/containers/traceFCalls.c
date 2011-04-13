@@ -922,12 +922,16 @@ void container_printStatistics (int bAll)
 void MergeAddressList(addressList *listA, addressList listB)
 {
 	addressList l = listB;
-	if(*listA == NULL) *listA = listB;
-	else
-		while(l!= NULL){
-			UpdateAddressList(listA, l->startAddress, l->startAddress-l->endAddress);
-			l=l->next;
-		}
+	if(*listA == NULL && l != NULL)
+	{
+		*listA = consAddressList( l->startAddress, l->endAddress, *listA);
+		l=l->next;
+	}
+	
+	while(l!= NULL){
+		UpdateAddressList(listA, l->startAddress, l->startAddress-l->endAddress);
+		l=l->next;
+	}
 }
 
 int FindInAddressList(addressList list,md_addr_t addr, int nbytes)
@@ -1278,7 +1282,7 @@ addressList consAddressList(md_addr_t startAddress, md_addr_t endAddress, addres
 
 addressList freeAddressList(addressList l)
 {
-	while(l){
+	while(l != NULL){
 		addressList temp = l;
 		l = l->next;
 		free(temp);
