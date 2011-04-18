@@ -148,3 +148,5 @@ CAS_EXCEPT_MASK                             :                       4095
 PERFECT_ICACHE                              :                          0
 RETIREMENT_CACHE_ACCESS                     :                          0  // this causes load/store to access cache during retirement ( in addition to the execution stage ) 
 RANDOM_SEED                                 :                          0
+PCACHE_CONTMGR_BUSWIDTH	                    :                          1
+CONTMGR_SINGLESTACKRANGE                    :                          0

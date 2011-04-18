@@ -760,20 +760,32 @@ void containeropal::Tick(){
 	switch(m_stage)
 	{
 		case SAVEDYN: 
-			m_stat_StageSTDYN++;
-			if(m_pendingWriteRequestsPending > 0)
-				SavePermissionsToCache(GetCurrentContainer());
+			if(m_pendingWriteRequestsPending > 0){
+				m_stat_StageSTDYN++;
+				container_stage_t stage = GetStage();
+				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
+				while(stage == SAVEDYN && pcache2contmgrBusWidthCount>0){
+					SavePermissionsToCache(GetCurrentContainer());
+					stage = GetStage();
+					pcache2contmgrBusWidthCount --;
+				}
+			}
 			else{
-				
 				PushPermissionStackAfter();
 				SetStage(LDSTATIC);
 				Tick();
 			}
 			break;
 		case LDDYN:
-			m_stat_StageLDDYN++;
 			if(m_pendingReadDynamicRequestsPending > 0){
-				LoadDynamicPermissionsFromCache(GetCurrentContainer());
+				m_stat_StageLDDYN++;
+				container_stage_t stage = GetStage();
+				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
+				while(stage == LDDYN && pcache2contmgrBusWidthCount>0){
+					LoadDynamicPermissionsFromCache(GetCurrentContainer());
+					stage = GetStage();
+					pcache2contmgrBusWidthCount --;
+				}
 			}
 			else{
 				PopPermissionStackAfter();
@@ -782,9 +794,15 @@ void containeropal::Tick(){
 			}
 			break;
 		case LDSTATIC:
-			m_stat_StageLDSTATIC++;
 			if(m_pendingReadStaticRequestsPending > 0){
-				LoadStaticPermissionsFromCache(GetCurrentContainer());
+				m_stat_StageLDSTATIC++;
+				container_stage_t stage = GetStage();
+				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
+				while(stage == LDSTATIC && pcache2contmgrBusWidthCount>0){
+					LoadStaticPermissionsFromCache(GetCurrentContainer());
+					stage = GetStage();
+					pcache2contmgrBusWidthCount --;
+				}
 			}
 			else
 				SetStage(IDLE);
@@ -1058,7 +1076,11 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 		container * newcont = container_add(addrStart,name);
 		newcont->opalOffsetLocateContainerInPermissions = offset;
 		newcont->endAddress = addrEnd;
-		uint64 local_write_pointer = 0;
+		
+		unsigned long long minStackStart = ULONG_LONG_MAX; //maxuint64
+		unsigned long long maxStackEnd = 0;
+		unsigned long long minFetchStart = ULONG_LONG_MAX; //maxuint64
+		unsigned long long maxFetchEnd = 0;
 		for(int i=0;i<listLength;i++){
 			
 			char type;
@@ -1068,37 +1090,98 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 			#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
 				DEBUG_OUT("%c[%llx,%llx) ",type,rangeStart,rangeEnd);
 			#endif
-			if(type == 'f'){ ifetch++; consAddressList(rangeStart,rangeEnd,newcont->opalCodeAccessList);  }
+			if(type == 'f'){ 
+				ifetch++;
+				if(minFetchStart > rangeStart) minFetchStart = rangeStart;
+				if(maxFetchEnd < rangeEnd) maxFetchEnd = rangeEnd;
+				newcont->opalCodeAccessList = consAddressList(rangeStart,rangeEnd,newcont->opalCodeAccessList);  
+			}
 			else if (type == 'c') {
 				c++;
-				consAddressList(rangeStart,rangeEnd,newcont->opalStaticDataAccessList); 
-				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,rangeStart,8);
-				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,rangeEnd-rangeStart,8);
-				
-				local_write_pointer += PERMISSION_RECORD_SIZE;
+				newcont->opalStaticDataAccessList = consAddressList(rangeStart,rangeEnd,newcont->opalStaticDataAccessList); 
 			}
 			else if (type == 's') {
 				s++;
-				consAddressList(rangeStart,rangeEnd,newcont->opalStackAccessList);
-				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,rangeStart,8);
-				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,rangeEnd-rangeStart,8);
-				
-				local_write_pointer += PERMISSION_RECORD_SIZE;
-				
+				if(minStackStart > rangeStart) minStackStart = rangeStart;
+				if(maxStackEnd < rangeEnd) maxStackEnd = rangeEnd;
+				newcont->opalStackAccessList = consAddressList(rangeStart,rangeEnd,newcont->opalStackAccessList);
 			}
-			else {h++;consAddressList(rangeStart,rangeEnd,newcont->opalHeapAccessList);}
-			consAddressList(rangeStart,rangeEnd,newcont->addressAccessList);
+			else {
+				h++;
+				newcont->opalHeapAccessList = consAddressList(rangeStart,rangeEnd,newcont->opalHeapAccessList);
+			}
+			newcont->addressAccessList = consAddressList(rangeStart,rangeEnd,newcont->addressAccessList);
 
 			//#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
 			//	DEBUG_OUT("\n %llx %llx %llx \n",globalreference->permissions_p,globalreference->permissions_p + globalreference->permissions_size, globalreference->permissions_p + newcont->opalOffsetLocateContainerInPermissions + local_write_pointer);
 			//#endif
-			assert(globalreference->permissions_p+ newcont->opalOffsetLocateContainerInPermissions + local_write_pointer <= globalreference->permissions_p + globalreference->permissions_size);
-			
 		}
-		newcont->opalSizeOfPermissionLists = c + s; //c for static S for stack
+
+
+		newcont->opalSizeOfPermissionLists = c + ( (CONTMGR_SINGLESTACKRANGE && minStackStart <= ULONG_LONG_MAX) ?1:s); //c for static S for stack
+		newcont->opalSizeOfPermissionLists += minFetchStart <= ULONG_LONG_MAX ? 1 : 0;//add the fetch as well
 		offset += newcont->opalSizeOfPermissionLists * PERMISSION_RECORD_SIZE; 
+
+		#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+			DEBUG_OUT("\n at runtime: ");
+		#endif
+	
+		uint64 local_write_pointer = 0;
+		//write permissions to permission segment
+		addressList ll;
+
+		if(minFetchStart <= ULONG_LONG_MAX){
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,minFetchStart,8);
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,maxFetchEnd-minFetchStart,8);
+				local_write_pointer += PERMISSION_RECORD_SIZE;
+			
+			#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+				DEBUG_OUT("f1[%llx,%llx) ",minFetchStart, maxFetchEnd);
+			#endif
+		}
+		
+		if(CONTMGR_SINGLESTACKRANGE)
+		{
+			if(minStackStart <= ULONG_LONG_MAX){
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,minStackStart,8);
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,maxStackEnd-minStackStart,8);
+				local_write_pointer += PERMISSION_RECORD_SIZE;
+			
+			#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+				DEBUG_OUT("s1[%llx,%llx) ",minStackStart, maxStackEnd);
+			#endif
+			}
+			
+		}else{
+			ll = newcont->opalStackAccessList;
+			while(ll != NULL){
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,ll->startAddress,8);
+				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,ll->endAddress-ll->startAddress,8);
+				local_write_pointer += PERMISSION_RECORD_SIZE;
+				#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+					DEBUG_OUT("s[%llx,%llx) ",ll->startAddress, ll->endAddress);
+				#endif
+				ll = ll->next;
+			}
+		}
+		
+		ll = newcont->opalStaticDataAccessList;
+		while(ll != NULL){
+			myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,ll->startAddress,8);
+			myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,ll->endAddress-ll->startAddress,8);
+			#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+				DEBUG_OUT("c[%llx,%llx) ",ll->startAddress, ll->endAddress);
+			#endif
+			local_write_pointer += PERMISSION_RECORD_SIZE;
+			ll = ll->next;
+		}
+		
+		assert(globalreference->permissions_p+ newcont->opalOffsetLocateContainerInPermissions + local_write_pointer <= globalreference->permissions_p + globalreference->permissions_size);
+		
 		
 		#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+			DEBUG_OUT("\n total size = %lld PERMISSION_RECORD_SIZE=%d newcont->opalSizeOfPermissionLists = %lld\n", newcont->opalSizeOfPermissionLists * PERMISSION_RECORD_SIZE,PERMISSION_RECORD_SIZE, newcont->opalSizeOfPermissionLists);
+			
 			DEBUG_OUT("\n");
 		#endif
 

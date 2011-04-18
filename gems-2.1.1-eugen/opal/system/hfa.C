@@ -142,6 +142,7 @@ static void hfa_config_generate_values( void )
   MEMOP_BLOCK_MASK = (1 << DL1_BLOCK_BITS) - 1;
   IL1_NUM_SETS = (1 << IL1_SET_BITS);
   DL1_NUM_SETS = (1 << DL1_SET_BITS);
+  PL1_NUM_SETS = (1 << PL1_SET_BITS);
 
   /* RAS generated values */
   if (RAS_BITS > 16) {

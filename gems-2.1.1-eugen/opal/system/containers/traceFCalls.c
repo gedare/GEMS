@@ -327,6 +327,11 @@ container* container_add(md_addr_t addr, char * name)
 	newContainer->addressAccessListWithoutLocalStackAccesses = NULL;
 	newContainer->addressAccessListPenalty = 0;
 
+	newContainer->opalCodeAccessList = NULL;
+	newContainer->opalStackAccessList = NULL;
+	newContainer->opalHeapAccessList = NULL;
+	newContainer->opalStaticDataAccessList = NULL;	
+
 	newContainer->staticAddressCount = 0;
 	newContainer->traceLoadedAddressCount= 0;
 	newContainer->traceLoadeduniqueChildContainersCalled = 0;
