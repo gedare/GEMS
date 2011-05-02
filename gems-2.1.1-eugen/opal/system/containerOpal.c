@@ -242,7 +242,7 @@ bool containeropal::AccessCacheThroughContainers(pa_t a, memory_inst_t *w, int o
 		permissionHit = true;
 		masterWaiter->internalCounter --;
 	}
-	else if( permissionHit = CheckMemoryAccess(a, 8) ){
+	else if( CONTMGR_CHECKPARTIALLOADEDCONTAINER && (permissionHit = CheckMemoryAccess(a, 8)) ){
 		masterWaiter->internalCounter --;
 		m_stat_LoadStoresFoundWithPartialLoadedContainer ++;
 	}
@@ -1130,7 +1130,9 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 		//write permissions to permission segment
 		addressList ll;
 
-		if(minFetchStart <= ULONG_LONG_MAX){
+
+		//PREPARE FETCH PERMISSIONS
+		if(CONTMGR_PERM_USEFETCH && minFetchStart <= ULONG_LONG_MAX){
 				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,minFetchStart,8);
 				myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer + 8,maxFetchEnd-minFetchStart,8);
 				local_write_pointer += PERMISSION_RECORD_SIZE;
@@ -1139,7 +1141,14 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 				DEBUG_OUT("f1[%llx,%llx) ",minFetchStart, maxFetchEnd);
 			#endif
 		}
-		
+
+		//CONTMGR_PERM_STACKFIRST define the order in which these 2 operations happen
+		//
+		if(!CONTMGR_PERM_STACKFIRST)
+			goto globalfirst;
+
+stackfirst:		
+		//PREPARE STATIC STACK PERMISSIONS
 		if(CONTMGR_SINGLESTACKRANGE)
 		{
 			if(minStackStart <= ULONG_LONG_MAX){
@@ -1164,7 +1173,10 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 				ll = ll->next;
 			}
 		}
-		
+		if(!CONTMGR_PERM_STACKFIRST) goto donereordering;
+
+globalfirst:
+		//PREPARE STATIC GLOBAL PERMISSIONS
 		ll = newcont->opalStaticDataAccessList;
 		while(ll != NULL){
 			myMemoryWrite(globalreference->permissions_p+newcont->opalOffsetLocateContainerInPermissions + local_write_pointer,ll->startAddress,8);
@@ -1175,7 +1187,10 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 			local_write_pointer += PERMISSION_RECORD_SIZE;
 			ll = ll->next;
 		}
-		
+		if(!CONTMGR_PERM_STACKFIRST) goto stackfirst;
+
+donereordering:
+	
 		assert(globalreference->permissions_p+ newcont->opalOffsetLocateContainerInPermissions + local_write_pointer <= globalreference->permissions_p + globalreference->permissions_size);
 		
 		

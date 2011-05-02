@@ -150,3 +150,6 @@ RETIREMENT_CACHE_ACCESS                     :                          0  // thi
 RANDOM_SEED                                 :                          0
 PCACHE_CONTMGR_BUSWIDTH	                    :                          1
 CONTMGR_SINGLESTACKRANGE                    :                          0
+CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          1
+CONTMGR_PERM_STACKFIRST			    :                          1
+CONTMGR_PERM_USEFETCH 			    :                          1

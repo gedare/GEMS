@@ -118,8 +118,8 @@ DL1_STREAM_BUFFERS: 0
 // L1 perm cache
 PL1_IDEAL: 0              // 1 -> ideal I cache
 PL1_ASSOC: 2              // direct mapped
-PL1_SET_BITS: 8           // 256 sets
-PL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+PL1_SET_BITS: 6           // 64 sets
+PL1_BLOCK_BITS: 7         // 128  byte L1 cache line
 PL1_MSHR_ENTRIES: 256
 PL1_STREAM_BUFFERS: 0
 PL1_NL_TYPE: 0            // default no next line prefetcher
@@ -241,5 +241,8 @@ RETIREMENT_CACHE_ACCESS: 1
 
 RANDOM_SEED: 0
 
-PCACHE_CONTMGR_BUSWIDTH	: 1
+PCACHE_CONTMGR_BUSWIDTH	: 4
 CONTMGR_SINGLESTACKRANGE : 0
+CONTMGR_CHECKPARTIALLOADEDCONTAINER : 1
+CONTMGR_PERM_STACKFIRST	: 1
+CONTMGR_PERM_USEFETCH : 1
