@@ -58,6 +58,7 @@ public:
 	addressList m_staticContainerRuntimeRecord;
 													
 	int m_dynamicContainerRuntimeRecordSize;
+	int m_dynamicContainerRuntimeRecordAlreadyPushed;
 	int	m_dynamicPermissionBufferSize;
 
 	//Runtime tracking of containers
@@ -110,6 +111,7 @@ public:
 
 	
 	void SavePermissionsToCache(container * c);
+	void SaveStaticPermissionToCacheOnIdle(container * c);
 	void PushPermissionStack(container * callee);
 	void PushPermissionStackAfter();
 	void PopPermissionStack(container * callee);
@@ -152,6 +154,7 @@ public:
 	uint64 m_stat_StageLDSTATIC;
 	uint64 m_stat_StageSTDYN;
 	uint64 m_stat_StageWAITONCACHE;
+	uint64 m_stat_StageIDLESAVE;
 	
 	
 	

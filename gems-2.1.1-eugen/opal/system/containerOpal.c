@@ -150,6 +150,7 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	m_stat_StageLDSTATIC = 0;
 	m_stat_StageSTDYN = 0 ;
 	m_stat_StageWAITONCACHE = 0;
+	m_stat_StageIDLESAVE = 0;
 	
 	
 	m_wait_list.wl_reset();
@@ -167,6 +168,7 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	m_dynamicPermissionBufferSize = 0;
 	m_dynamicContainerRuntimeRecord = NULL;
 	m_dynamicContainerRuntimeRecordSize = 0;
+	m_dynamicContainerRuntimeRecordAlreadyPushed = 0;
 
 	m_staticContainerRuntimeRecord = NULL;
 
@@ -482,6 +484,9 @@ void containeropal::PushPermissionStack(container * callee){
 	this->permissionsStack_SP = newSP;
 
 
+	//the ranges might have been already saved on IDLE
+	m_pendingWriteRequestsPending = m_dynamicContainerRuntimeRecordSize - m_dynamicContainerRuntimeRecordAlreadyPushed;
+	m_pendingWriteRequests = m_pendingWriteRequestsPending;
 
 	#ifdef DEBUG_GICA8
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
@@ -518,6 +523,9 @@ void containeropal::transferDynPermBufferToDynContainerRunTimeRecord()
 	freeAddressList(m_dynamicPermissionBuffer);
 	m_dynamicPermissionBuffer = NULL;
 	m_dynamicPermissionBufferSize = 0;
+	
+	m_dynamicContainerRuntimeRecordAlreadyPushed = 0;
+	
 
 	#ifdef DEBUG_GICA_DYNAMIC_RANGE
 		if(m_dynamicContainerRuntimeRecordSize > 0) {
@@ -686,8 +694,8 @@ void containeropal::LoadDynamicPermissionsFromCache(container * c){
 	
 	if(permissionHit) {
 		m_pendingReadDynamicRequestsPending--;
-		if(!m_pendingReadDynamicRequestsPending)
-			Tick();
+		//if(!m_pendingReadDynamicRequestsPending)
+		//	Tick();
 	}
 	else SetStage(WAITONCACHE);
 }
@@ -723,8 +731,47 @@ void containeropal::SavePermissionsToCache(container * c){
 
 	if(permissionHit) {
 		m_pendingWriteRequestsPending--;
-		if(!m_pendingWriteRequestsPending)
-			Tick();
+		//if(!m_pendingWriteRequestsPending)
+		//	Tick();
+	}
+	else SetStage(WAITONCACHE);
+}
+
+void containeropal::SaveStaticPermissionToCacheOnIdle(container * c){
+	
+	if(!c) return;
+	
+	bool permissionHit;
+	int pendingIdleWrites =  ( m_dynamicContainerRuntimeRecordSize - m_dynamicContainerRuntimeRecordAlreadyPushed);
+	pa_t whereToSaveDynamicPermissionList = this->permissionsStack_SP - pendingIdleWrites * PERMISSION_RECORD_SIZE ;
+	
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE_ONIDLE
+		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+		DEBUG_OUT("%s %d %s ",__PRETTY_FUNCTION__, pendingIdleWrites, c->name);
+		DEBUG_OUT("permissions_p %llx entryAddress %llx opalOffsetLocateContainerInPermissions %llx pendingWritesOnIdle %d whereToSaveDynamicPermissionList %llx ",permissions_p, c->entryAddress, c->opalOffsetLocateContainerInPermissions, pendingIdleWrites, whereToSaveDynamicPermissionList);
+	#endif
+
+	//navigate to the entry that is being saved
+	int i = m_dynamicContainerRuntimeRecordAlreadyPushed;
+	addressList l = m_dynamicContainerRuntimeRecord;
+	addressList lgood = l;
+	
+	while( i > 0 && !l)
+	{
+		if(!l->next) lgood = l->next;
+		l = l->next;
+		i--;
+	}
+	permissionHit = this->l1_perm_cache->Write(whereToSaveDynamicPermissionList,this);
+	packed_permission_rec p = create_permrec(lgood->startAddress,lgood->endAddress,0x3);
+	myMemoryWrite(whereToSaveDynamicPermissionList,p.startaddr,8);
+	myMemoryWrite(whereToSaveDynamicPermissionList+8,p.permandsize,8);
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE_ONIDLE
+		DEBUG_OUT(" [%llx %llx] (%d) \n", lgood->startAddress, lgood->endAddress,0x3);
+	#endif
+
+	if(permissionHit) {
+		m_dynamicContainerRuntimeRecordAlreadyPushed++;
 	}
 	else SetStage(WAITONCACHE);
 }
@@ -747,7 +794,13 @@ void containeropal::Wakeup(  )
 	else if(m_pendingReadStaticRequestsPending ) {
 		m_pendingReadStaticRequestsPending--;
 		SetStage(LDSTATIC);
-	}		
+	}else if(m_dynamicContainerRuntimeRecordAlreadyPushed < m_dynamicContainerRuntimeRecordSize){
+		m_dynamicContainerRuntimeRecordAlreadyPushed ++;
+		SetStage(IDLE);
+	}
+	else{
+		ERROR_OUT("%s inconsistent state in %s",__PRETTY_FUNCTION__);
+	}
 	
  	Tick();
 	
@@ -809,6 +862,17 @@ void containeropal::Tick(){
 			break;
 		case IDLE:
 			m_stat_StageIDLE++;
+			if( CONTMGR_PERM_SAVEBUFFER && m_dynamicContainerRuntimeRecordAlreadyPushed < m_dynamicContainerRuntimeRecordSize )
+			{
+				m_stat_StageIDLESAVE ++;
+				container_stage_t stage = GetStage();
+				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
+				while(stage == IDLE && m_dynamicContainerRuntimeRecordAlreadyPushed < m_dynamicContainerRuntimeRecordSize && pcache2contmgrBusWidthCount>0){
+					SaveStaticPermissionToCacheOnIdle(GetCurrentContainer());
+					stage = GetStage();
+					pcache2contmgrBusWidthCount --;
+				}
+			}
 			//if(!m_wait_list.Empty()) m_wait_list.WakeupChain();
 			break;
 		case WAITONCACHE:
@@ -940,7 +1004,7 @@ void containeropal::PrintStats(){
 	DEBUG_OUT("stat_StageSTDYN :\t %lld \n", m_stat_StageSTDYN);
 	DEBUG_OUT("stat_StageLDSTATIC :\t %lld \n", m_stat_StageLDSTATIC);
 	DEBUG_OUT("stat_StageWAITONCACHE :\t %lld \n", m_stat_StageWAITONCACHE);
-	
+	DEBUG_OUT("m_stat_StageIDLESAVE :\t %lld \n", m_stat_StageIDLESAVE);
 }
 
 
