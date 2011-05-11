@@ -111,7 +111,7 @@ public:
 
 	
 	void SavePermissionsToCache(container * c);
-	void SaveStaticPermissionToCacheOnIdle(container * c);
+	void SavePermissionToCacheOnIdle(container * c);
 	void PushPermissionStack(container * callee);
 	void PushPermissionStackAfter();
 	void PopPermissionStack(container * callee);
