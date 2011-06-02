@@ -49,6 +49,8 @@ public:
 	uint64 permissions_size ;
 	uint64 permissionsStack_size ;
 
+	uint64 permissionsMulti_p;
+
 	uint64 permissionsStack_SP ; //stack pointer for the permission cache
 	uint64 permissionsStack_FP ; //Frame pointer for the permission cache
 
@@ -70,7 +72,7 @@ public:
 	//Inside a container
 	void InsideCall(container * callee);
 	//Add dynamic range - called when ALLOW is issued 
-	void AddDynamicRange(pa_t startAddress, uint64 size, byte_t perm,dynamic_inst_t *w);
+	void AddDynamicRange(pa_t startAddress, uint64 size,byte_t multi, byte_t perm,dynamic_inst_t *w);
 	
  	
 
@@ -81,18 +83,21 @@ public:
 	SAVEDYN,
 	LDDYN,
 	LDSTATIC,
-	IDLE
+	IDLE,
+	LDMULTI
   	};
 
 	int m_pendingWriteRequests;
 	int m_pendingReadStaticRequests;
 	int m_pendingReadDynamicRequests;
+	int m_pendingReadMultiRequests;
+	
 
 
 	int m_pendingWriteRequestsPending;
 	int m_pendingReadStaticRequestsPending;
 	int m_pendingReadDynamicRequestsPending;
-	
+	int m_pendingReadMultiRequestsPending;
 	
 	container_stage_t m_stage;
 	int m_loadsPendingValidation;
@@ -108,6 +113,7 @@ public:
 	void LoadStaticPermissionsFromCache(container * c);
 	void LoadDynamicPermissionsFromCache(container * c);
 	bool CheckPedingWaiters(pa_t addr, uint64 size);
+	void LoadMultiPermissionsFromCache(container * c);
 
 	
 	void SavePermissionsToCache(container * c);
@@ -155,6 +161,7 @@ public:
 	uint64 m_stat_StageSTDYN;
 	uint64 m_stat_StageWAITONCACHE;
 	uint64 m_stat_StageIDLESAVE;
+	uint64 m_stat_StageLDMULTI;
 	
 	
 	
@@ -269,6 +276,7 @@ public:
 
   uint64 m_startaddr;
   uint64 m_size;
+  byte_t m_multi;
   byte_t m_perm;
   
 };

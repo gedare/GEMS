@@ -95,7 +95,7 @@ void LoadContainersChildContainers(const char * FileWithPrefix);
 
 
 containeropal * globalreference;
-
+pa_t retAdr;
 
 containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic, generic_cache_template<generic_cache_block_t> *dc,
 	generic_cache_template<generic_cache_block_t> *pc)
@@ -110,6 +110,8 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	permissions_size = mySimicsIntSymbolRead("Permissions_size");
 	permissionsStack_size = mySimicsIntSymbolRead("Permissions_Stack_size");
 
+	permissionsMulti_p = NULL;
+
 	ThreadAdd(0,0);
 	container_simicsInit();
 
@@ -122,6 +124,8 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	m_pendingReadStaticRequests = 0;
 	m_pendingReadDynamicRequests = 0;
 	m_pendingWriteRequestsPending = 0 ;
+ 	m_pendingReadMultiRequests = 0;
+	m_pendingReadMultiRequestsPending = 0; 
 
 	
 	m_pendingReadStaticRequestsPending = 0 ;
@@ -151,6 +155,7 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	m_stat_StageSTDYN = 0 ;
 	m_stat_StageWAITONCACHE = 0;
 	m_stat_StageIDLESAVE = 0;
+	m_stat_StageLDMULTI = 0;
 	
 	
 	m_wait_list.wl_reset();
@@ -314,7 +319,7 @@ bool containeropal::Retire(dynamic_inst_t *w){
 }
 
 
-pa_t retAdr;
+
 void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 {
 	#ifdef DEBUG_GICA5 
@@ -605,27 +610,69 @@ container * containeropal::GetCurrentContainer( ){
 	return ret;
 }
 
-void containeropal::AddDynamicRange(pa_t startAddress, uint64 size, byte_t perm, dynamic_inst_t *w){
-	#ifdef DEBUG_GICA_DYNAMIC_RANGE
+void containeropal::AddDynamicRange(pa_t startAddress, uint64 size,byte_t multi, byte_t perm, dynamic_inst_t *w){
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE_MULTI
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
-		DEBUG_OUT("%s %llx %lld %d ",__PRETTY_FUNCTION__, startAddress, size, perm);
-		char printbuff[1000];
+		DEBUG_OUT("%s %s  %llx %lld  %d %d ",__PRETTY_FUNCTION__,printStage(m_stage), startAddress, size,multi, perm);
 	#endif
-	
-	UpdateAddressList( &m_dynamicPermissionBuffer,startAddress, size);
-	m_dynamicPermissionBufferSize= addressListSize(m_dynamicPermissionBuffer);
+
+	if(multi == 1){
+		//DEBUG_OUT("IS MULTI %d",multi);
+		m_pendingReadMultiRequestsPending = size;
+		m_pendingReadMultiRequests = m_pendingReadMultiRequestsPending;
+		permissionsMulti_p = startAddress;
+		SetStage(LDMULTI);
+		Tick();
+	}
+	else{
+		UpdateAddressList( &m_dynamicPermissionBuffer,startAddress, size);
+		m_dynamicPermissionBufferSize= addressListSize(m_dynamicPermissionBuffer);
+	}
 
 
-	#ifdef DEBUG_GICA_DYNAMIC_RANGE
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE_MULTI
 		printAddressList(stdoutPrintBuffer,m_dynamicPermissionBuffer);
 		DEBUG_OUT(" NEW SIZE = %d \n",addressListSize(m_dynamicPermissionBuffer) );
 	#endif
 }
 
 
+void containeropal::LoadMultiPermissionsFromCache(container * c){
+
+	if(m_pendingReadMultiRequests <=0 || !c) {m_pendingReadMultiRequests = 0; m_pendingReadMultiRequestsPending = 0;SetStage(IDLE);return;}
+	
+	bool permissionHit;
+	pa_t whereToLookForStaticPermissionList = permissionsMulti_p;
+	whereToLookForStaticPermissionList += (m_pendingReadMultiRequests) * PERMISSION_RECORD_SIZE; 
+
+	permissionHit = this->l1_data_cache->Read(whereToLookForStaticPermissionList,this);
+	uint64 val1 = myMemoryRead(whereToLookForStaticPermissionList,8);
+	uint64 val2 = myMemoryRead(whereToLookForStaticPermissionList+8,8);
+
+	#ifdef DEBUG_GICA_DYNAMIC_RANGE_MULTI
+			for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+			DEBUG_OUT("%s %d %s ",__PRETTY_FUNCTION__, m_pendingReadMultiRequestsPending, c->name);
+			DEBUG_OUT("permissionsMulti_p %llx entryAddress %llx m_pendingReadMultiRequests %d whereToLookForStaticPermissionList %llx",permissionsMulti_p, c->entryAddress, m_pendingReadMultiRequests, whereToLookForStaticPermissionList);
+			DEBUG_OUT(" %llx %lld \n", val1, val2);
+	#endif
+
+	UpdateAddressList( &m_dynamicPermissionBuffer,val1, maskBits64(val2,0,60));
+	m_dynamicPermissionBufferSize= addressListSize(m_dynamicPermissionBuffer);
+	
+	m_pendingReadMultiRequests--;
+	
+	if(permissionHit) {
+		m_pendingReadMultiRequestsPending--;
+		if(!m_pendingReadMultiRequestsPending)
+			SetStage(IDLE);
+	}
+	else SetStage(WAITONCACHE);
+}
+
+
 void containeropal::LoadStaticPermissionsFromCache(container * c){
 
-	if(m_pendingReadStaticRequestsPending <=0 || !c) {m_pendingReadStaticRequests = 0;m_pendingReadStaticRequests = 0;SetStage(IDLE);return;}
+	if(m_pendingReadStaticRequestsPending <=0 || !c) {m_pendingReadStaticRequests = 0;m_pendingReadStaticRequestsPending = 0;SetStage(IDLE);return;}
 	
 	bool permissionHit;
 	pa_t whereToLookForStaticPermissionList = permissions_p;
@@ -796,6 +843,10 @@ void containeropal::Wakeup(  )
 	else if(m_pendingReadStaticRequestsPending ) {
 		m_pendingReadStaticRequestsPending--;
 		SetStage(LDSTATIC);
+	}
+	else if(m_pendingReadMultiRequestsPending ) {
+		m_pendingReadMultiRequestsPending--;
+		SetStage(LDMULTI);
 	}else if(CONTMGR_PERM_SAVEBUFFER && m_dynamicContainerRuntimeRecordAlreadyPushed < m_dynamicContainerRuntimeRecordSize){
 		m_dynamicContainerRuntimeRecordAlreadyPushed ++;
 		SetStage(IDLE);
@@ -870,6 +921,25 @@ void containeropal::Tick(){
 					stage = GetStage();
 					pcache2contmgrBusWidthCount --;
 					if(m_pendingReadStaticRequestsPending == 0)
+					{
+						SetStage(IDLE);
+						break;
+					}
+				}
+			}
+			else
+				SetStage(IDLE);
+			break;
+		case LDMULTI:
+			if(m_pendingReadMultiRequestsPending > 0){
+				m_stat_StageLDMULTI++;
+				container_stage_t stage = GetStage();
+				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
+				while(stage == LDMULTI && pcache2contmgrBusWidthCount>0){
+					LoadMultiPermissionsFromCache(GetCurrentContainer());
+					stage = GetStage();
+					pcache2contmgrBusWidthCount --;
+					if(m_pendingReadMultiRequestsPending == 0)
 					{
 						SetStage(IDLE);
 						break;
@@ -1023,7 +1093,8 @@ void containeropal::PrintStats(){
 	DEBUG_OUT("stat_StageSTDYN :\t %lld \n", m_stat_StageSTDYN);
 	DEBUG_OUT("stat_StageLDSTATIC :\t %lld \n", m_stat_StageLDSTATIC);
 	DEBUG_OUT("stat_StageWAITONCACHE :\t %lld \n", m_stat_StageWAITONCACHE);
-	DEBUG_OUT("m_stat_StageIDLESAVE :\t %lld \n", m_stat_StageIDLESAVE);
+	DEBUG_OUT("stat_StageIDLESAVE :\t %lld \n", m_stat_StageIDLESAVE);
+	DEBUG_OUT("stat_StageLDMULTI :\t %lld \n", m_stat_StageLDMULTI);
 }
 
 
@@ -1449,7 +1520,7 @@ pcd_inst_t::Retire( abstract_pc_t *a ) {
 			DEBUG_OUT("%s %s %s \n",__PRETTY_FUNCTION__, w->printStage(w->getStage()), buf);
 	#endif
 
-	m_pseq->getContainerOpal()->AddDynamicRange(m_startaddr, m_size, m_perm,this);
+	m_pseq->getContainerOpal()->AddDynamicRange(m_startaddr, m_size, m_multi, m_perm,this);
 
 	memory_inst_t::Retire(a);
 }
