@@ -643,7 +643,13 @@ void container_printMemoryRanges(int bAll )
 
 void container_printDecodedMemoryRanges(int bAll )
 {
-	sprintf(printBuffer,"count: %llx \n",containerSize);
+	int count = 0;
+	for (int i=0 ; i < containerSize; i++){
+		int bUsed = containerTable[i].totalStackPushes > 0;
+		if(bUsed) count++;
+	}
+
+	sprintf(printBuffer,"count: %x\n",count);
 	myprint(printBuffer);
 	sprintf(printBuffer,"data: %llx %llx stack: %llx %llx \n",ld_text_base,ld_text_bound,ld_stack_base ,ld_stack_base+ ld_stack_size);
 	myprint(printBuffer);

@@ -1199,12 +1199,15 @@ void LoadContainersFromDecodedAccessListFile(const char * FileWithPrefix)
 	unsigned long long stackA;
 	unsigned long long stackB;
 	char junk[7][200];
- 	
+	int totalCount;
+
+	fscanf(file,"count: %x",&totalCount);
  	fscanf(file,"data: %llx %llx stack: %llx %llx",&codeA,&codeB,&stackA,&stackB);
 	fscanf(file,"%s %s\t%s\t%s\t%s\t%s\t%s",junk[0],junk[1],junk[2],junk[3],junk[4],junk[5],junk[6]);
 
 
 	#ifdef DEBUG_GICALoadContainersFromDecodedAccessListFile
+		printf("count:%x\n",totalCount);fflush(stdin);
  		printf("code: %llx %llx stack: %llx %llx\n",codeA,codeB,stackA,stackB);fflush(stdin);
  		printf("%s %s\t%s\t%s\t%s\t%s\t%s\n",junk[0],junk[1],junk[2],junk[3],junk[4],junk[5],junk[6]);fflush(stdin);
 	#endif
