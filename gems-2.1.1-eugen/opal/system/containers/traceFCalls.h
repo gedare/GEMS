@@ -115,6 +115,8 @@ int FindInAddressList(addressList list,md_addr_t addr, int nbytes);
 
 void printAddressListStdout(addressList l);
 void printAddressList(char* printbuff, addressList l);
+void printAddressListCount(char* printbuff, addressList l);
+
 void printCountMemoryAccesses(char * printbuff,addressList l);
 decodedMemRange decodeMemoryRange(md_addr_t base, md_addr_t bound);
 

@@ -697,6 +697,129 @@ void container_printDecodedMemoryRanges(int bAll )
 
 }
 
+
+void container_printDecodedMemoryRangesForRTEMSThread(int bAll )
+{
+	int count = 0;
+	for (int i=0 ; i < containerSize; i++){
+		int bUsed = containerTable[i].totalStackPushes > 0;
+		if(bUsed) count++;
+	}
+
+	sprintf(printBuffer,"count: %x\n",count);
+	myprint(printBuffer);
+	sprintf(printBuffer,"data: %llx %llx stack: %llx %llx \n",ld_text_base,ld_text_bound,ld_stack_base ,ld_stack_base+ ld_stack_size);
+	myprint(printBuffer);
+	sprintf(printBuffer,"entryAddress endAddress\tname\ttotalHeap\ttotalPushes\tcount\tLIST\n");
+	myprint(printBuffer);
+
+	for (int i=0 ; i < containerSize; i++)
+	{
+		addressList l = containerTable[i].addressAccessListWithoutLocalStackAccesses;
+		while(l!=NULL)
+		{
+		 	if(!isHypervisorRange(l->startAddress)){
+				decodedMemRange md = decodeMemoryRange(l->startAddress, l->endAddress);
+				//printbuff += sprintf(printbuff,"%c[%llx,%llx) ",md.type,md.base,md.bound);
+				if(md.type == 'f')
+					containerTable[i].opalCodeAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalCodeAccessList);  
+				else if(md.type == 'c')
+		 			containerTable[i].opalStaticDataAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalStaticDataAccessList);  
+				else if(md.type == 's')
+					containerTable[i].opalStackAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalStackAccessList);  
+				else 
+					containerTable[i].opalHeapAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalHeapAccessList);  
+		 	}
+			l = l->next;
+		}
+
+		l = containerTable[i].instructionFetches;
+
+		while(l!=NULL)
+		{
+		 	if(!isHypervisorRange(l->startAddress)){
+				decodedMemRange md = decodeMemoryRange(l->startAddress, l->endAddress);
+				//printbuff += sprintf(printbuff,"%c[%llx,%llx) ",md.type,md.base,md.bound);
+				if(md.type == 'f')
+					containerTable[i].opalCodeAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalCodeAccessList);  
+				else if(md.type == 'c')
+		 			containerTable[i].opalStaticDataAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalStaticDataAccessList);  
+				else if(md.type == 's')
+					containerTable[i].opalStackAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalStackAccessList);  
+				else 
+					containerTable[i].opalHeapAccessList = consAddressList(l->startAddress,l->endAddress,containerTable[i].opalHeapAccessList);  
+		 	}
+			l = l->next;
+		}
+		
+	}
+
+	int grandTotal = 0;
+	for (int i=0 ; i < containerSize; i++)
+	{
+		int bUsed = containerTable[i].totalStackPushes > 0;
+		addressList l = containerTable[i].addressAccessListWithoutLocalStackAccesses;
+		addressList m = containerTable[i].instructionFetches;
+		if(bAll || bUsed){
+			//count (we do not have a size of the list)
+			int jcnt = 0;
+			addressList jl = l;
+			while (jl) {
+				if(!isHypervisorRange(jl->startAddress)) jcnt++;
+				jl=jl->next;}
+			jl = m;
+			while (jl) {
+				if(!isHypervisorRange(jl->startAddress)) jcnt++;
+				jl=jl->next;}
+
+			
+			sprintf(printBuffer,"%llx %llx\t%s\t%d\t%d\t%d\t",
+							containerTable[i].entryAddress,
+							containerTable[i].endAddress,
+					(containerTable[i].name),
+					containerTable[i].totalHeapRanges,
+					containerTable[i].totalStackPushes,
+					jcnt);
+			myprint(printBuffer);
+
+			int cnt = addressListSize(containerTable[i].opalStackAccessList );
+			cnt +=  addressListSize(containerTable[i].opalStaticDataAccessList);
+			cnt +=  addressListSize(containerTable[i].opalCodeAccessList);
+
+			grandTotal+=cnt;
+			sprintf(printBuffer,"%d ",cnt);
+			myprint(printBuffer);
+			
+			//printDecodedAddressList(printBuffer,containerTable[i].opalHeapAccessList);
+			sprintf(printBuffer,"\n");
+			myprint(printBuffer);
+		}
+	}
+	sprintf(printBuffer,"%d \n",grandTotal);
+	myprint(printBuffer);
+	for (int i=0 ; i < containerSize; i++)
+	{
+		int bUsed = containerTable[i].totalStackPushes > 0;
+		if(bAll || bUsed){
+			int cnt = addressListSize(containerTable[i].opalStackAccessList );
+			cnt +=  addressListSize(containerTable[i].opalStaticDataAccessList);
+			cnt +=  addressListSize(containerTable[i].opalCodeAccessList);
+			sprintf(printBuffer,"%d ",cnt);
+			myprint(printBuffer);
+			printDecodedAddressList(printBuffer,containerTable[i].opalStackAccessList );
+			myprint(printBuffer);
+			printDecodedAddressList(printBuffer,containerTable[i].opalStaticDataAccessList);
+			myprint(printBuffer);
+			printDecodedAddressList(printBuffer,containerTable[i].opalCodeAccessList);
+			myprint(printBuffer);
+			sprintf(printBuffer,"\n");
+			myprint(printBuffer);
+		}
+	}
+
+}
+
+
 void container_printSimpleCountAddressAcess(int bAll )
 {
 	sprintf(printBuffer,"entryAddress endAddress\tname\tcode initialized stack heap\n");
@@ -767,12 +890,14 @@ void printAllStatsFiles(char * fStatsFileBaseName)
 	
 	char * fullAddressAccessListFileName = "FullAddressAccessList.txt";
 	char * fullDecodedAddressAccessListFileName = "FullDecodedAddressAccessList.txt";
+	char * fullDecodedAddressForRTEMSThreadAccessListFileName = "FullDecodedForRTEMSThreadAddressAccessList.txt";
 	char * simpleCountAddressAcessFileName = "SimpleCountAddressAccessList.txt";
 	char * containerCallListFileName = "ContainerCallList.txt";
 	char * containerStatisticsFileName = "ContainerStats.txt";
 
 	FILE * fullAddressAccessListFile;
 	FILE * fullDecodedAddressAccessListFile;
+	FILE * fullDecodedAddressForRTEMSThreadAccessListFile;
 	FILE * simpleCountAddressAcessFile;
 	FILE * containerCallListFile;
 	FILE * containerStatisticsFile;
@@ -792,6 +917,14 @@ void printAllStatsFiles(char * fStatsFileBaseName)
 			printf("\n\n Unable to open %s, using stdout \n\n",s);
 			fullDecodedAddressAccessListFile = stdout;
 		}
+	free(s);
+	s = (char *)malloc(snprintf(NULL, 0, "%s %s", baseFileName, fullDecodedAddressForRTEMSThreadAccessListFileName) + 1);
+		sprintf(s, "%s%s", baseFileName, fullDecodedAddressForRTEMSThreadAccessListFileName);
+		fullDecodedAddressForRTEMSThreadAccessListFile = fopen(s,"w");
+			if(!fullDecodedAddressForRTEMSThreadAccessListFile){
+				printf("\n\n Unable to open %s, using stdout \n\n",s);
+				fullDecodedAddressForRTEMSThreadAccessListFile = stdout;
+			}
 	free(s);
 	s = (char *)malloc(snprintf(NULL, 0, "%s %s", baseFileName, simpleCountAddressAcessFileName) + 1);
 	sprintf(s, "%s%s", baseFileName, simpleCountAddressAcessFileName);
@@ -825,6 +958,10 @@ void printAllStatsFiles(char * fStatsFileBaseName)
 	fclose(overrideOutputfd);
 	overrideOutputfd = fullAddressAccessListFile;
 	container_printMemoryRanges(0);
+	fflush(overrideOutputfd);
+	fclose(overrideOutputfd);
+	overrideOutputfd = fullDecodedAddressForRTEMSThreadAccessListFile;
+	container_printDecodedMemoryRangesForRTEMSThread(0);
 	fflush(overrideOutputfd);
 	fclose(overrideOutputfd);
 	overrideOutputfd = fullDecodedAddressAccessListFile;
@@ -1093,6 +1230,26 @@ void printAddressListStdout(addressList l){
 	{
 		printf("[%llx,%llx) ",l->startAddress, l->endAddress);
 		l = l->next;
+	}
+}
+
+void printAddressListCount(char * printbuff,addressList l){
+	printbuff[0] = 0;
+	int cnt = 0;
+	addressList ll = l;
+	while(ll!=NULL){
+		cnt++;
+		ll=ll->next;
+	}
+	sprintf(printbuff,"%d ",cnt);
+	myprint(printbuff);
+	ll = l;
+	while(ll!=NULL)
+	{
+		decodedMemRange type = decodeMemoryRange(ll->startAddress, ll->endAddress);
+		sprintf(printbuff,"%c[%llx,%llx) ",type.type, ll->startAddress, ll->endAddress);
+		myprint(printbuff);
+		ll = ll->next;
 	}
 }
 

@@ -3431,7 +3431,9 @@ WATTCH_READ_SOURCE;
   (static_cast<pcd_inst_t *>(this))->m_startaddr = SOURCE1;
   (static_cast<pcd_inst_t *>(this))->m_size = maskBits64(SOURCE2,0,60);
   (static_cast<pcd_inst_t *>(this))->m_multi = (byte_t) maskBits64(SOURCE2,61,61);
+  (static_cast<pcd_inst_t *>(this))->m_context_switch = (byte_t) maskBits64(SOURCE2,60,60);  
   (static_cast<pcd_inst_t *>(this))->m_perm =(byte_t) maskBits64(SOURCE2,62,63);
+  
   
   //m_pseq->getContainerOpal()->AddDynamicRange(SOURCE1, maskBits64(SOURCE2,0,61), (byte_t) maskBits64(SOURCE2,62,63),this);
   //m_pseq->out_info("   source1 0x%0llx\n", (SOURCE1));

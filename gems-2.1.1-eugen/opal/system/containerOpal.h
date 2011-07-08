@@ -73,7 +73,7 @@ public:
 	void InsideCall(container * callee);
 	//Add dynamic range - called when ALLOW is issued 
 	void AddDynamicRange(pa_t startAddress, uint64 size,byte_t multi, byte_t perm,dynamic_inst_t *w);
-	
+	void ContextSwitch(pa_t startAddress, dynamic_inst_t *w);
  	
 
 	//FCalls : save dynamic ranges to stack, load static ranges
@@ -277,6 +277,7 @@ public:
   uint64 m_startaddr;
   uint64 m_size;
   byte_t m_multi;
+  byte_t m_context_switch;
   byte_t m_perm;
   
 };

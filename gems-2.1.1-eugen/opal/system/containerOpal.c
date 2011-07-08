@@ -636,6 +636,23 @@ void containeropal::AddDynamicRange(pa_t startAddress, uint64 size,byte_t multi,
 	#endif
 }
 
+void containeropal::ContextSwitch(pa_t startAddress, dynamic_inst_t *w){
+	#ifdef DEBUG_GICA_CONTEXTSWITCH
+		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+		DEBUG_OUT("%s %s  %llx %lld  %d %d ",__PRETTY_FUNCTION__,printStage(m_stage), startAddress);
+	#endif
+
+	//
+	//  save, flush , reload
+	//
+	DEBUG_OUT("%s %llx \n",__PRETTY_FUNCTION__, startAddress);
+	
+	#ifdef DEBUG_GICA_CONTEXTSWITCH
+		printAddressList(stdoutPrintBuffer,m_dynamicPermissionBuffer);
+		DEBUG_OUT(" NEW SIZE = %d \n",addressListSize(m_dynamicPermissionBuffer) );
+	#endif
+	
+}
 
 void containeropal::LoadMultiPermissionsFromCache(container * c){
 
@@ -1523,7 +1540,10 @@ pcd_inst_t::Retire( abstract_pc_t *a ) {
 			DEBUG_OUT("%s %s %s \n",__PRETTY_FUNCTION__, w->printStage(w->getStage()), buf);
 	#endif
 
-	m_pseq->getContainerOpal()->AddDynamicRange(m_startaddr, m_size, m_multi, m_perm,this);
+	if(!m_context_switch)
+		m_pseq->getContainerOpal()->AddDynamicRange(m_startaddr, m_size, m_multi, m_perm,this);
+	else
+		m_pseq->getContainerOpal()->ContextSwitch(m_startaddr, this);
 
 	memory_inst_t::Retire(a);
 }
