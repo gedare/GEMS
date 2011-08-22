@@ -76,6 +76,10 @@ thread_monitor_t* ThreadAdd(uint64 id, uint64 name)
 	newThread->maxFP = 0;
 	newThread->minFP = ULLONG_MAX ;
 
+	newThread->permissionsStack_FP = NULL;
+	newThread->permissionsStack_SP = NULL;
+	newThread->containerRecord_p = NULL;
+
 	newThread->container_runtime_stack = stack_create();
 	//create a name for the thread trace file
 	if(fullTracefdFileName != NULL){
@@ -122,12 +126,16 @@ thread_monitor_t* ThreadFind(uint64 id)
 	return NULL;
 }
 
-void Thread_switch( uint64 id, uint64 name)
+int Thread_switch( uint64 id, uint64 name)
 {
+	bool create_new = 0;
 	thread_monitor_t* newThread;
 	newThread = ThreadFind(id);
-	if(newThread == thread_active) return;
-	if(!newThread) newThread = ThreadAdd(id,name);
+	if(newThread == thread_active) return create_new;
+	if(!newThread){
+		newThread = ThreadAdd(id,name);
+		create_new = 1;
+	}
 	fflush(thread_active->traceFD);
 	thread_active = newThread;
     
@@ -143,6 +151,8 @@ void Thread_switch( uint64 id, uint64 name)
 
 	ld_text_base = mySimicsIntSymbolRead("start");
 	ld_text_bound = mySimicsIntSymbolRead("end");
+
+	return create_new;
 }
 
 

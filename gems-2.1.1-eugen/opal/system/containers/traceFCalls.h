@@ -228,6 +228,40 @@ void toStringRTEMSTaksName(char * dest, int _name);
 void itoa(int n, char s[]);
 void reverse(char s[]);
 
+typedef struct packed_permission_record{
+	uint64 startaddr;
+	uint64 permandsize;
+} packed_permission_rec;
+
+typedef struct unpacked_permission_record{
+	uint64 startaddr;
+	uint64 endaddr;
+	unsigned char perm;
+} unpacked_permission_rec;
+
+
+typedef struct staticpermlist{
+	md_addr_t entryAddress; // the entry address in the container
+	md_addr_t endAddress;
+	md_addr_t opalOffsetLocateContainerInPermissions;
+	md_addr_t opalSizeOfPermissionLists;//use in the opal module.
+	
+} staticpermlist;
+
+
+typedef struct staticpermssions
+{
+	uint64 containersSize; //0
+	staticpermlist *containers;//8
+	uint64 staticPermissionsSize; //16
+	packed_permission_rec *staticPermissions; //24
+	uint64 permissionStackMaxSize; //32
+	packed_permission_rec *permissionStack; //40
+	uint64 dynamicPermissionBufferSize; //48
+	packed_permission_rec *dynamicPermissionBuffer; //56
+	uint64 dynamicContainerRuntimeRecordSize; //64
+	packed_permission_rec *dynamicContainerRuntimeRecord;//72	
+} staticpermssions;
 
 
 //Adding thread awareness to the containers.
@@ -248,12 +282,17 @@ typedef struct thread_monitor
 	uint64 minFP;
 	uint64 maxFP;
 
+	uint64 permissionsStack_SP ; //stack pointer for the permission cache
+	uint64 permissionsStack_FP ; //Frame pointer for the permission cache
+
+	staticpermssions * containerRecord_p;
+	
 } thread_monitor_t;
 
 extern thread_monitor_t *thread_active;
 thread_monitor_t* ThreadAdd(uint64 id, uint64 name);
 thread_monitor_t* ThreadFind(uint64 id);
-void Thread_switch( uint64 id, uint64 name);
+int Thread_switch( uint64 id, uint64 name);
 void ThreadInitializeOnStart();
 
 

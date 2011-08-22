@@ -10,8 +10,6 @@
 #include "containerOpalSimpleWaiter.h"
 
 
-
-
 /**
 *
 */
@@ -49,10 +47,17 @@ public:
 	uint64 permissions_size ;
 	uint64 permissionsStack_size ;
 
+	uint64	permissionsContainers_p;
+	uint64	permissionsContainers_size;
+
 	uint64 permissionsMulti_p;
 
-	uint64 permissionsStack_SP ; //stack pointer for the permission cache
-	uint64 permissionsStack_FP ; //Frame pointer for the permission cache
+	uint64 dynamicPermissionBuffer_size;
+	uint64 dynamicPermissionBuffer_p ; 
+	uint64 dynamicContainerRuntimeRecord_size ;
+	uint64 dynamicContainerRuntimeRecord_p ; 
+
+
 
 	addressList m_dynamicPermissionBuffer; //ALLOW permissions accumulate here between container switches
 	addressList m_dynamicContainerRuntimeRecord; 	//on call and returns dynamic ranges transfer from the dynamicPermissionBuffer here
@@ -74,7 +79,7 @@ public:
 	//Add dynamic range - called when ALLOW is issued 
 	void AddDynamicRange(pa_t startAddress, uint64 size,byte_t multi, byte_t perm,dynamic_inst_t *w);
 	void ContextSwitch(pa_t startAddress, dynamic_inst_t *w);
- 	
+ 	void ContextSwitchEnd();
 
 	//FCalls : save dynamic ranges to stack, load static ranges
 	//Returns : load static ranges, load dynamic ranges from stack
@@ -84,20 +89,34 @@ public:
 	LDDYN,
 	LDSTATIC,
 	IDLE,
-	LDMULTI
+	LDMULTI, 
+	CTXSWITCHSTART,
+	CTXSWITCHEND
   	};
 
-	int m_pendingWriteRequests;
+	long long m_pendingWriteRequests;
 	int m_pendingReadStaticRequests;
-	int m_pendingReadDynamicRequests;
+	long long m_pendingReadDynamicRequests;
 	int m_pendingReadMultiRequests;
 	
 
 
-	int m_pendingWriteRequestsPending;
+	//int m_pendingWriteRequestsPending;
 	int m_pendingReadStaticRequestsPending;
-	int m_pendingReadDynamicRequestsPending;
+	//int m_pendingReadDynamicRequestsPending;
 	int m_pendingReadMultiRequestsPending;
+	
+	//int m_pendingCtxSwitchSaveDyn;
+	//int m_pendingCtxSwitchLoadDyn;
+	long long m_pendingCtxSwitchLoadContainerList;
+	long long m_pendingCtxSwitchLoadContainerListPending;
+	long long m_pendingCtxSwitchSaveDynContainerRunTimeRecord;
+	long long m_pendingCtxSwitchSaveDynPermBuffer;
+	long long m_pendingCtxSwitchLoadDynContainerRunTimeRecord;
+	long long m_pendingCtxSwitchLoadDynPermBuffer;
+	staticpermssions* m_oldThreadContext;
+	staticpermssions* m_newThreadContext;
+	
 	
 	container_stage_t m_stage;
 	int m_loadsPendingValidation;
@@ -111,12 +130,15 @@ public:
 	void Tick(); //advance loading the permissions from cache
 	container * GetCurrentContainer( );
 	void LoadStaticPermissionsFromCache(container * c);
-	void LoadDynamicPermissionsFromCache(container * c);
+	//void LoadDynamicPermissionsFromCache(container * c);
+	void LoadPermissionsList(container * c, pa_t location_base, long long * remainingCounter_p, addressList toSave, int * toSaveSize);
 	bool CheckPedingWaiters(pa_t addr, uint64 size);
 	void LoadMultiPermissionsFromCache(container * c);
+	void LoadCtxContainerList(container * c);
 
 	
-	void SavePermissionsToCache(container * c);
+	//void SavePermissionsToCache(container * c);
+	void SavePermissionList(container *c, pa_t location_base, long long * remainingCounter_p, addressList *toSave, int * toSaveSize );
 	void SavePermissionToCacheOnIdle(container * c);
 	void PushPermissionStack(container * callee);
 	void PushPermissionStackAfter();
@@ -162,7 +184,7 @@ public:
 	uint64 m_stat_StageWAITONCACHE;
 	uint64 m_stat_StageIDLESAVE;
 	uint64 m_stat_StageLDMULTI;
-	
+	uint64 m_stat_StageCTXSWITCH;
 	
 	
 	int m_debug_memleakNew;
