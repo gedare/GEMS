@@ -113,9 +113,16 @@ containeropal::containeropal(generic_cache_template<generic_cache_block_t> * ic,
 	dynamicContainerRuntimeRecord_p = NULL ; 
 
 	permissionsMulti_p = NULL;
+	thread_active = NULL;
 
 	ThreadAdd(0,0);
 	container_simicsInit();
+
+//	#ifdef DEBUG_GICA_THREAD_SWITCHING
+//		char rtemsname[10];
+//		toStringRTEMSTaksName(rtemsname, thread_active->thread_name);
+//		DEBUG_OUT("%s %0x%llx %s \n",__PRETTY_FUNCTION__,thread_active->thread_id, rtemsname);
+//	#endif
 
 	m_stage = IDLE;
 
@@ -615,6 +622,15 @@ void containeropal::PopPermissionStackAfter(){
 
 container * containeropal::GetCurrentContainer( ){
 	container *ret = NULL;
+	#ifdef DEBUG_GICA_THREAD_SWITCHING
+		char rtemsname[10];
+		//toStringRTEMSTaksName(rtemsname, thread_active->thread_name);
+		DEBUG_OUT("%s 0x%llx 0x%llx\n",__PRETTY_FUNCTION__,thread_active->thread_id, thread_active->thread_name);
+	#endif
+
+	if(thread_active->container_runtime_stack == NULL)
+		return ret;
+	
 	mystack returnAddressStack = thread_active->container_runtime_stack;
 	if(!stack_empty(returnAddressStack))
 	{
@@ -720,9 +736,17 @@ void containeropal::ContextSwitchEnd(){
 
 	uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.name.name_u32");
 	uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.id");
-	//char rtemsname[10];
-	//toStringRTEMSTaksName(rtemsname, threadNameNew);
+	#ifdef DEBUG_GICA_CONTEXTSWITCH
+		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+		DEBUG_OUT("%s %llx %llx ",__PRETTY_FUNCTION__,thread_active->thread_id, thread_active->thread_name);
+		DEBUG_OUT("switch to %llx %llx\n",__PRETTY_FUNCTION__,threadIdNew, threadNameNew);
+	#endif
 	Thread_switch(threadIdNew, threadNameNew);
+	#ifdef DEBUG_GICA_CONTEXTSWITCH
+		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
+		DEBUG_OUT("switched to %llx %llx\n",thread_active->thread_id, thread_active->thread_name);
+		
+	#endif
 		
 	if(thread_active->permissionsStack_SP == NULL)
 	{
@@ -1764,10 +1788,12 @@ pcd_inst_t::Retire( abstract_pc_t *a ) {
 			DEBUG_OUT("%s %s %s \n",__PRETTY_FUNCTION__, w->printStage(w->getStage()), buf);
 	#endif
 
+#ifdef GICACONTAINER
 	if(!m_context_switch)
 		m_pseq->getContainerOpal()->AddDynamicRange(m_startaddr, m_size, m_multi, m_perm,this);
 	else
 		m_pseq->getContainerOpal()->ContextSwitch(m_startaddr, this);
+#endif
 
 	memory_inst_t::Retire(a);
 }

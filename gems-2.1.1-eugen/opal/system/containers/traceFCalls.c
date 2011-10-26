@@ -139,9 +139,9 @@ int Thread_switch( uint64 id, uint64 name)
 	fflush(thread_active->traceFD);
 	thread_active = newThread;
     
-	printf("\nThread_switch 0x%llx ",thread_active->thread_id);
+	//printf("\nThread_switch 0x%llx ",thread_active->thread_id);
 	printRTEMSTaksName(thread_active->thread_name);
-	printf("\n");
+	//printf("\n");
 
 	md_addr_t StackArea = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Start.Initial_stack.area");
 	uint64 StackSize = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Start.Initial_stack.size");
