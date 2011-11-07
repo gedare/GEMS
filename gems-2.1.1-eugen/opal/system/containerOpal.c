@@ -369,20 +369,23 @@ void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 						m_pendingReadDynamicRequests =0;
 						SetStage(IDLE);
   					}
-			if(m_stage == IDLE ){ 
+			if(m_stage == IDLE || m_stage == LDSTATIC){ 
 				stack_pop(returnAddressStack);
 				returned = 1;
-				#ifdef DEBUG_GICA8 
+				#ifdef DEBUG_GICA_returns 
 					for(int i = 0; i< returnAddressStack->size; i++) DEBUG_OUT("|\t");
 					DEBUG_OUT("}\n");
 				#endif
 				Return(t.containerObj);
 				m_allowRetire = true;
+				if (m_stage == LDSTATIC)
+					m_pendingReadStaticRequestsPending = 0;
 				if(!stack_empty(returnAddressStack)) t = stack_top(returnAddressStack);
 				else break;
 			}
-			else{
-				#ifdef DEBUG_GICA7 
+			else
+			{
+				#ifdef DEBUG_GICA_returns
 					for(int j = 0; j< returnAddressStack->size; j++) DEBUG_OUT("|\t");
 					char buf[128];
   					w->getStaticInst()->printDisassemble(buf);
@@ -396,7 +399,7 @@ void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 	}
 
 	if(!returned && m_allowRetire){
-		//if it was not a function return , it is either a function call ( push to container stack in this case) or a regular intruction executing (within the container)
+		//if it was not a function return , it is either a function call ( push to container stack in this case) or a regular instruction executing (within the container)
 		container *foundSearch = search(pc);
 		if(foundSearch){
 			
@@ -416,7 +419,7 @@ void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 					stackObject t;
 					t.containerObj = foundSearch;
 					t.returnAddress = getRet();//return_addr;
-					#ifdef DEBUG_GICA8 
+					#ifdef DEBUG_GICA_returns 
 						for(int j = 0; j< returnAddressStack->size; j++) DEBUG_OUT("|\t");
 						DEBUG_OUT("%s {\n", foundSearch->name);
 					#endif
@@ -425,8 +428,9 @@ void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 					m_allowRetire = true;
 				}
 				else{
-					#ifdef DEBUG_GICA7 
+					#ifdef DEBUG_GICA_returns 
 						for(int j = 0; j< returnAddressStack->size; j++) DEBUG_OUT("|\t");
+						DEBUG_OUT("%s {\n", foundSearch->name);
 						char buf[128];
   						w->getStaticInst()->printDisassemble(buf);
 						DEBUG_OUT("DELAY RETIRE %s pending:%d %s\n", printStage(m_stage), m_loadsPendingValidation + m_storesPendingValidation,buf);
@@ -499,7 +503,9 @@ void containeropal::PushPermissionStack(container * callee){
 	m_pendingReadStaticRequests = m_pendingReadStaticRequestsPending;
 
 	m_pendingWriteRequests = m_dynamicContainerRuntimeRecordSize;
-	//m_pendingWriteRequests = m_pendingWriteRequestsPending;
+	if(CONTMGR_INFINIT_CONTWINDOW){
+		m_pendingWriteRequests = 0;
+	}
 	
 	//save FP to stack top : thread_active->permissionsStack_FP
 	uint64 newSP = thread_active->permissionsStack_SP + m_pendingWriteRequests * PERMISSION_RECORD_SIZE + 8;
@@ -507,10 +513,11 @@ void containeropal::PushPermissionStack(container * callee){
 	thread_active->permissionsStack_FP = thread_active->permissionsStack_SP;
 	thread_active->permissionsStack_SP = newSP;
 
-
 	//the ranges might have been already saved on IDLE
 	m_pendingWriteRequests = m_dynamicContainerRuntimeRecordSize - m_dynamicContainerRuntimeRecordAlreadyPushed;
 	//m_pendingWriteRequests = m_pendingWriteRequestsPending;
+	if(CONTMGR_INFINIT_CONTWINDOW) m_pendingWriteRequests = 0;
+
 
 	#ifdef DEBUG_GICA_PushPermissionStack
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
@@ -579,6 +586,11 @@ void containeropal::Return(container * callee){
 	m_staticContainerRuntimeRecord = freeAddressList(m_staticContainerRuntimeRecord);
 	m_dynamicContainerRuntimeRecord = freeAddressList(m_dynamicContainerRuntimeRecord);
 	m_dynamicContainerRuntimeRecordSize = 0;
+
+	if(CONTMGR_INFINIT_CONTWINDOW){
+		m_pendingReadStaticRequestsPending = 0;
+		m_pendingReadStaticRequests = 0;
+	}
 	
 //	if(GetCurrentContainer()){
 
@@ -598,6 +610,12 @@ void containeropal::PopPermissionStack(container * callee){
 
 	m_pendingReadDynamicRequests = (thread_active->permissionsStack_SP - thread_active->permissionsStack_FP) / PERMISSION_RECORD_SIZE;
     //m_pendingReadDynamicRequests = m_pendingReadDynamicRequestsPending;
+
+	if(CONTMGR_INFINIT_CONTWINDOW){
+		m_pendingReadStaticRequestsPending = 0;
+		m_pendingReadStaticRequests = 0;
+		m_pendingReadDynamicRequests = 0;
+	}
 
 	#ifdef DEBUG_GICA_PopPermissionStack
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");

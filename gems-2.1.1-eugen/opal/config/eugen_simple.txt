@@ -105,7 +105,7 @@ L2_FILL_BUS_CYCLES                          :                          9  //Pipe
 RUBY_CLOCK_DIVISOR                          :                          1
 TLB_NUM_ENTRIES                             :                         64 //There is a fully associative instruction TLB with 64 entries. The buffer supports the following page sizes: 8 Kbytes, 64 Kbytes, 4 Mbytes, and 256 Mbytes.
 TLB_NUM_PAGE_SIZES                          :                          4
-TLB_PAGE_SIZES                              : (8192, 65536, 4194304,268435456 )
+TLB_PAGE_SIZES                              : (8192, 65536, 524288, 4194304)
 TLB_IS_IDEAL                                :                          0
 ICACHE_CYCLE                                :                          1
 FETCH_PASS_CACHE_LINE                       :                          1

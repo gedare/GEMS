@@ -106,7 +106,7 @@ L2_FILL_BUS_CYCLES                          :                          9  //Pipe
 RUBY_CLOCK_DIVISOR                          :                          1
 TLB_NUM_ENTRIES                             :                         64 //There is a fully associative instruction TLB with 64 entries. The buffer supports the following page sizes: 8 Kbytes, 64 Kbytes, 4 Mbytes, and 256 Mbytes.
 TLB_NUM_PAGE_SIZES                          :                          4
-TLB_PAGE_SIZES                              : (8192, 65536, 4194304,268435456 )
+TLB_PAGE_SIZES                              : (8192, 65536, 524288, 4194304)
 TLB_IS_IDEAL                                :                          0
 ICACHE_CYCLE                                :                          1
 FETCH_PASS_CACHE_LINE                       :                          1
@@ -149,9 +149,10 @@ CAS_EXCEPT_MASK                             :                       4095
 PERFECT_ICACHE                              :                          0
 RETIREMENT_CACHE_ACCESS                     :                          1
 RANDOM_SEED                                 :                          0
-PCACHE_CONTMGR_BUSWIDTH	                    :                          4
-CONTMGR_SINGLESTACKRANGE                    :                          1
+PCACHE_CONTMGR_BUSWIDTH	                    :                          1
+CONTMGR_SINGLESTACKRANGE                    :                          0
 CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          1
-CONTMGR_PERM_STACKFIRST			    :                          1
-CONTMGR_PERM_USEFETCH 			    :                          1
-CONTMGR_PERM_SAVEBUFFER	    		    :			       1
+CONTMGR_PERM_STACKFIRST			    		:                          0
+CONTMGR_PERM_USEFETCH 			    		:                          1
+CONTMGR_PERM_SAVEBUFFER	    		    	:					       0
+CONTMGR_INFINIT_CONTWINDOW					:						   0
