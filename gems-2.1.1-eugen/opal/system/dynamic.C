@@ -1290,10 +1290,10 @@ bool dynamic_inst_t::isRetireReady()  {
              (m_stage == COMPLETE_STAGE) && (m_pseq->getLocalCycle() >= m_complete_cycle) );
   }
 
-  #ifdef GICACONTAINER
+  if( CONTMGR_CONTAINERENABLED ){
 	if (ready)
 		ready = m_pseq->getContainerOpal()->AllowRetire(this);
-  #endif
+ }
   	
   if(!ready){
     // prints out the instruction at head of ROB

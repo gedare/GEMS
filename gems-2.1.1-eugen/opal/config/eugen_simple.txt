@@ -154,3 +154,4 @@ CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          1
 CONTMGR_PERM_STACKFIRST			    :                          1
 CONTMGR_PERM_USEFETCH 			    :                          1
 CONTMGR_PERM_SAVEBUFFER	    		    :			       1
+CONTMGR_CONTAINERENABLED : 0

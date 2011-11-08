@@ -1074,15 +1074,16 @@ load_inst_t::accessCache( void ) {
     }
 
 	bool primary_bool = false;
-
-	#ifdef GICACONTAINER
-	containeropal * contOpal = m_pseq->getContainerOpal();
-	if ( !contOpal->CacheRead(m_physical_addr, this, true, &primary_bool )) {
-    #else
-    cache_t *dcache = m_pseq->getDataCache();
-    if ( !dcache->Read( m_physical_addr, this, true, &primary_bool )) {
-	#endif
-
+    bool miss = false;
+	
+	if(CONTMGR_CONTAINERENABLED ){
+		containeropal * contOpal = m_pseq->getContainerOpal();
+		miss = !contOpal->CacheRead(m_physical_addr, this, true, &primary_bool );
+	}else{
+    	cache_t *dcache = m_pseq->getDataCache();
+    	miss = !dcache->Read( m_physical_addr, this, true, &primary_bool );
+    }
+	if(miss){
 	  markEvent( EVENT_DCACHE_MISS );
       STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
       SetStage(CACHE_MISS_STAGE);
@@ -1206,15 +1207,16 @@ load_inst_t::doCacheRetirement(void){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
 	bool primary_bool = false;
+	bool miss = false;
 	
-    #ifdef GICACONTAINER
-	containeropal * contOpal = m_pseq->getContainerOpal();
-	if ( !contOpal->CacheRead(m_physical_addr, this, true, &primary_bool )) {
-    #else
-    cache_t *dcache = m_pseq->getDataCache();
-    if ( !dcache->Read( m_physical_addr, this, true, &primary_bool )) {
-	#endif
-	
+    if(CONTMGR_CONTAINERENABLED){
+		containeropal * contOpal = m_pseq->getContainerOpal();
+		miss = !contOpal->CacheRead(m_physical_addr, this, true, &primary_bool );
+    }else{
+    	cache_t *dcache = m_pseq->getDataCache();
+    	miss = !dcache->Read( m_physical_addr, this, true, &primary_bool );
+    }
+	if(miss){
       markEvent( EVENT_DCACHE_MISS );
       STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
       SetStage(CACHE_MISS_RETIREMENT_STAGE);
@@ -1903,7 +1905,7 @@ store_inst_t::accessCache( void ) {
     }
 
 
-	#ifdef GICACONTAINER
+    if(CONTMGR_CONTAINERENABLED){
 		containeropal * contOpal = m_pseq->getContainerOpal();
 		if(!contOpal->CacheWrite(m_physical_addr, this )) //cache miss
 		{
@@ -1911,7 +1913,7 @@ store_inst_t::accessCache( void ) {
 		    STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
 		    return false;
 		}
-    #else
+    }else{
 		cache_t *dcache = m_pseq->getDataCache();
     	if ( !dcache->Write( m_physical_addr, this ) ) {
 			    /* we missed: the cache is requesting a fill,
@@ -1921,7 +1923,7 @@ store_inst_t::accessCache( void ) {
       		STAT_INC(m_pseq->m_stat_num_dcache_miss[m_proc]);
       		return false;
     	}
-	#endif
+    }
   }
 
   return true;
@@ -2012,14 +2014,16 @@ store_inst_t::doCacheRetirement(void){
     if(WATTCH_POWER){
       m_pseq->getPowerStats()->incrementDCacheAccess();
     }
+	bool miss= false;
 
-    #ifdef GICACONTAINER
-	containeropal * contOpal = m_pseq->getContainerOpal();
-	if ( !contOpal->CacheWrite(m_physical_addr, this )) {
-    #else
-	cache_t *dcache = m_pseq->getDataCache();
-    if ( !dcache->Write( m_physical_addr, this ) ) {
-	#endif
+    if(CONTMGR_CONTAINERENABLED){
+		containeropal * contOpal = m_pseq->getContainerOpal();
+		miss = !contOpal->CacheWrite(m_physical_addr, this );
+    }else{
+		cache_t *dcache = m_pseq->getDataCache();
+    	miss = !dcache->Write( m_physical_addr, this );
+    }
+	if(miss){
       /* we missed: the cache is requesting a fill,
        *            we'll wait in CACHE_MISS_STAGE for the wakeup,
        *            update statistics, return */

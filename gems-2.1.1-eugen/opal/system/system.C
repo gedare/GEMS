@@ -630,7 +630,7 @@ void system_t::printLogHeader( void )
     fprintf( logfp, "# IL1_STREAM_BUFFERS:          %d\n", IL1_STREAM_BUFFERS);
     fprintf( logfp, "# IL1_IDEAL:                   %d\n", IL1_IDEAL);
 
-#ifdef GICACONTAINER
+if(CONTMGR_CONTAINERENABLED){
 	fprintf( logfp, "# L1 perm cache: block: %dB, %dx assoc, %d sets. %dB total.\n",
              1 << PL1_BLOCK_BITS, PL1_ASSOC, PL1_NUM_SETS,
              (1 << PL1_BLOCK_BITS) * PL1_ASSOC * PL1_NUM_SETS );
@@ -639,7 +639,7 @@ void system_t::printLogHeader( void )
     fprintf( logfp, "# PL1_MSHR_QUEUE_ISSUE_WIDTH:  %d\n", PL1_MSHR_QUEUE_ISSUE_WIDTH);
     fprintf( logfp, "# PL1_STREAM_BUFFERS:          %d\n", PL1_STREAM_BUFFERS);
     fprintf( logfp, "# PL1_IDEAL:                   %d\n", PL1_IDEAL);
-#endif
+}
 
     fprintf( logfp, "# L2 unified cache: block: %dB, %dx assoc, %d sets. %dB total.\n",
              1 << L2_BLOCK_BITS, L2_ASSOC, (1 << L2_SET_BITS),

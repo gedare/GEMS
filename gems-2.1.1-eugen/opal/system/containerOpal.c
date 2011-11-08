@@ -1806,12 +1806,12 @@ pcd_inst_t::Retire( abstract_pc_t *a ) {
 			DEBUG_OUT("%s %s %s \n",__PRETTY_FUNCTION__, w->printStage(w->getStage()), buf);
 	#endif
 
-#ifdef GICACONTAINER
+if(CONTMGR_CONTAINERENABLED){
 	if(!m_context_switch)
 		m_pseq->getContainerOpal()->AddDynamicRange(m_startaddr, m_size, m_multi, m_perm,this);
 	else
 		m_pseq->getContainerOpal()->ContextSwitch(m_startaddr, this);
-#endif
+}
 
 	memory_inst_t::Retire(a);
 }

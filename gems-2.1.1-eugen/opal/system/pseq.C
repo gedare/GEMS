@@ -1349,11 +1349,10 @@ void pseq_t::advanceCycle( void )
     il1_mshr->Tick();
     dl1_mshr->Tick();
 	
-	#ifdef GICACONTAINER
+    if(CONTMGR_CONTAINERENABLED){
 		pl1_mshr->Tick();
 		m_containeropal->Tick();
-		
-	#endif
+    }
   }
 
   // advance local time one cycle (do this only after all threads have finished going through pipeline)
@@ -1552,23 +1551,24 @@ void pseq_t::fetchInstrSimple( )
                DEBUG_OUT("\tWe hit in the L1-Icache!\n");
            #endif
 
-		       #ifdef GICACONTAINER
-				if(! m_containeropal->CacheSameLine(m_last_fetch_physical_address[proc],fetchPhysicalPC,this)) {
-			   #else
-               	if(! l1_inst_cache->same_line(m_last_fetch_physical_address[proc], fetchPhysicalPC)) {
-			   #endif
+			   bool same_line = false;
+		       if(CONTMGR_CONTAINERENABLED){
+					same_line = ! m_containeropal->CacheSameLine(m_last_fetch_physical_address[proc],fetchPhysicalPC,this);
+		       }else{
+               		same_line = ! l1_inst_cache->same_line(m_last_fetch_physical_address[proc], fetchPhysicalPC);
+		       }
              
-
+				if(same_line){
 				  #ifdef DEBUG_PSEQ
                      DEBUG_OUT("\tUpdating our line buffer...\n");
                    #endif
                      // Modified to take in the logical proc's waiter object:
 
-			   #ifdef GICACONTAINER
+			  if(CONTMGR_CONTAINERENABLED){
 				hit = m_containeropal->Fetch( fetchPhysicalPC, m_proc_waiter[proc], false,NULL);
-			   #else
+			  }else{
                	hit = l1_inst_cache->Read( fetchPhysicalPC, m_proc_waiter[proc], false );
-			   #endif
+			  }
 
 			   
                 /* WATTCH power */
@@ -7533,9 +7533,9 @@ void pseq_t::printStats( void )
   setDebugTime( filterTime );
 
 
-	#ifdef GICACONTAINER
+	if(CONTMGR_CONTAINERENABLED){
 		m_containeropal->PrintStats();
-	#endif
+	}
 
   #ifdef DEBUG_PSEQ
   DEBUG_OUT("pseq_t:printStats END\n");
