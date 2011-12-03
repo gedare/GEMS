@@ -84,9 +84,9 @@ DL1_BLOCK_BITS                              :                          4 //8-Kby
 DL1_MSHR_ENTRIES                            :                        256
 DL1_STREAM_BUFFERS                          :                          0
 DL1_IDEAL                                   :                          0
-PL1_ASSOC                                   :                          2 // 16-Kbyte data, 2-way, 128-byte line size
-PL1_SET_BITS                                :                          6 // 16-Kbyte data, 2-way, 128-byte line size
-PL1_BLOCK_BITS                              :                          7 // 16-Kbyte data, 2-way, 128-byte line size
+PL1_ASSOC                                   :                          4 // 16-Kbyte data, 4-way, 64-byte line size
+PL1_SET_BITS                                :                          6 // 16-Kbyte data, 4-way, 64-byte line size
+PL1_BLOCK_BITS                              :                          6 // 16-Kbyte data, 4-way, 64-byte line size
 PL1_STREAM_BUFFERS                          :                          0
 PL1_IDEAL                                   :                          0
 PL1_MSHR_QUEUE_SIZE                         :                         32 
@@ -149,11 +149,11 @@ CAS_EXCEPT_MASK                             :                       4095
 PERFECT_ICACHE                              :                          0
 RETIREMENT_CACHE_ACCESS                     :                          1
 RANDOM_SEED                                 :                          0
-PCACHE_CONTMGR_BUSWIDTH	                    :                          4
+PCACHE_CONTMGR_BUSWIDTH	                    :                          1
 CONTMGR_SINGLESTACKRANGE                    :                          0
-CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          1
-CONTMGR_PERM_STACKFIRST			    :                          1
-CONTMGR_PERM_USEFETCH 			    :                          1
-CONTMGR_PERM_SAVEBUFFER	    		    :			       1
+CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          0
+CONTMGR_PERM_STACKFIRST			    :                          0
+CONTMGR_PERM_USEFETCH 			    :                          0
+CONTMGR_PERM_SAVEBUFFER	    		    :			       0
 CONTMGR_INFINIT_CONTWINDOW		    :			       0
-CONTMGR_CONTAINERENABLED 		    :			       0
+CONTMGR_CONTAINERENABLED 		    :			       1

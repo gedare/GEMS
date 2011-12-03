@@ -149,11 +149,11 @@ CAS_EXCEPT_MASK                             :                       4095
 PERFECT_ICACHE                              :                          0
 RETIREMENT_CACHE_ACCESS                     :                          1
 RANDOM_SEED                                 :                          0
-PCACHE_CONTMGR_BUSWIDTH	                    :                          4
+PCACHE_CONTMGR_BUSWIDTH	                    :                          1
 CONTMGR_SINGLESTACKRANGE                    :                          0
 CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          1
-CONTMGR_PERM_STACKFIRST			    :                          1
-CONTMGR_PERM_USEFETCH 			    :                          1
-CONTMGR_PERM_SAVEBUFFER	    		    :			       1
+CONTMGR_PERM_STACKFIRST			    :                          0
+CONTMGR_PERM_USEFETCH 			    :                          0
+CONTMGR_PERM_SAVEBUFFER	    		    :			       0
 CONTMGR_INFINIT_CONTWINDOW		    :			       0
-CONTMGR_CONTAINERENABLED 		    :			       0
+CONTMGR_CONTAINERENABLED 		    :			       1
