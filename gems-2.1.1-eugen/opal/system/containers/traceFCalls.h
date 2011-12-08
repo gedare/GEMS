@@ -160,7 +160,7 @@ void container_simicsInit();
 
 void container_close();
 
-
+void container_reset();
 container * container_add(md_addr_t addr, char * name);
 
 struct loadingPenalties container_traceFunctioncall(md_addr_t addr, mem_tp * mem, char displayLineNumbers);

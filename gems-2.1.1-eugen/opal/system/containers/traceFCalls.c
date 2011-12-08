@@ -136,12 +136,19 @@ int Thread_switch( uint64 id, uint64 name)
 		newThread = ThreadAdd(id,name);
 		create_new = 1;
 	}
+
+	//printf("\nThread_switch OUT 0x%llx ",thread_active->thread_id);
+	//printRTEMSTaksName(thread_active->thread_name);
+	//printf("\n");
+	//fflush(stdout);
+	
 	fflush(thread_active->traceFD);
 	thread_active = newThread;
     
-	//printf("\nThread_switch 0x%llx ",thread_active->thread_id);
-	printRTEMSTaksName(thread_active->thread_name);
+	//printf("\nThread_switch IN 0x%llx ",thread_active->thread_id);
+	//printRTEMSTaksName(thread_active->thread_name);
 	//printf("\n");
+	//fflush(stdout);
 
 	md_addr_t StackArea = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Start.Initial_stack.area");
 	uint64 StackSize = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Start.Initial_stack.size");
@@ -374,6 +381,18 @@ container* container_add(md_addr_t addr, char * name)
 	//printf("%lld = %llx %s %d %d\n", addr,containerTable[containerSize-1].entryAddress, containerTable[containerSize-1].name, containerTable[containerSize-1].traceLoadedAddressCount, containerTable[containerSize-1].traceLoadeduniqueChildContainersCalled);
 	free(newContainer);
 	return &containerTable[containerSize-1];
+}
+
+void container_reset()
+{
+	for(int i=0; i< containerSize; i++){
+		container item = containerTable[i];
+		freeAddressList(item.opalCodeAccessList);
+		freeAddressList(item.opalStackAccessList);
+		freeAddressList(item.opalHeapAccessList);
+		freeAddressList(item.opalStaticDataAccessList);
+	}
+	containerSize = 0;
 }
 
 

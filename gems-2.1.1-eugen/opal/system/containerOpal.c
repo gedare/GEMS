@@ -699,6 +699,12 @@ void containeropal::ContextSwitch(pa_t startAddress, dynamic_inst_t *w){
 	
 	staticpermssions * ctx = (staticpermssions *) startAddress;
 
+	
+	printf("\nThread_switch OUT 0x%llx ",thread_active->thread_id);
+	printRTEMSTaksName(thread_active->thread_name);
+	printf("permissionsStack_p = %llx permissionsStack_size=%llx thread_active->permissionsStack_SP=%llx stacksize=%lld\n", permissionsStack_p, permissionsStack_size,thread_active->permissionsStack_SP,  thread_active->permissionsStack_SP - permissionsStack_p  );
+	fflush(stdout);
+
 	//check staticpermssions structure for the offsets
 	permissions_p = myMemoryRead(startAddress+24, 8);
 	permissionsStack_p =myMemoryRead(startAddress+40, 8);
@@ -730,7 +736,6 @@ void containeropal::ContextSwitch(pa_t startAddress, dynamic_inst_t *w){
 	m_oldThreadContext = thread_active->containerRecord_p;
 	m_newThreadContext = ctx;
 
-	
 
 
 	#ifdef DEBUG_GICA_CONTEXTSWITCH
@@ -773,6 +778,11 @@ void containeropal::ContextSwitchEnd(){
 		thread_active->permissionsStack_SP = permissionsStack_p+8;
 	}
 	thread_active->containerRecord_p = m_newThreadContext;
+
+	printf("\nThread_switch IN 0x%llx ",thread_active->thread_id);
+	printRTEMSTaksName(thread_active->thread_name);
+	printf("permissionsStack_p = %llx permissionsStack_size=%llx thread_active->permissionsStack_SP=%llx stacksize=%lld\n", permissionsStack_p, permissionsStack_size,thread_active->permissionsStack_SP,  thread_active->permissionsStack_SP - permissionsStack_p  );
+	fflush(stdout);
 }
 
 
@@ -1214,7 +1224,15 @@ void containeropal::Tick(){
 			else if(m_pendingCtxSwitchLoadDynPermBuffer > 0){
 				LoadPermissionsList(GetCurrentContainer(),(pa_t) dynamicPermissionBuffer_p,&m_pendingCtxSwitchLoadDynPermBuffer , m_dynamicPermissionBuffer, &m_dynamicPermissionBufferSize);
 			}
-			else if(m_pendingCtxSwitchLoadContainerListPending > 0){
+			else 
+				SetStage(CTXSWITCHRESET);
+			break;
+		case CTXSWITCHRESET:
+			container_reset();
+			SetStage(CTXSWITCHLOADNEW);
+			break;
+		case CTXSWITCHLOADNEW:
+			if(m_pendingCtxSwitchLoadContainerListPending > 0){
 				
 				LoadCtxContainerList(GetCurrentContainer());
 			}
