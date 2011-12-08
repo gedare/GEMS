@@ -1,0 +1,159 @@
+CONFIG_LOGICAL_PER_PHY_PROC                 :                          1
+CONFIG_FETCH_THREADS_PER_CYCLE              :                          1
+FETCH_STAGES                                :                          1
+DECODE_STAGES                               :                          1
+RETIRE_STAGES                               :                          1
+MAX_FETCH                                   :                          4
+MAX_DECODE                                  :                          4
+MAX_DISPATCH                                :                          4
+MAX_EXECUTE                                 :                          4
+MAX_RETIRE                                  :                          4
+PSEQ_MAX_UNCHECKED                          :                          1
+CONFIG_IREG_PHYSICAL                        :                        224 //no clue
+CONFIG_FPREG_PHYSICAL                       :                        192
+CONFIG_CCREG_PHYSICAL                       :                         69
+CONFIG_NUM_CONTROL_SETS                     :                         64
+//CONFIG_ALU_MAPPING                          : (0,   1, 1, 1,  1, 2, 2, 2,  2,  2,  2,  3, 3)
+CONFIG_ALU_MAPPING: (
+    0, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    2, // FU_INTMULT,              // integer multiplier
+    3, // FU_INTDIV,               // integer divider
+    4, // FU_BRANCH,               // compare / branch units
+    5, // FU_FLOATADD,             // floating point adder/subtractor
+    6, // FU_FLOATCMP,             // floating point comparator
+    7, // FU_FLOATCVT,             // floating point<->integer converter
+    8, // FU_FLOATMULT,            // floating point multiplier
+    9, // FU_FLOATDIV,             // floating point divider
+    10, // FU_FLOATSQRT,            // floating point square root
+    11, // FU_RDPORT,               // memory read port
+    12  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+//CONFIG_NUM_ALUS                             : (127, 1, 1, 1,  1, 1, 1, 1,  1,  1,  1,  1, 1)  //1 arithmetic logic unit (ALU) and shifter. The ALU is reused for branch address and virtual address calculation. The integer multiplier has a 5 clock latency
+CONFIG_NUM_ALUS: (
+    127, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    1, // FU_INTMULT,              // integer multiplier
+    1, // FU_INTDIV,               // integer divider
+    1, // FU_BRANCH,               // compare / branch units
+    1, // FU_FLOATADD,             // floating point adder/subtractor
+    1, // FU_FLOATCMP,             // floating point comparator
+    1, // FU_FLOATCVT,             // floating point<->integer converter
+    1, // FU_FLOATMULT,            // floating point multiplier
+    1, // FU_FLOATDIV,             // floating point divider
+    1, // FU_FLOATSQRT,            // floating point square root
+    8, // FU_RDPORT,               // memory read port
+    8  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+
+//CONFIG_ALU_LATENCY                          : (1,   1, 5, 20, 1, 2, 2, 2,  4,  12, 24, 1, 1)
+
+CONFIG_ALU_LATENCY: (
+    1, // FU_NONE,                 // inst does not use a functional unit
+    1, // FU_INTALU,               // integer ALU
+    5, // FU_INTMULT,              // integer multiplier
+   20, // FU_INTDIV,               // integer divider
+    1, // FU_BRANCH,               // compare / branch units
+    2, // FU_FLOATADD,             // floating point adder/subtractor
+    2, // FU_FLOATCMP,             // floating point comparator
+    2, // FU_FLOATCVT,             // floating point<->integer converter
+    4, // FU_FLOATMULT,            // floating point multiplier
+   12, // FU_FLOATDIV,             // floating point divider
+   24, // FU_FLOATSQRT,            // floating point square root
+    1, // FU_RDPORT,               // memory read port
+    1  // FU_WRPORT,               // memory write port
+       // FU_NUM_FU_TYPES          // total functional unit classes
+)
+
+WRITE_BUFFER_SIZE                           :                          0
+IL1_ASSOC                                   :                          4 // 16-Kbyte data, 4-way, 32-byte line size
+IL1_SET_BITS                                :                          7 // 16-Kbyte data, 4-way, 32-byte line size
+IL1_BLOCK_BITS                              :                          5 // 16-Kbyte data, 4-way, 32-byte line size
+IL1_MSHR_ENTRIES                            :                        256 
+IL1_STREAM_BUFFERS                          :                          0
+IL1_IDEAL                                   :                          0
+IL1_NL_TYPE                                 :                          0
+IL1_NL_LINES                                :                          0
+IL1_MSHR_QUEUE_SIZE                         :                         32 
+IL1_MSHR_QUEUE_ISSUE_WIDTH                  :                          2
+DL1_ASSOC                                   :                          4 //8-Kbyte data, 4-way, 16-byte line size
+DL1_SET_BITS                                :                          7 //8-Kbyte data, 4-way, 16-byte line size
+DL1_BLOCK_BITS                              :                          4 //8-Kbyte data, 4-way, 16-byte line size
+DL1_MSHR_ENTRIES                            :                        256
+DL1_STREAM_BUFFERS                          :                          0
+DL1_IDEAL                                   :                          0
+PL1_ASSOC                                   :                          2 // 16-Kbyte data, 2-way, 128-byte line size
+PL1_SET_BITS                                :                          6 // 16-Kbyte data, 2-way, 128-byte line size
+PL1_BLOCK_BITS                              :                          7 // 16-Kbyte data, 2-way, 128-byte line size
+PL1_STREAM_BUFFERS                          :                          0
+PL1_IDEAL                                   :                          0
+PL1_MSHR_QUEUE_SIZE                         :                         32 
+PL1_MSHR_QUEUE_ISSUE_WIDTH                  :                          2
+L2_ASSOC                                    :                         12 //3-Mbyte, 12-way, line size is 64 bytes
+L2_SET_BITS                                 :                         12 //3-Mbyte, 12-way, line size is 64 bytes
+L2_BLOCK_BITS                               :                          6 //3-Mbyte, 12-way, line size is 64 bytes
+L2_MSHR_ENTRIES                             :                        128
+L2_STREAM_BUFFERS                           :                          0
+L2_LATENCY                                  :                         23  //23 cycles for an L1 data cache miss and 22 cycles for an L1 instruction cache miss
+L2_IDEAL                                    :                          0
+MEMORY_DRAM_LATENCY                         :                         80
+MEMORY_OUTSTANDING_REQUESTS                 :                        128
+MEMOP_STALE_DATA                            :                          0
+L1_FILL_BUS_CYCLES                          :                          1
+L2_FILL_BUS_CYCLES                          :                          9  //Pipeline latency in the L2-cache is 8 clocks for a load, 9 clocks for an I-miss, with the critical chunk returned first.
+RUBY_CLOCK_DIVISOR                          :                          1
+TLB_NUM_ENTRIES                             :                         64 //There is a fully associative instruction TLB with 64 entries. The buffer supports the following page sizes: 8 Kbytes, 64 Kbytes, 4 Mbytes, and 256 Mbytes.
+TLB_NUM_PAGE_SIZES                          :                          4
+TLB_PAGE_SIZES                              : (8192, 65536, 524288, 4194304)
+TLB_IS_IDEAL                                :                          0
+ICACHE_CYCLE                                :                          1
+FETCH_PASS_CACHE_LINE                       :                          1
+FETCH_PASS_TAKEN_BRANCH                     :                          1
+BRANCHPRED_TYPE                             :                       YAGS
+BRANCHPRED_PHT_BITS                         :                         20
+BRANCHPRED_EXCEPTION_BITS                   :                         15
+BRANCHPRED_TAG_BITS                         :                         15
+BRANCHPRED_MISPRED_PENALTY                  :                          1
+BRANCHPRED_USE_GLOBAL                       :                          0
+LOAD_REPLAY_PENALTY                         :                         10
+STORESET_PREDICTOR                          :                          1
+CAS_TABLE_BITS                              :                         12
+CAS_EXCEPT_BITS                             :                         12
+CAS_EXCEPT_SHIFT                            :                          1
+RAS_BITS                                    :                          6
+RAS_EXCEPTION_TABLE_BITS                    :                          6
+IWINDOW_ROB_SIZE                            :                         64
+IWINDOW_WIN_SIZE                            :                         32
+RESERVED_ROB_ENTRIES                        :                          4
+STAT_EXPENSIVE_PROFILE                      :                          0
+CHAIN_IDEAL_WINDOW                          :                          0
+CHAIN_IDEAL_BRANCH_PRED                     :                          0
+CHAIN_ST_LD_FORWARDING                      :                          1
+CHAIN_MP_MODE                               :                          1
+WATTCH_POWER                                :                          0
+PREFETCHER_POWER                            :                          1
+COMPRESSION_POWER                           :                          0
+L1_BANKS                                    :                          2
+L1I_PF_STREAMS                              :                          8
+L1D_PF_STREAMS                              :                          8
+UNIT_PF_FILTERSIZE                          :                         32
+NONUNIT_PF_FILTERSIZE                       :                         32
+L1_L2_STARTUP_PFS                           :                          6
+MEMOP_BLOCK_MASK                            :                         63
+CAS_TABLE_SIZE                              :                       4096
+CAS_TABLE_MASK                              :                       4095
+CAS_EXCEPT_SIZE                             :                       4096
+CAS_EXCEPT_MASK                             :                       4095
+PERFECT_ICACHE                              :                          0
+RETIREMENT_CACHE_ACCESS                     :                          1
+RANDOM_SEED                                 :                          0
+PCACHE_CONTMGR_BUSWIDTH	                    :                          1
+CONTMGR_SINGLESTACKRANGE                    :                          0
+CONTMGR_CHECKPARTIALLOADEDCONTAINER         :                          0
+CONTMGR_PERM_STACKFIRST			    :                          0
+CONTMGR_PERM_USEFETCH 			    :                          0
+CONTMGR_PERM_SAVEBUFFER	    		    :			       0
+CONTMGR_INFINIT_CONTWINDOW		    :			       0
+CONTMGR_CONTAINERENABLED 		    :			       1
