@@ -3,6 +3,11 @@
 static Chain_Control queues[10];
 static size_t queue_size[10];
 
+void sparc64_hwpq_allocate( int max_pq_size )
+{
+  sparc64_hwpq_allocate_freelist(max_pq_size);
+}
+
 void sparc64_hwpq_initialize()
 {
   proc_ptr old;
@@ -55,7 +60,7 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
   uint32_t queue_idx;
   uint32_t operation;
   uint32_t exception;
-  uint64_t pointer;
+  uint64_t val;
   uint32_t key;
   uint32_t value;
   register int mask = (1<<1);
@@ -89,20 +94,20 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
       for ( i = 0;
           i < queue_size[queue_idx]/2; // FIXME
           i++ ) {
-//        HWDS_LAST_PRI(queue_idx,priority);
-        HWDS_SPILL(queue_idx, pointer); 
-        if (!pointer) {
+//        HWDS_LAST_PRI(queue_idx,key);
+        HWDS_SPILL(queue_idx, val); 
+        if (!val) {
           printk("Nothing to spill!\n");
           while(1);
         }
-        key = POINTER_TO_KEY(pointer);
-        value = POINTER_TO_VALUE(pointer);
+        key = POINTER_TO_KEY(val);
+        value = POINTER_TO_VALUE(val);
 #ifdef GAB_DEBUG
         printk("spill: queue: %d\tnode: %x\tprio: %d\n",queue_idx,value,key);
 #endif
-        // sort by ascending priority
+        // sort by ascending key
         while (!_Chain_Is_head(cc, iter) && 
-            key < ((pq_node*)iter)->priority) 
+            key < ((pq_node*)iter)->key) 
           iter = _Chain_Previous(iter);
 
         // TODO: use a free list instead of workspace_allocate?
@@ -114,7 +119,7 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
   i=0;
   while(!_Chain_Is_tail(cc,iter)) {
     pq_node *p = (pq_node*)iter;
-    printk("%d\tChain: %X\t%d\t%x\n",i,p,p->priority,p->pointer);
+    printk("%d\tChain: %X\t%d\t%x\n",i,p,p->key,p->val);
     i++;
     iter = _Chain_Next(iter);
   }
@@ -123,9 +128,9 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
         while (1);
         }
 
-        // priority >= iter->priority, insert priority node after iter
-        new_node->priority = key;
-        new_node->pointer = value; // FIXME: not full 64-bits here
+        // key >= iter->key, insert key node after iter
+        new_node->key = key;
+        new_node->val = value; // FIXME: not full 64-bits here
         _Chain_Insert_unprotected(iter, (Chain_Node*)new_node);
       }
       break;
@@ -147,11 +152,11 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
         pq_node *p = iter;
 #ifdef GAB_DEBUG_FILL
         printk("fill: queue: %d\tnode: %x\tprio: %d\n",
-            queue_idx,p->pointer,p->priority);
+            queue_idx,p->val,p->key);
 #endif
         Chain_Node *tmp = _Chain_Next(iter);
         // add node to hw pq 
-        HWDS_FILL(queue_idx, p->priority, p->pointer, exception); 
+        HWDS_FILL(queue_idx, p->key, p->val, exception); 
         
         // remove node from sw pq
         iter = _Chain_Get_unprotected(cc);
@@ -161,19 +166,19 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
 
         if (exception) {
           tmp = _Chain_Last(cc);
-          // HWDS_LAST_PRI(queue_idx,priority);
-          HWDS_SPILL(queue_idx, pointer);
-          if (!pointer) {
+          // HWDS_LAST_PRI(queue_idx,key);
+          HWDS_SPILL(queue_idx, val);
+          if (!val) {
             printk("nothing spilled!\n");
             while(1);
           }
-          key = POINTER_TO_KEY(pointer);
-          value = POINTER_TO_VALUE(pointer);
+          key = POINTER_TO_KEY(val);
+          value = POINTER_TO_VALUE(val);
 #ifdef GAB_DEBUG_FILL
           printk("Spilling (%d,%X) while filling\n",key,value);
 #endif
-          // sort by ascending priority
-          while (!_Chain_Is_head(cc, tmp) && key < ((pq_node*)tmp)->priority) {
+          // sort by ascending key
+          while (!_Chain_Is_head(cc, tmp) && key < ((pq_node*)tmp)->key) {
             tmp = _Chain_Previous(tmp);
           }
 
@@ -182,9 +187,9 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
             printk("Unable to allocate new_node\n");
             while (1);
           }
-          // priority >= tmp->priority, insert priority node after tmp
-          new_node->priority = key;
-          new_node->pointer = value;
+          // key >= tmp->key, insert key node after tmp
+          new_node->key = key;
+          new_node->val = value;
           _Chain_Insert_unprotected(tmp, (Chain_Node*)new_node);
         }
 
@@ -205,7 +210,7 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
   iter = _Chain_First(cc);
   while(!_Chain_Is_tail(cc,iter)) {
     pq_node *p = (pq_node*)iter;
-    printk("Chain: %X\t%d\t%x\n",p,p->priority,p->pointer);
+    printk("Chain: %X\t%d\t%x\n",p,p->key,p->val);
     iter = _Chain_Next(iter);
   }
 #endif
@@ -223,7 +228,7 @@ void sparc64_hwpq_software_extract(uint64_t vector, CPU_Interrupt_frame *istate)
   uint64_t context;
   uint32_t queue_idx;
   uint32_t operation;
-  uint64_t pointer;
+  uint64_t val;
   uint32_t key;
   uint32_t value;
   pq_node *new_node;
@@ -238,14 +243,14 @@ void sparc64_hwpq_software_extract(uint64_t vector, CPU_Interrupt_frame *istate)
   queue_idx = (((uint32_t)(context>>32))&(~0))>>20;
   operation = (((uint32_t)(context>>32))&~(~0 << (3 + 1)));
 
-  HWDS_GET_PAYLOAD(pointer);
+  HWDS_GET_PAYLOAD(val);
 
 #ifdef GAB_DEBUG
-  printk("Software extract: %x\n",pointer);
+  printk("Software extract: %x\n",val);
 #endif
 
-  key = POINTER_TO_KEY(pointer);
-  value = POINTER_TO_VALUE(pointer);
+  key = POINTER_TO_KEY(val);
+  value = POINTER_TO_VALUE(val);
 
 
   // linear search, ugh
@@ -253,7 +258,7 @@ void sparc64_hwpq_software_extract(uint64_t vector, CPU_Interrupt_frame *istate)
   iter = _Chain_First(cc);
   while(!_Chain_Is_tail(cc,iter)) {
     pq_node *p = (pq_node*)iter;
-    if (p->pointer == value) {
+    if (p->val == value) {
       if (_Chain_Is_first(iter))
         _Chain_Get_first_unprotected(iter);
       else

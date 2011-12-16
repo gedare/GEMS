@@ -4,6 +4,11 @@
 static Chain_Control queues[10];
 static size_t queue_size[10];
 
+void sparc64_hwpq_allocate( int max_pq_size )
+{
+  sparc64_hwpq_allocate_freelist(max_pq_size);
+}
+
 void sparc64_hwpq_initialize()
 {
   proc_ptr old;

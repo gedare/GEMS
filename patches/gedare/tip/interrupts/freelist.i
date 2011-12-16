@@ -15,7 +15,7 @@ static inline void sparc64_hwpq_initialize_freelist( )
   _Chain_Initialize_empty ( &freelist );
 }
 
-static inline void sparc64_hwpq_allocate_freelist( int size )
+void sparc64_hwpq_allocate_freelist( int size )
 {
   int i;
   pq_node *the_nodes;
