@@ -15,10 +15,6 @@
 extern "C" {
 #endif
 
-// should be consistent with hwpq-decoder
-// TODO: make configurable
-#define QUEUE_SIZE (101)
-
 #define POINTER_TO_KEY(ptr)   (ptr>>32)
 #define POINTER_TO_VALUE(ptr) ((uint32_t)ptr)
 

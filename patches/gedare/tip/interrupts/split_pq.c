@@ -1,6 +1,5 @@
 #include "pq.h"
 #include "freelist.i"
-
 static Chain_Control queues[10];
 static size_t queue_size[10];
 
@@ -30,7 +29,6 @@ void sparc64_hwpq_initialize()
     &old
    );
 }
-
 
 void hwpq_drain_queue( int qid ) {
   Chain_Node *tmp;
