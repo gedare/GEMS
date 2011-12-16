@@ -21,11 +21,11 @@ extern "C" {
 #endif
 #include <rtems/bspIo.h>
 
-typedef struct {
-  Chain_Node Node;
-  uint32_t priority;
-  uint32_t pointer;
-} pq_node;
+extern void sparc64_spillpq_allocate( size_t max_pq_size );
+extern void sparc64_spillpq_initialize( int size );
+extern void sparc64_spillpq_insert( uint64_t p );
+extern uint64_t sparc64_spillpq_first( void );
+extern uint64_t sparc64_spillpq_pop( void );
 
 #ifdef __cplusplus
 }
