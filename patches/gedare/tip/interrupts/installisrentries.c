@@ -14,7 +14,7 @@
 
 #include <rtems.h>
 
-#include "pq.h"
+#include "hwpq_exceptions.h"
 
 void sparc64_install_isr_entries( void )
 {
