@@ -6,8 +6,8 @@
 
 typedef struct {
   Chain_Node Node;
-  uint32_t priority;
-  uint32_t pointer;
+  uint32_t key;
+  uint32_t val;
 } pq_node;
 
 #endif

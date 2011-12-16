@@ -10,22 +10,18 @@
 extern "C" {
 #endif
 
-#define POINTER_TO_KEY(ptr)   (ptr>>32)
-#define POINTER_TO_VALUE(ptr) ((uint32_t)ptr)
+#define kv_value(kv) ((uint32_t)kv)
+#define kv_key(kv)   (kv>>32)
 
 //#define GAB_DEBUG
-//#define GAB_DEBUG_FILL
 
-#if defined(GAB_DEBUG)
-#define GAB_DEBUG_FILL
-#endif
 #include <rtems/bspIo.h>
 
-extern void sparc64_spillpq_allocate( size_t max_pq_size );
-extern void sparc64_spillpq_initialize( int size );
-extern void sparc64_spillpq_insert( uint64_t p );
-extern uint64_t sparc64_spillpq_first( void );
-extern uint64_t sparc64_spillpq_pop( void );
+extern void sparc64_spillpq_initialize( int max_pq_size );
+extern void sparc64_spillpq_handle_spill(int queue_idx);
+extern void sparc64_spillpq_handle_fill(int queue_idx);
+extern void sparc64_spillpq_handle_extract(int queue_idx);
+extern void sparc64_spillpq_drain( int queue_id );
 
 #ifdef __cplusplus
 }
