@@ -11,11 +11,6 @@ void sparc64_free_node(void *n) {
   _Chain_Append_unprotected( &sparc64_hwpq_freelist, n );
 }
 
-void sparc64_hwpq_initialize_freelist( )
-{
-  _Chain_Initialize_empty ( &sparc64_hwpq_freelist );
-}
-
 void sparc64_hwpq_allocate_freelist( size_t max_pq_size, size_t node_size )
 {
   int i;
@@ -26,6 +21,7 @@ void sparc64_hwpq_allocate_freelist( size_t max_pq_size, size_t node_size )
     while (1);
   }
 
+  _Chain_Initialize_empty ( &sparc64_hwpq_freelist );
   for ( i = 0; i < max_pq_size; i++ ) {
     /* this is kind of ugly */
     _Chain_Append_unprotected(

@@ -15,7 +15,6 @@ extern Chain_Control sparc64_hwpq_freelist;
 
 void *sparc64_alloc_node(void);
 void sparc64_free_node(void *n);
-void sparc64_hwpq_initialize_freelist(void);
 void sparc64_hwpq_allocate_freelist( size_t max_pq_size, size_t node_size );
 
 #ifdef __cplusplus
