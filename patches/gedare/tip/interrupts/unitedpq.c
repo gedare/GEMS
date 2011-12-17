@@ -5,7 +5,8 @@
 static Chain_Control queues[10];
 static size_t queue_size[10];
 
-static inline void sparc64_unitedpq_initialize( size_t max_pq_size )
+static inline 
+void sparc64_unitedpq_initialize( size_t max_pq_size )
 {
   int i;
   uint64_t reg = 0;
@@ -18,7 +19,8 @@ static inline void sparc64_unitedpq_initialize( size_t max_pq_size )
   }
 }
 
-static inline void sparc64_unitedpq_spill_node(queue_idx, Chain_Control *spill_pq)
+static inline 
+void sparc64_unitedpq_spill_node(int queue_idx, Chain_Control *spill_pq)
 {
   Chain_Node *iter;
   uint64_t kv;
@@ -67,7 +69,8 @@ static inline void sparc64_unitedpq_spill_node(queue_idx, Chain_Control *spill_p
   _Chain_Insert_unprotected(iter, (Chain_Node*)new_node);
 }
 
-static inline void sparc64_unitedpq_fill_node(int queue_idx, Chain_Control *spill_pq)
+static inline 
+void sparc64_unitedpq_fill_node(int queue_idx, Chain_Control *spill_pq)
 {
   uint32_t exception;
   pq_node *p;
@@ -87,7 +90,8 @@ static inline void sparc64_unitedpq_fill_node(int queue_idx, Chain_Control *spil
   }
 }
 
-static inline void sparc64_unitedpq_handle_spill( int queue_idx )
+static inline 
+void sparc64_unitedpq_handle_spill( int queue_idx )
 {
   int i = 0;
   Chain_Control *spill_pq;
@@ -105,7 +109,8 @@ static inline void sparc64_unitedpq_handle_spill( int queue_idx )
  * Current algorithm pulls nodes from the head of the sorted sw pq
  * and fills them into the hw pq.
  */
-static inline void sparc64_unitedpq_handle_fill(int queue_idx)
+static inline 
+void sparc64_unitedpq_handle_fill(int queue_idx)
 {
  Chain_Control *spill_pq;
  int            i = 0;
@@ -119,7 +124,8 @@ static inline void sparc64_unitedpq_handle_fill(int queue_idx)
   }
 }
 
-static inline void sparc64_unitedpq_handle_extract(int queue_idx)
+static inline 
+void sparc64_unitedpq_handle_extract(int queue_idx)
 {
   uint64_t kv;
   uint32_t key;
@@ -155,7 +161,8 @@ static inline void sparc64_unitedpq_handle_extract(int queue_idx)
   }
 }
 
-static inline void sparc64_unitedpq_drain( int qid )
+static inline 
+void sparc64_unitedpq_drain( int qid )
 {
   Chain_Node *tmp;
   Chain_Node *iter;
