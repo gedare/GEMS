@@ -1,6 +1,6 @@
 
-#ifndef __SPARC64_PQ_H
-#define __SPARC64_PQ_H
+#ifndef __SPARC64_SPILLPQ_H
+#define __SPARC64_SPILLPQ_H
 
 
 #include <rtems/score/chain.h>
@@ -16,6 +16,18 @@ extern "C" {
 //#define GAB_DEBUG
 
 #include <rtems/bspIo.h>
+
+typedef void (*SpillPQ_Function)(int argument);
+
+typedef struct {
+  SpillPQ_Function  initialize;
+  SpillPQ_Function  spill;
+  SpillPQ_Function  fill;
+  SpillPQ_Function  extract;
+  SpillPQ_Function  drain;
+} sparc64_spillpq_operations;
+
+extern sparc64_spillpq_operations spillpq_ops;
 
 extern void sparc64_spillpq_initialize( int max_pq_size );
 extern void sparc64_spillpq_handle_spill(int queue_idx);

@@ -5,8 +5,14 @@
 static Chain_Control queues[10];
 static size_t queue_size[10];
 
+typedef struct {
+  Chain_Node Node;
+  uint32_t key;
+  uint32_t val;
+} pq_node;
+
 static inline 
-void sparc64_unitedpq_initialize( size_t max_pq_size )
+void sparc64_unitedlistpq_initialize( size_t max_pq_size )
 {
   int i;
   uint64_t reg = 0;
@@ -20,7 +26,7 @@ void sparc64_unitedpq_initialize( size_t max_pq_size )
 }
 
 static inline 
-void sparc64_unitedpq_spill_node(int queue_idx, Chain_Control *spill_pq)
+void sparc64_unitedlistpq_spill_node(int queue_idx, Chain_Control *spill_pq)
 {
   Chain_Node *iter;
   uint64_t kv;
@@ -70,7 +76,7 @@ void sparc64_unitedpq_spill_node(int queue_idx, Chain_Control *spill_pq)
 }
 
 static inline 
-void sparc64_unitedpq_fill_node(int queue_idx, Chain_Control *spill_pq)
+void sparc64_unitedlistpq_fill_node(int queue_idx, Chain_Control *spill_pq)
 {
   uint32_t exception;
   pq_node *p;
@@ -86,12 +92,12 @@ void sparc64_unitedpq_fill_node(int queue_idx, Chain_Control *spill_pq)
 
   if (exception) {
     DPRINTK("Spilling (%d,%X) while filling\n");
-    sparc64_unitedpq_spill_node(queue_idx, spill_pq);
+    sparc64_unitedlistpq_spill_node(queue_idx, spill_pq);
   }
 }
 
 static inline 
-void sparc64_unitedpq_handle_spill( int queue_idx )
+void sparc64_unitedlistpq_handle_spill( int queue_idx )
 {
   int i = 0;
   Chain_Control *spill_pq;
@@ -101,7 +107,7 @@ void sparc64_unitedpq_handle_spill( int queue_idx )
   // pop elements off tail of hwpq, merge into software pq
   while ( i < queue_size[queue_idx]/2 ) { // FIXME
     i++;
-    sparc64_unitedpq_spill_node(queue_idx, spill_pq);
+    sparc64_unitedlistpq_spill_node(queue_idx, spill_pq);
   }
 }
 
@@ -110,7 +116,7 @@ void sparc64_unitedpq_handle_spill( int queue_idx )
  * and fills them into the hw pq.
  */
 static inline 
-void sparc64_unitedpq_handle_fill(int queue_idx)
+void sparc64_unitedlistpq_handle_fill(int queue_idx)
 {
  Chain_Control *spill_pq;
  int            i = 0;
@@ -120,12 +126,12 @@ void sparc64_unitedpq_handle_fill(int queue_idx)
   // FIXME: figure out what threshold to use (right now just half the queue)
   while (!_Chain_Is_empty(spill_pq) && i < queue_size[queue_idx]/2) {
     i++;
-    sparc64_unitedpq_fill_node(queue_idx, spill_pq);
+    sparc64_unitedlistpq_fill_node(queue_idx, spill_pq);
   }
 }
 
 static inline 
-void sparc64_unitedpq_handle_extract(int queue_idx)
+void sparc64_unitedlistpq_handle_extract(int queue_idx)
 {
   uint64_t kv;
   uint32_t key;
@@ -162,7 +168,7 @@ void sparc64_unitedpq_handle_extract(int queue_idx)
 }
 
 static inline 
-void sparc64_unitedpq_drain( int qid )
+void sparc64_unitedlistpq_drain( int qid )
 {
   Chain_Node *tmp;
   Chain_Node *iter;
@@ -181,24 +187,11 @@ void sparc64_unitedpq_drain( int qid )
   }
 }
 
-void sparc64_spillpq_initialize( int max_pq_size )
-{
-  sparc64_unitedpq_initialize(max_pq_size);
-}
-void sparc64_spillpq_handle_spill(int queue_idx)
-{
-  sparc64_unitedpq_handle_spill(queue_idx);
-}
-void sparc64_spillpq_handle_fill(int queue_idx)
-{
-  sparc64_unitedpq_handle_fill(queue_idx);
-}
-void sparc64_spillpq_handle_extract(int queue_idx)
-{
-  sparc64_unitedpq_handle_extract(queue_idx);
-}
-void sparc64_spillpq_drain( int queue_id )
-{
-  sparc64_unitedpq_drain(queue_id );
-}
+sparc64_spillpq_operations sparc64_unitedlistpq_ops = {
+  sparc64_unitedlistpq_initialize,
+  sparc64_unitedlistpq_handle_spill,
+  sparc64_unitedlistpq_handle_fill,
+  sparc64_unitedlistpq_handle_extract,
+  sparc64_unitedlistpq_drain
+};
 
