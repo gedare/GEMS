@@ -27,7 +27,7 @@ typedef struct {
   SpillPQ_Function  drain;
 } sparc64_spillpq_operations;
 
-extern sparc64_spillpq_operations spillpq_ops;
+extern sparc64_spillpq_operations *spillpq_ops;
 
 extern void sparc64_spillpq_initialize( int max_pq_size );
 extern void sparc64_spillpq_handle_spill(int queue_idx);

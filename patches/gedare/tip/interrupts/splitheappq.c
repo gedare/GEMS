@@ -1,4 +1,4 @@
-#include "splitheappq.h"
+#include "spillpq.h"
 #include "freelist.h"
 #include "gabdebug.h"
 
@@ -75,7 +75,7 @@ void bubble_down( int i ) {
 }
 
 static inline
-heap_insert( uint64_t kv ) {
+void heap_insert( uint64_t kv ) {
   pq_node *n = sparc64_alloc_node();
   if (!n) {
     printk("Unable to allocate new node while spilling\n");
@@ -91,7 +91,7 @@ heap_insert( uint64_t kv ) {
 }
 
 static inline
-heap_remove( int i ) {
+void heap_remove( int i ) {
   swap_entries(i, heap_current_size);
   sparc64_free_node(the_heap[heap_current_size]);
   --heap_current_size;
