@@ -1,4 +1,4 @@
-#include "splitpq.h"
+#include "splitheappq.h"
 #include "freelist.h"
 #include "gabdebug.h"
 
