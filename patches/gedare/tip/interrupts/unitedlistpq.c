@@ -4,6 +4,7 @@
 
 static Chain_Control queues[10];
 static size_t queue_size[10];
+static Freelist_Control free_nodes;
 
 typedef struct {
   Chain_Node Node;
@@ -16,7 +17,7 @@ void sparc64_unitedlistpq_initialize( size_t max_pq_size )
 {
   int i;
   uint64_t reg = 0;
-  sparc64_hwpq_allocate_freelist(max_pq_size, sizeof(pq_node));
+  freelist_initialize(&free_nodes, sizeof(pq_node), max_pq_size);
 
   for (i = 0; i < 10; i++) {
     _Chain_Initialize_empty(&queues[i]);
@@ -54,7 +55,7 @@ void sparc64_unitedlistpq_spill_node(int queue_idx, Chain_Control *spill_pq)
   while (!_Chain_Is_head(spill_pq, iter) && key < ((pq_node*)iter)->key) 
     iter = _Chain_Previous(iter);
 
-  new_node = sparc64_alloc_node();
+  new_node = freelist_get_node(&free_nodes);
   if (!new_node) {
     // debug output
     iter = _Chain_First(spill_pq);
@@ -88,7 +89,7 @@ void sparc64_unitedlistpq_fill_node(int queue_idx, Chain_Control *spill_pq)
   // add node to hw pq 
   HWDS_FILL(queue_idx, p->key, p->val, exception); 
 
-  sparc64_free_node(p);
+  freelist_put_node(&free_nodes, p);
 
   if (exception) {
     DPRINTK("Spilling (%d,%X) while filling\n");
@@ -156,7 +157,7 @@ void sparc64_unitedlistpq_handle_extract(int queue_idx)
         _Chain_Get_first_unprotected(spill_pq);
       else
         _Chain_Extract_unprotected(iter);
-      sparc64_free_node(iter);
+      freelist_put_node(&free_nodes, iter);
       break;
     }
     iter = _Chain_Next(iter);
@@ -182,7 +183,7 @@ void sparc64_unitedlistpq_drain( int qid )
     p = iter;
     tmp = _Chain_Next(iter);
     iter = _Chain_Get_unprotected(spill_pq);
-    sparc64_free_node((pq_node*)p);
+    freelist_put_node(&free_nodes, (pq_node*)p);
     iter = tmp;
   }
 }

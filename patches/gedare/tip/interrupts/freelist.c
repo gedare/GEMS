@@ -1,32 +1,51 @@
 
 #include "freelist.h"
 
-Chain_Control sparc64_hwpq_freelist;
-
-void *sparc64_alloc_node() {
-  return _Chain_Get_unprotected( &sparc64_hwpq_freelist );
+void freelist_initialize(
+    Freelist_Control *fc,
+    size_t node_size,
+    size_t bump_count
+) {
+  _Chain_Initialize_empty( &fc->freelist );
+  fc->node_size = node_size;
+  fc->bump_count = bump_count;
+  fc->free_count = 0;
+  freelist_bump(fc);
 }
 
-void sparc64_free_node(void *n) {
-  _Chain_Append_unprotected( &sparc64_hwpq_freelist, n );
-}
-
-void sparc64_hwpq_allocate_freelist( size_t max_pq_size, size_t node_size )
+size_t freelist_bump(Freelist_Control *fc)
 {
+  void *nodes;
   int i;
-  void *the_nodes;
-  the_nodes = _Workspace_Allocate(max_pq_size * node_size);
-  if (!the_nodes) {
-    printk("Unable to allocate free list of size: \n", max_pq_size * node_size);
-    while (1);
+  size_t count = fc->bump_count;
+  size_t size = fc->node_size;
+
+  /* better to use workspace or malloc? */
+  nodes = _Workspace_Allocate(count * size);
+  if (!nodes) {
+    printk("Unable to allocate free list of size: \n", count * size);
+    return 0;
   }
 
-  _Chain_Initialize_empty ( &sparc64_hwpq_freelist );
-  for ( i = 0; i < max_pq_size; i++ ) {
-    /* this is kind of ugly */
-    _Chain_Append_unprotected(
-        &sparc64_hwpq_freelist, 
-        (size_t)the_nodes+i*node_size
-    );
+  fc->free_count += count;
+  for ( i = 0; i < count; i++ ) {
+    _Chain_Append_unprotected( &fc->freelist, (size_t)nodes+i*size );
   }
+  return count;
 }
+
+void *freelist_get_node(Freelist_Control *fc) {
+  if ( fc->free_count == 0 ) {
+    if ( !freelist_bump(fc) ) {
+      return NULL;
+    }
+  }
+  fc->free_count--;
+  return _Chain_Get_first_unprotected( &fc->freelist );
+}
+
+void freelist_put_node(Freelist_Control *fc, void *n) {
+  _Chain_Prepend_unprotected( &fc->freelist, n );
+  fc->free_count++;
+}
+

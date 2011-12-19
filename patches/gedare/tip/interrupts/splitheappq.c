@@ -4,6 +4,7 @@
 
 static Chain_Control queues[10];
 static size_t queue_size[10];
+static Freelist_Control free_nodes;
 
 /* split pq: the heap */
 typedef struct {
@@ -76,7 +77,7 @@ void bubble_down( int i ) {
 
 static inline
 void heap_insert( uint64_t kv ) {
-  pq_node *n = sparc64_alloc_node();
+  pq_node *n = freelist_get_node(&free_nodes);
   if (!n) {
     printk("Unable to allocate new node while spilling\n");
     while (1);
@@ -93,7 +94,7 @@ void heap_insert( uint64_t kv ) {
 static inline
 void heap_remove( int i ) {
   swap_entries(i, heap_current_size);
-  sparc64_free_node(the_heap[heap_current_size]);
+  freelist_put_node(&free_nodes, the_heap[heap_current_size]);
   --heap_current_size;
   bubble_down(i);
 }
@@ -140,7 +141,7 @@ void sparc64_splitheappq_initialize( size_t max_pq_size )
 {
   int i;
   uint64_t reg = 0;
-  sparc64_hwpq_allocate_freelist(max_pq_size, sizeof(pq_node));
+  freelist_initialize(&free_nodes, sizeof(pq_node), max_pq_size);
   sparc64_splitheappq_heap_allocate(max_pq_size);
 
   for (i = 0; i < 10; i++) {
