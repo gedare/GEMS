@@ -424,6 +424,7 @@ void containeropal::RunTimeContainerTracking(pa_t pc, dynamic_inst_t *w)
 						DEBUG_OUT("%s {\n", foundSearch->name);
 					#endif
 					stack_push(returnAddressStack, t);
+					//printf("push %llx stacksize=%d\n",pc, returnAddressStack->size);
 					NewCall(t.containerObj);
 					m_allowRetire = true;
 				}
@@ -520,6 +521,7 @@ void containeropal::PushPermissionStack(container * callee){
 
 
 	#ifdef DEBUG_GICA_PushPermissionStack
+		DEBUG_OUT("%d",thread_active->container_runtime_stack->size);
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %llx\n",__PRETTY_FUNCTION__, callee->entryAddress);
 		//DEBUG_OUT("%s  thread_active->permissionsStack_SP=%llx thread_active->permissionsStack_FP=%llx m_dynamicContainerRuntimeRecordSize=%d\n",__PRETTY_FUNCTION__, thread_active->permissionsStack_SP, thread_active->permissionsStack_FP, m_dynamicContainerRuntimeRecordSize);
@@ -699,11 +701,12 @@ void containeropal::ContextSwitch(pa_t startAddress, dynamic_inst_t *w){
 	
 	staticpermssions * ctx = (staticpermssions *) startAddress;
 
-	
-	printf("\nThread_switch OUT 0x%llx ",thread_active->thread_id);
-	printRTEMSTaksName(thread_active->thread_name);
-	printf("permissionsStack_p = %llx permissionsStack_size=%llx thread_active->permissionsStack_SP=%llx stacksize=%lld\n", permissionsStack_p, permissionsStack_size,thread_active->permissionsStack_SP,  thread_active->permissionsStack_SP - permissionsStack_p  );
-	fflush(stdout);
+	#ifdef DEBUG_GICA_CONTEXTSWITCH_ContextSwitchEnd
+		printf("\nThread_switch OUT 0x%llx ",thread_active->thread_id);
+		printRTEMSTaksName(thread_active->thread_name);
+		printf("permissionsStack_p = %llx permissionsStack_size=%llx thread_active->permissionsStack_SP=%llx stacksize=%lld\n", permissionsStack_p, permissionsStack_size,thread_active->permissionsStack_SP,  thread_active->permissionsStack_SP - permissionsStack_p  );
+		fflush(stdout);
+	#endif
 
 	//check staticpermssions structure for the offsets
 	permissions_p = myMemoryRead(startAddress+24, 8);
@@ -741,8 +744,8 @@ void containeropal::ContextSwitch(pa_t startAddress, dynamic_inst_t *w){
 	#ifdef DEBUG_GICA_CONTEXTSWITCH
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %s  %llx ",__PRETTY_FUNCTION__,printStage(m_stage), startAddress);
-		uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.name.name_u32");
-		uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.id");
+		uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Object.name.name_u32");
+		uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Object.id");
 		char rtemsname[10];
 		toStringRTEMSTaksName(rtemsname, threadNameNew);
 		DEBUG_OUT("switch to THREAD %s ",rtemsname);
@@ -757,8 +760,8 @@ void containeropal::ContextSwitch(pa_t startAddress, dynamic_inst_t *w){
 
 void containeropal::ContextSwitchEnd(){
 
-	uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.name.name_u32");
-	uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.id");
+	uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Object.name.name_u32");
+	uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Object.id");
 	#ifdef DEBUG_GICA_CONTEXTSWITCH
 		for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 		DEBUG_OUT("%s %llx %llx ",__PRETTY_FUNCTION__,thread_active->thread_id, thread_active->thread_name);
@@ -779,10 +782,15 @@ void containeropal::ContextSwitchEnd(){
 	}
 	thread_active->containerRecord_p = m_newThreadContext;
 
-	printf("\nThread_switch IN 0x%llx ",thread_active->thread_id);
-	printRTEMSTaksName(thread_active->thread_name);
-	printf("permissionsStack_p = %llx permissionsStack_size=%llx thread_active->permissionsStack_SP=%llx stacksize=%lld\n", permissionsStack_p, permissionsStack_size,thread_active->permissionsStack_SP,  thread_active->permissionsStack_SP - permissionsStack_p  );
-	fflush(stdout);
+	#ifdef DEBUG_GICA_CONTEXTSWITCH_ContextSwitchEnd
+		printf("\nThread_switch IN 0x%llx ",thread_active->thread_id);
+		printRTEMSTaksName(thread_active->thread_name);
+		printf("permissionsStack_p = %llx permissionsStack_size=%llx thread_active->permissionsStack_SP=%llx stacksize=%lld\n", permissionsStack_p, permissionsStack_size,thread_active->permissionsStack_SP,  thread_active->permissionsStack_SP - permissionsStack_p  );
+		printf("containerSize = %d stacksize=%d\n",containerSize, thread_active->container_runtime_stack->size);
+		//for(int i =0; i< containerSize; i++)
+		//	printf("%s %llx %llx\n",__PRETTY_FUNCTION__, containerTable[i].entryAddress,containerTable[i].endAddress );
+		fflush(stdout);
+	#endif
 }
 
 
@@ -932,9 +940,10 @@ void containeropal::SavePermissionsToCache(container * c){
 }
 */
 
-void containeropal::LoadPermissionsList(container * c, pa_t location_base, long long *remainingCounter_p, addressList toSave, int * toSaveSize){
+void containeropal::LoadPermissionsList( pa_t location_base, long long *remainingCounter_p, addressList toSave, int * toSaveSize){
 
-	if( *remainingCounter_p <=0 || !c) return;
+	//if( *remainingCounter_p <=0 || !c) return;
+	if( *remainingCounter_p <=0) return;
 	bool permissionHit;
 	//pa_t whereToLookForDynamicPermissionList = thread_active->permissionsStack_SP - m_pendingReadDynamicRequests * PERMISSION_RECORD_SIZE;
 	pa_t whereToLookForDynamicPermissionList = location_base - *remainingCounter_p * PERMISSION_RECORD_SIZE;
@@ -967,15 +976,16 @@ void containeropal::LoadPermissionsList(container * c, pa_t location_base, long 
 }
 
 
-void containeropal::SavePermissionList(container *c, pa_t location_base, long long * remainingCounter_p, addressList *toSave, int * toSaveSize ){
-	if( *remainingCounter_p <= 0 || !c) return;
+void containeropal::SavePermissionList(pa_t location_base, long long * remainingCounter_p, addressList *toSave, int * toSaveSize ){
+	if( *remainingCounter_p <= 0) return;
 	bool permissionHit;
 	pa_t whereToSaveDynamicPermissionList = location_base - *remainingCounter_p * PERMISSION_RECORD_SIZE ;
 
 	#ifdef DEBUG_GICA_SavePermissionsList
+			DEBUG_OUT("%d",thread_active->container_runtime_stack->size);
 			for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
-			DEBUG_OUT("%s %d %llx ",__PRETTY_FUNCTION__, *remainingCounter_p, c->entryAddress);
-			DEBUG_OUT("permissions_p %llx entryAddress %llx opalOffsetLocateContainerInPermissions %llx m_pendingReadRequests %d whereToSaveDynamicPermissionList %llx ",permissions_p, c->entryAddress, c->opalOffsetLocateContainerInPermissions, *remainingCounter_p, whereToSaveDynamicPermissionList);
+			DEBUG_OUT("%s %d",__PRETTY_FUNCTION__, *remainingCounter_p);
+			DEBUG_OUT("permissions_p %llx  m_pendingReadRequests %d whereToSaveDynamicPermissionList %llx \n",permissions_p, *remainingCounter_p, whereToSaveDynamicPermissionList);
 	#endif
 
 	permissionHit = this->l1_perm_cache->Write(whereToSaveDynamicPermissionList,this);
@@ -1054,8 +1064,11 @@ void containeropal::LoadCtxContainerList(container * c){
 	#ifdef DEBUG_GICA_CONTEXTSWITCH_LoadCtxContainerList
 			for(int j = 0; j< thread_active->container_runtime_stack->size; j++) DEBUG_OUT("|\t");
 			DEBUG_OUT("%s %d",__PRETTY_FUNCTION__, m_pendingCtxSwitchLoadContainerListPending);
-			DEBUG_OUT(" %llx %llx %llx %lld %lld \n", whereToLookForPermissions, startaddr, endaddr, offset, len);
+			DEBUG_OUT("%s %llx %llx %llx %lld %lld \n",__PRETTY_FUNCTION__, whereToLookForPermissions, startaddr, endaddr, offset, len);
+			DEBUG_OUT("containerSize = %d \n",containerSize);
 	#endif
+	//DEBUG_OUT("%s %llx %llx %llx %lld %lld \n",__PRETTY_FUNCTION__, whereToLookForPermissions, startaddr, endaddr, offset, len);
+			
 
 	container * newcont = container_add(startaddr,"noname");
 	newcont->endAddress = endaddr;
@@ -1080,16 +1093,17 @@ void containeropal::Wakeup(  )
 		DEBUG_OUT("%s %s m_pendingWriteRequests=%d m_pendingReadDynamicRequests=%d m_pendingReadStaticRequestsPending = %d m_pendingCtxSwitchLoadContainerListPending = %d\n",__PRETTY_FUNCTION__,printStage(GetStage()), m_pendingWriteRequests, m_pendingReadDynamicRequests, m_pendingReadStaticRequestsPending, m_pendingCtxSwitchLoadContainerListPending);
 	#endif
 
-	if(m_pendingCtxSwitchLoadContainerListPending || m_pendingCtxSwitchSaveDynContainerRunTimeRecord || m_pendingCtxSwitchSaveDynPermBuffer)
+	if( m_pendingCtxSwitchSaveDynContainerRunTimeRecord || m_pendingCtxSwitchSaveDynPermBuffer)
 	{
 		if(m_pendingCtxSwitchSaveDynContainerRunTimeRecord)
 			m_pendingCtxSwitchSaveDynContainerRunTimeRecord--;
 		else if(m_pendingCtxSwitchSaveDynPermBuffer)
 			m_pendingCtxSwitchSaveDynPermBuffer--;
-		else if (m_pendingCtxSwitchLoadContainerListPending)
-			m_pendingCtxSwitchLoadContainerListPending--;
-		
 		SetStage(CTXSWITCHSTART);
+	}
+	else if (m_pendingCtxSwitchLoadContainerListPending){
+		m_pendingCtxSwitchLoadContainerListPending--;
+		SetStage(CTXSWITCHLOADNEW);
 	}
 	else if ( m_pendingWriteRequests ){ 
 		m_pendingWriteRequests--;
@@ -1131,7 +1145,7 @@ void containeropal::Tick(){
 				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
 				while(stage == SAVEDYN && pcache2contmgrBusWidthCount>0){
 					//SavePermissionsToCache(GetCurrentContainer());
-					SavePermissionList(GetCurrentContainer(), thread_active->permissionsStack_SP, &m_pendingWriteRequests, &m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize);
+					SavePermissionList( thread_active->permissionsStack_SP, &m_pendingWriteRequests, &m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize);
 					stage = GetStage();
 					pcache2contmgrBusWidthCount --;
 					if(m_pendingWriteRequests == 0)
@@ -1155,7 +1169,7 @@ void containeropal::Tick(){
 				int pcache2contmgrBusWidthCount = PCACHE_CONTMGR_BUSWIDTH;
 				while(stage == LDDYN && pcache2contmgrBusWidthCount>0){
 					//LoadDynamicPermissionsFromCache(GetCurrentContainer());
-					LoadPermissionsList(GetCurrentContainer(), thread_active->permissionsStack_SP, &m_pendingReadDynamicRequests, m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize); 
+					LoadPermissionsList( thread_active->permissionsStack_SP, &m_pendingReadDynamicRequests, m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize); 
 					stage = GetStage();
 					pcache2contmgrBusWidthCount --;
 					if(m_pendingReadDynamicRequests == 0)
@@ -1213,16 +1227,16 @@ void containeropal::Tick(){
 		case CTXSWITCHSTART:
 			m_stat_StageCTXSWITCH++;
 			if(m_pendingCtxSwitchSaveDynContainerRunTimeRecord > 0){
-				SavePermissionList(GetCurrentContainer(),(pa_t) (thread_active->containerRecord_p+72),&m_pendingCtxSwitchSaveDynContainerRunTimeRecord, &m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize);
+				SavePermissionList((pa_t) (thread_active->containerRecord_p+72),&m_pendingCtxSwitchSaveDynContainerRunTimeRecord, &m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize);
 			}
 			else if(m_pendingCtxSwitchSaveDynPermBuffer> 0){
-				SavePermissionList(GetCurrentContainer(),(pa_t) (thread_active->containerRecord_p+56),&m_pendingCtxSwitchSaveDynPermBuffer, &m_dynamicPermissionBuffer, &m_dynamicPermissionBufferSize);
+				SavePermissionList((pa_t) (thread_active->containerRecord_p+56),&m_pendingCtxSwitchSaveDynPermBuffer, &m_dynamicPermissionBuffer, &m_dynamicPermissionBufferSize);
 			}
 			else if(m_pendingCtxSwitchLoadDynContainerRunTimeRecord > 0){
-				LoadPermissionsList(GetCurrentContainer(), (pa_t)dynamicContainerRuntimeRecord_p ,&m_pendingCtxSwitchLoadDynContainerRunTimeRecord, m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize);
+				LoadPermissionsList((pa_t)dynamicContainerRuntimeRecord_p ,&m_pendingCtxSwitchLoadDynContainerRunTimeRecord, m_dynamicContainerRuntimeRecord, &m_dynamicContainerRuntimeRecordSize);
 			}
 			else if(m_pendingCtxSwitchLoadDynPermBuffer > 0){
-				LoadPermissionsList(GetCurrentContainer(),(pa_t) dynamicPermissionBuffer_p,&m_pendingCtxSwitchLoadDynPermBuffer , m_dynamicPermissionBuffer, &m_dynamicPermissionBufferSize);
+				LoadPermissionsList((pa_t) dynamicPermissionBuffer_p,&m_pendingCtxSwitchLoadDynPermBuffer , m_dynamicPermissionBuffer, &m_dynamicPermissionBufferSize);
 			}
 			else 
 				SetStage(CTXSWITCHRESET);

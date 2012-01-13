@@ -133,14 +133,14 @@ public:
 	container * GetCurrentContainer( );
 	void LoadStaticPermissionsFromCache(container * c);
 	//void LoadDynamicPermissionsFromCache(container * c);
-	void LoadPermissionsList(container * c, pa_t location_base, long long * remainingCounter_p, addressList toSave, int * toSaveSize);
+	void LoadPermissionsList(pa_t location_base, long long * remainingCounter_p, addressList toSave, int * toSaveSize);
 	bool CheckPedingWaiters(pa_t addr, uint64 size);
 	void LoadMultiPermissionsFromCache(container * c);
 	void LoadCtxContainerList(container * c);
 
 	
 	//void SavePermissionsToCache(container * c);
-	void SavePermissionList(container *c, pa_t location_base, long long * remainingCounter_p, addressList *toSave, int * toSaveSize );
+	void SavePermissionList( pa_t location_base, long long * remainingCounter_p, addressList *toSave, int * toSaveSize );
 	void SavePermissionToCacheOnIdle(container * c);
 	void PushPermissionStack(container * callee);
 	void PushPermissionStackAfter();

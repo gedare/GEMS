@@ -150,8 +150,8 @@ int Thread_switch( uint64 id, uint64 name)
 	//printf("\n");
 	//fflush(stdout);
 
-	md_addr_t StackArea = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Start.Initial_stack.area");
-	uint64 StackSize = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Start.Initial_stack.size");
+	md_addr_t StackArea = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Start.Initial_stack.area");
+	uint64 StackSize = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Start.Initial_stack.size");
 
 	ld_stack_base = StackArea;
 	ld_stack_size = StackSize;
@@ -165,8 +165,8 @@ int Thread_switch( uint64 id, uint64 name)
 
 void ThreadInitializeOnStart()
 {
-	uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.name.name_u32");
-	uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information.executing.Object.id");
+	uint64 threadNameNew = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Object.name.name_u32");
+	uint64 threadIdNew = mySimicsIntSymbolRead("_Per_CPU_Information[0].executing.Object.id");
 	Thread_switch( threadIdNew, threadNameNew);
 }
 
@@ -385,13 +385,13 @@ container* container_add(md_addr_t addr, char * name)
 
 void container_reset()
 {
-	for(int i=0; i< containerSize; i++){
+	/*for(int i=0; i< containerSize; i++){
 		container item = containerTable[i];
 		freeAddressList(item.opalCodeAccessList);
 		freeAddressList(item.opalStackAccessList);
 		freeAddressList(item.opalHeapAccessList);
 		freeAddressList(item.opalStaticDataAccessList);
-	}
+	}*/
 	containerSize = 0;
 }
 
@@ -1558,6 +1558,11 @@ int container_comparison(const void * m1, const void * m2){
 	return ((container *)m1)->entryAddress - ((container *)m2)->entryAddress;
 }
 
+int container_comparison_debug(const void * m1, const void * m2){
+	printf("\t GICA: comparing %llx %llx ? %llx\n", ((container *)m1)->entryAddress, ((container *)m2)->entryAddress, ((container *)m1)->entryAddress - ((container *)m2)->entryAddress);
+	return ((container *)m1)->entryAddress - ((container *)m2)->entryAddress;
+}
+
 //the container list is sorted by address
 container * search(md_addr_t addr)
 {
@@ -1566,10 +1571,7 @@ container * search(md_addr_t addr)
 	return (container *)bsearch(&key, containerTable, containerSize,sizeof(container),container_comparison);
 }
 
-int container_comparison_debug(const void * m1, const void * m2){
-	printf("\t GICA: comparing %llx %llx ? %llx\n", ((container *)m1)->entryAddress, ((container *)m2)->entryAddress, ((container *)m1)->entryAddress - ((container *)m2)->entryAddress);
-	return ((container *)m1)->entryAddress - ((container *)m2)->entryAddress;
-}
+
 
 //the container list is sorted by address
 container * search_debug(md_addr_t addr)
