@@ -550,8 +550,8 @@ extern "C" {
  */
 #define sparc64_write_tick_cmpr( _tick_cmpr ) \
   do { \
-    __asm__ volatile( "wr %%g0, %0, %%tick_cmpr" :  "=r" (_tick_cmpr)  \
-                                             :  "0" (_tick_cmpr) ); \
+    __asm__ volatile( "wr %%g0, %0, %%tick_cmpr" : "=r" (_tick_cmpr) \
+        : "0" (_tick_cmpr) ); \
   } while ( 0 )
 
 /* 
@@ -559,10 +559,16 @@ extern "C" {
  *
  * sun4u and sun4v: softint_clr asr = 21, with mnemonic clear_softint
  */
-#define sparc64_clear_interrupt_bits( _bit_mask ) \
+#define sparc64_clear_interrupt_bits_reg( _bit_mask ) \
   do { \
-  __asm__ volatile( "wr %%g0, %0, %%clear_softint" : "=r" (_bit_mask) \
-                                               : "0" (_bit_mask)); \
+  __asm__ volatile( "wr %%g0, %0, %%clear_softint" \
+      : "=r" (_bit_mask) \
+      :"0" (_bit_mask) ); \
+  } while ( 0 )
+
+#define sparc64_clear_interrupt_bits_const( _bit_mask ) \
+  do { \
+  __asm__ volatile( "wr %%g0, %0, %%clear_softint" : : "n" (_bit_mask) ); \
   } while ( 0 )
 
 /************* DEPRECATED ****************/

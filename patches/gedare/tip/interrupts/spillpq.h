@@ -17,7 +17,7 @@ extern "C" {
 
 #include <rtems/bspIo.h>
 
-typedef void (*SpillPQ_Function)(int argument);
+typedef int (*SpillPQ_Function)(int argument);
 
 typedef struct {
   SpillPQ_Function  initialize;
@@ -29,11 +29,11 @@ typedef struct {
 
 extern sparc64_spillpq_operations *spillpq_ops;
 
-extern void sparc64_spillpq_initialize( int max_pq_size );
-extern void sparc64_spillpq_handle_spill(int queue_idx);
-extern void sparc64_spillpq_handle_fill(int queue_idx);
-extern void sparc64_spillpq_handle_extract(int queue_idx);
-extern void sparc64_spillpq_drain( int queue_id );
+extern int sparc64_spillpq_initialize( int max_pq_size );
+extern int sparc64_spillpq_handle_spill(int queue_idx);
+extern int sparc64_spillpq_handle_fill(int queue_idx);
+extern int sparc64_spillpq_handle_extract(int queue_idx);
+extern int sparc64_spillpq_drain( int queue_id );
 
 #ifdef __cplusplus
 }

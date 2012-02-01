@@ -28,7 +28,7 @@ static int heap_current_size;
 #define kv_key(kv)   (kv>>32)
 
 static inline
-void sparc64_splitheappq_heap_allocate( size_t max_pq_size )
+int sparc64_splitheappq_heap_allocate( size_t max_pq_size )
 {
   the_heap = _Workspace_Allocate(max_pq_size * sizeof(pq_node*));
   if ( ! the_heap ) {
@@ -36,6 +36,8 @@ void sparc64_splitheappq_heap_allocate( size_t max_pq_size )
     while (1);
   }
   heap_current_size = 0;
+
+  return 0;
 }
 
 static inline
@@ -137,7 +139,7 @@ uint64_t heap_pop_min( ) {
 }
 
 static inline 
-void sparc64_splitheappq_initialize( size_t max_pq_size )
+int sparc64_splitheappq_initialize( size_t max_pq_size )
 {
   int i;
   uint64_t reg = 0;
@@ -149,10 +151,12 @@ void sparc64_splitheappq_initialize( size_t max_pq_size )
     HWDS_GET_SIZE_LIMIT(i,reg);
     queue_size[i] = reg;
   }
+
+  return 0;
 }
 
 static inline 
-void sparc64_splitheappq_spill_node(int queue_idx)
+int sparc64_splitheappq_spill_node(int queue_idx)
 {
   uint64_t kv;
 
@@ -163,10 +167,12 @@ void sparc64_splitheappq_spill_node(int queue_idx)
   }
 
   heap_insert(kv);
+
+  return 0;
 }
 
 static inline 
-void sparc64_splitheappq_fill_node(int queue_idx)
+int sparc64_splitheappq_fill_node(int queue_idx)
 {
   uint32_t exception;
   uint64_t kv;
@@ -178,12 +184,14 @@ void sparc64_splitheappq_fill_node(int queue_idx)
 
   if (exception) {
     DPRINTK("Spilling (%d,%X) while filling\n");
-    sparc64_splitheappq_spill_node(queue_idx);
+    return sparc64_splitheappq_spill_node(queue_idx);
   }
+
+  return 0;
 }
 
 static inline 
-void sparc64_splitheappq_handle_spill( int queue_idx )
+int sparc64_splitheappq_handle_spill( int queue_idx )
 {
   int i = 0;
 
@@ -192,6 +200,8 @@ void sparc64_splitheappq_handle_spill( int queue_idx )
     i++;
     sparc64_splitheappq_spill_node(queue_idx);
   }
+
+  return 0;
 }
 
 /*
@@ -199,7 +209,7 @@ void sparc64_splitheappq_handle_spill( int queue_idx )
  * and fills them into the hw pq.
  */
 static inline 
-void sparc64_splitheappq_handle_fill(int queue_idx)
+int sparc64_splitheappq_handle_fill(int queue_idx)
 {
  int            i = 0;
 
@@ -208,10 +218,12 @@ void sparc64_splitheappq_handle_fill(int queue_idx)
     i++;
     sparc64_splitheappq_fill_node(queue_idx);
   }
+
+  return 0;
 }
 
 static inline 
-void sparc64_splitheappq_handle_extract(int queue_idx)
+int sparc64_splitheappq_handle_extract(int queue_idx)
 {
   uint64_t kv;
   uint32_t key;
@@ -235,14 +247,18 @@ void sparc64_splitheappq_handle_extract(int queue_idx)
   }
 
   if ( i == heap_current_size) {
-    printk("Failed software extract: %d\t%X\n", key, val);
+    DPRINTK("Failed software extract: %d\t%X\n", key, val);
+    return -1;
   }
+
+  return 0;
 }
 
 static inline 
-void sparc64_splitheappq_drain( int qid )
+int sparc64_splitheappq_drain( int qid )
 {
   heap_current_size = 0;
+  return 0;
 }
 
 sparc64_spillpq_operations sparc64_splitheappq_ops = {
