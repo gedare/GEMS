@@ -23,7 +23,7 @@ size_t freelist_bump(Freelist_Control *fc)
   /* better to use workspace or malloc? */
   nodes = _Workspace_Allocate(count * size);
   if (!nodes) {
-    printk("Unable to allocate free list of size: \n", count * size);
+    printk("Unable to allocate free list of size: %d\n", count * size);
     return 0;
   }
 

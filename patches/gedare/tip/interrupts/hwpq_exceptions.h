@@ -17,6 +17,8 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate);
 // formerly sparc64_interrupt_3
 void sparc64_hwpq_software_extract(uint64_t vector, CPU_Interrupt_frame *istate);
 
+void sparc64_hwpq_context_switch(uint64_t vector, CPU_Interrupt_frame *istate);
+
 void sparc64_hwpq_drain_queue( int qid );
 
 #ifdef __cplusplus

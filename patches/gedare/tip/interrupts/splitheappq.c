@@ -4,7 +4,7 @@
 
 static Chain_Control queues[10];
 static size_t queue_size[10];
-static Freelist_Control free_nodes;
+static Freelist_Control free_nodes[10];
 
 /* split pq: the heap */
 typedef struct {
@@ -14,8 +14,8 @@ typedef struct {
   uint32_t heap_index;
 } pq_node;
 
-static pq_node **the_heap;
-static int heap_current_size;
+static pq_node **the_heap[10]; // FIXME: need multiple heaps
+static int heap_current_size[10];
 
 /* heap implementation ... */
 #define HEAP_PARENT(i) (i>>1)
@@ -28,58 +28,58 @@ static int heap_current_size;
 #define kv_key(kv)   (kv>>32)
 
 static inline
-int sparc64_splitheappq_heap_allocate( size_t max_pq_size )
+int sparc64_splitheappq_heap_allocate( int qid, size_t max_pq_size )
 {
-  the_heap = _Workspace_Allocate(max_pq_size * sizeof(pq_node*));
-  if ( ! the_heap ) {
+  the_heap[qid] = _Workspace_Allocate(max_pq_size * sizeof(pq_node*));
+  if ( ! the_heap[qid] ) {
     printk("Unable to allocate heap of size: \n",max_pq_size*sizeof(pq_node*));
     while (1);
   }
-  heap_current_size = 0;
+  heap_current_size[qid] = 0;
 
   return 0;
 }
 
 static inline
-void swap_entries(int a, int b) {
-  pq_node *tmp = the_heap[a];
-  int tmpIndex = the_heap[a]->heap_index;
-  the_heap[a]->heap_index = the_heap[b]->heap_index;
-  the_heap[b]->heap_index = tmpIndex;
-  the_heap[a] = the_heap[b];
-  the_heap[b] = tmp;
+void swap_entries(int qid, int a, int b) {
+  pq_node *tmp = the_heap[qid][a];
+  int tmpIndex = the_heap[qid][a]->heap_index;
+  the_heap[qid][a]->heap_index = the_heap[qid][b]->heap_index;
+  the_heap[qid][b]->heap_index = tmpIndex;
+  the_heap[qid][a] = the_heap[qid][b];
+  the_heap[qid][b] = tmp;
 }
 
 static inline
-void bubble_up( int i )
+void bubble_up( int qid, int i )
 {
-  while ( i > 1 && the_heap[i]->key < the_heap[HEAP_PARENT(i)]->key ) {
-    swap_entries (i, HEAP_PARENT(i));
+  while ( i > 1 && the_heap[qid][i]->key < the_heap[qid][HEAP_PARENT(i)]->key ) {
+    swap_entries (qid, i, HEAP_PARENT(i));
     i = HEAP_PARENT(i);
   }
 }
 
 static inline
-void bubble_down( int i ) {
+void bubble_down( int qid, int i ) {
   int j = 0;
 
   do {
     j = i;
-    if ( HEAP_LEFT(j) <= heap_current_size ) {
-      if (the_heap[HEAP_LEFT(j)]->key < the_heap[i]->key)
+    if ( HEAP_LEFT(j) <= heap_current_size[qid] ) {
+      if (the_heap[qid][HEAP_LEFT(j)]->key < the_heap[qid][i]->key)
         i = HEAP_LEFT(j);
     }
-    if ( HEAP_RIGHT(j) <= heap_current_size ) {
-      if (the_heap[HEAP_RIGHT(j)]->key < the_heap[i]->key) 
+    if ( HEAP_RIGHT(j) <= heap_current_size[qid] ) {
+      if (the_heap[qid][HEAP_RIGHT(j)]->key < the_heap[qid][i]->key) 
         i = HEAP_RIGHT(j);
     }
-    swap_entries(i,j);
+    swap_entries(qid, i,j);
   } while (i != j);
 }
 
 static inline
-void heap_insert( uint64_t kv ) {
-  pq_node *n = freelist_get_node(&free_nodes);
+void heap_insert( int qid, uint64_t kv ) {
+  pq_node *n = freelist_get_node(&free_nodes[qid]);
   if (!n) {
     printk("Unable to allocate new node while spilling\n");
     while (1);
@@ -87,118 +87,116 @@ void heap_insert( uint64_t kv ) {
 
   n->key = kv_key(kv);
   n->val = kv_value(kv);
-  ++heap_current_size;
-  the_heap[heap_current_size] = n;
-  n->heap_index = heap_current_size;
-  bubble_up(heap_current_size);
+  ++heap_current_size[qid];
+  the_heap[qid][heap_current_size[qid]] = n;
+  n->heap_index = heap_current_size[qid];
+  bubble_up(qid, heap_current_size[qid]);
 }
 
 static inline
-void heap_remove( int i ) {
-  swap_entries(i, heap_current_size);
-  freelist_put_node(&free_nodes, the_heap[heap_current_size]);
-  --heap_current_size;
-  bubble_down(i);
+void heap_remove( int qid, int i ) {
+  swap_entries(qid, i, heap_current_size[qid]);
+  freelist_put_node(&free_nodes[qid], the_heap[qid][heap_current_size[qid]]);
+  --heap_current_size[qid];
+  bubble_down(qid, i);
 }
 
 /*
 void heap_change_key( int i, int k ) {
-  if (the_heap[i]->key < k) {
+  if (the_heap[qid][i]->key < k) {
     heap_increase_key(i,k);
-  } else if (the_heap[i]->key > k) {
+  } else if (the_heap[qid][i]->key > k) {
     heap_decrease_key(i,k);
   }
 }
 
 void heap_decrease_key( int i, int k ) {
-  the_heap[i]->key = k;
+  the_heap[qid][i]->key = k;
   bubble_up(i);
 }
 
 void heap_increase_key( int i, int k ) {
-  the_heap[i]->key = k;
+  the_heap[qid][i]->key = k;
   bubble_down(i);
 }
 */
 
 static inline
-uint64_t heap_min( ) {
-  if (heap_current_size) {
-    return (HEAP_NODE_TO_KV(the_heap[1]));
+uint64_t heap_min( int qid ) {
+  if (heap_current_size[qid]) {
+    return (HEAP_NODE_TO_KV(the_heap[qid][1]));
   }
   return (uint64_t)-1; // FIXME: error handling
 }
 
 static inline
-uint64_t heap_pop_min( ) {
+uint64_t heap_pop_min( int qid ) {
   uint64_t kv;
-  kv = heap_min();
+  kv = heap_min(qid);
   if ( kv != (uint64_t)-1 )
-    heap_remove(1);
+    heap_remove(qid, 1);
   return kv;
 }
 
 static inline 
-int sparc64_splitheappq_initialize( size_t max_pq_size )
+int sparc64_splitheappq_initialize( int qid, size_t max_pq_size )
 {
   int i;
   uint64_t reg = 0;
-  freelist_initialize(&free_nodes, sizeof(pq_node), max_pq_size);
-  sparc64_splitheappq_heap_allocate(max_pq_size);
+  freelist_initialize(&free_nodes[qid], sizeof(pq_node), max_pq_size);
+  sparc64_splitheappq_heap_allocate(qid, max_pq_size);
 
-  for (i = 0; i < 10; i++) {
-    _Chain_Initialize_empty(&queues[i]);
-    HWDS_GET_SIZE_LIMIT(i,reg);
-    queue_size[i] = reg;
-  }
+  _Chain_Initialize_empty(&queues[qid]);
+  HWDS_GET_SIZE_LIMIT(qid,reg);
+  queue_size[qid] = reg;
 
   return 0;
 }
 
 static inline 
-int sparc64_splitheappq_spill_node(int queue_idx)
+int sparc64_splitheappq_spill_node(int qid)
 {
   uint64_t kv;
 
-  HWDS_SPILL(queue_idx, kv);
+  HWDS_SPILL(qid, kv);
   if (!kv) {
-    printk("Nothing to spill!\n");
-    while(1);
+    DPRINTK("%d\tNothing to spill!\n", qid);
+    return kv;
   }
 
-  heap_insert(kv);
+  heap_insert(qid, kv);
 
   return 0;
 }
 
 static inline 
-int sparc64_splitheappq_fill_node(int queue_idx)
+int sparc64_splitheappq_fill_node(int qid)
 {
   uint32_t exception;
   uint64_t kv;
 
-  kv = heap_pop_min();
+  kv = heap_pop_min(qid);
 
   // add node to hwpq
-  HWDS_FILL(queue_idx, kv_key(kv), kv_value(kv), exception); 
+  HWDS_FILL(qid, kv_key(kv), kv_value(kv), exception); 
 
   if (exception) {
     DPRINTK("Spilling (%d,%X) while filling\n");
-    return sparc64_splitheappq_spill_node(queue_idx);
+    return sparc64_splitheappq_spill_node(qid);
   }
 
   return 0;
 }
 
 static inline 
-int sparc64_splitheappq_handle_spill( int queue_idx )
+int sparc64_splitheappq_handle_spill( int qid )
 {
   int i = 0;
 
   // pop elements off tail of hwpq, merge into software pq
-  while ( i < queue_size[queue_idx]/2 ) { // FIXME
+  while ( i < queue_size[qid]/2 ) { // FIXME
     i++;
-    sparc64_splitheappq_spill_node(queue_idx);
+    sparc64_splitheappq_spill_node(qid);
   }
 
   return 0;
@@ -209,21 +207,21 @@ int sparc64_splitheappq_handle_spill( int queue_idx )
  * and fills them into the hw pq.
  */
 static inline 
-int sparc64_splitheappq_handle_fill(int queue_idx)
+int sparc64_splitheappq_handle_fill(int qid)
 {
  int            i = 0;
 
   // FIXME: figure out what threshold to use (right now just half the queue)
-  while (heap_current_size > 0 && i < queue_size[queue_idx]/2) {
+  while (heap_current_size[qid] > 0 && i < queue_size[qid]/2) {
     i++;
-    sparc64_splitheappq_fill_node(queue_idx);
+    sparc64_splitheappq_fill_node(qid);
   }
 
   return 0;
 }
 
 static inline 
-int sparc64_splitheappq_handle_extract(int queue_idx)
+int sparc64_splitheappq_handle_extract(int qid)
 {
   uint64_t kv;
   uint32_t key;
@@ -235,18 +233,18 @@ int sparc64_splitheappq_handle_extract(int queue_idx)
   val = kv_value(kv);
 
   DPRINTK("software extract: queue: %d\tnode: %x\tprio: %d\n",
-      queue_idx,val,key);
+      qid,val,key);
 
   // linear search, ugh
-  for ( i = 0; i < heap_current_size; i++ ) {
-    if ( the_heap[i]->key == key ) {
-      heap_remove(i);
+  for ( i = 0; i < heap_current_size[qid]; i++ ) {
+    if ( the_heap[qid][i]->key == key ) {
+      heap_remove(qid,i);
       i--;
       break;
     }
   }
 
-  if ( i == heap_current_size) {
+  if ( i == heap_current_size[qid]) {
     DPRINTK("Failed software extract: %d\t%X\n", key, val);
     return -1;
   }
@@ -257,7 +255,20 @@ int sparc64_splitheappq_handle_extract(int queue_idx)
 static inline 
 int sparc64_splitheappq_drain( int qid )
 {
-  heap_current_size = 0;
+  heap_current_size[qid] = 0;
+  return 0;
+}
+
+static inline 
+int sparc64_splitheappq_context_switch( int qid )
+{
+  int i = 0;
+
+  // pop elements off tail of hwpq, merge into software pq
+  while ( sparc64_splitheappq_spill_node(qid) ); // FIXME: pass heap pointer
+
+  // no need to refill, will happen later.
+
   return 0;
 }
 
@@ -266,6 +277,7 @@ sparc64_spillpq_operations sparc64_splitheappq_ops = {
   sparc64_splitheappq_handle_spill,
   sparc64_splitheappq_handle_fill,
   sparc64_splitheappq_handle_extract,
-  sparc64_splitheappq_drain
+  sparc64_splitheappq_drain,
+  sparc64_splitheappq_context_switch
 };
 
