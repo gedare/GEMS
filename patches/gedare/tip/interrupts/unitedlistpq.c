@@ -46,16 +46,19 @@ int sparc64_unitedlistpq_initialize( int qid, size_t max_pq_size )
 }
 
 // FIXME: make a single pass to spill all the nodes..
+// Pass iter node as either the tail of spill_pq or as a node that is known
+// to have lower priority than the lowest priority node in the hwpq; this is
+// simple when there is not concurrent access to a pq in the hwpq.
 static inline 
-int sparc64_unitedlistpq_spill_node(int queue_idx, Chain_Control *spill_pq)
+int sparc64_unitedlistpq_spill_node(int queue_idx, Chain_Control *spill_pq, Chain_Node *iter)
 {
-  Chain_Node *iter;
   uint64_t kv;
   uint32_t key, val;
   pq_node *new_node;
   int i;
 
-  iter = _Chain_Last(spill_pq);
+  //Chain_Node *iter;
+  //iter = _Chain_Last(spill_pq);
 
   HWDS_SPILL(queue_idx, kv);
   if (!kv) {
@@ -87,7 +90,7 @@ int sparc64_unitedlistpq_spill_node(int queue_idx, Chain_Control *spill_pq)
   new_node->key = key;
   new_node->val = val; // FIXME: not full 64-bits
   _Chain_Insert_unprotected(iter, (Chain_Node*)new_node);
-  return 1;
+  return new_node;
 }
 
 static inline 
@@ -107,7 +110,7 @@ int sparc64_unitedlistpq_fill_node(int queue_idx, Chain_Control *spill_pq)
 
   if (exception) {
     DPRINTK("%d\tSpilling while filling\n", queue_idx);
-    return sparc64_unitedlistpq_spill_node(queue_idx, spill_pq);
+    return sparc64_unitedlistpq_spill_node(queue_idx, spill_pq, _Chain_Last(spill_pq));
   }
   return 0;
 }
@@ -117,14 +120,16 @@ int sparc64_unitedlistpq_handle_spill( int queue_idx )
 {
   int i = 0;
   Chain_Control *spill_pq;
+  Chain_Node *iter;
 
   spill_pq = &queues[queue_idx];
   DPRINTK("spill: queue: %d\n", queue_idx);
 
+  iter = _Chain_Last(spill_pq);
   // pop elements off tail of hwpq, merge into software pq
-  while ( i < queue_max_size[queue_idx]/2 ) { // FIXME
+  while ( i < queue_max_size[queue_idx]/2 ) { // FIXME: how much to spill?
     i++;
-    sparc64_unitedlistpq_spill_node(queue_idx, spill_pq); /* FIXME */
+    iter = sparc64_unitedlistpq_spill_node(queue_idx, spill_pq, iter);
   }
   return 0;
 }
@@ -210,7 +215,8 @@ int sparc64_unitedlistpq_context_switch( int qid )
 
   DPRINTK("%d\tcontext_switch\n", qid);
   spill_pq = &queues[qid];
-  while ( sparc64_unitedlistpq_spill_node(qid, spill_pq) );
+  iter = _Chain_Last(spill_pq);
+  while ( (iter = sparc64_unitedlistpq_spill_node(qid, spill_pq, iter)) );
   
   // pull back one node (head/first) to satisfy 'read first' requests.
   sparc64_unitedlistpq_fill_node(qid, spill_pq);

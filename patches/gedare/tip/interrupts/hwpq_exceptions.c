@@ -55,8 +55,6 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
   //operation = (((uint32_t)(context>>32))&~(~0 << (3 + 1)));
   operation = (((uint32_t)(context))&~(~0 << (3 + 1)));
 
-  // TODO: currently not using the HWDS cache? :(
-
   // TODO: should check exception conditions, since some operations can
   // cause multiple exceptions.
 
@@ -70,9 +68,7 @@ void sparc64_hwpq_spill_fill(uint64_t vector, CPU_Interrupt_frame *istate)
       break;
 
     default:
-      // FIXME: this is happening in dimacs, not sure why, but the operations
-      // are spill (7) or fill (8). Doing nothing seems to work though.
-//      printk("Unknown operation (RTEMS): %d\n", operation);
+      printk("Unknown operation (RTEMS): %d\n", operation);
       break;
   }
 
@@ -133,7 +129,6 @@ void sparc64_hwpq_context_switch(uint64_t vector, CPU_Interrupt_frame *istate)
 
   status = sparc64_spillpq_context_switch(queue_idx);
 
-  // TODO: set the new queue id to t_idx
   HWDS_SET_CURRENT_ID(trap_idx);
 
   // FIXME: emulate trapping instruction?
