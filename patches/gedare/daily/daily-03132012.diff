@@ -968,7 +968,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/dx.i gems-2.1.1-hwpq-head2/opal/sy
  
 diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwpq-head2/opal/system/dynamic.C
 --- gems-2.1.1/opal/system/dynamic.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/dynamic.C	2012-03-12 22:22:47.000000000 -0400
++++ gems-2.1.1-hwpq-head2/opal/system/dynamic.C	2012-03-13 13:31:58.000000000 -0400
 @@ -77,7 +77,7 @@
  /*------------------------------------------------------------------------*/
  /* Macro declarations                                                     */
@@ -1051,21 +1051,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwpq-head2/op
      if(!stall){
        m_pseq->getScheduler()->schedule(this);
      }
-@@ -732,6 +742,13 @@ dynamic_inst_t::Schedule() { 
-     static_cast<memory_inst_t *> (this)->Complete(); 
-     break;
- 
-+  case HWDS_CACHE_MISS_STAGE:
-+    #ifdef DEBUG_SCHEDULE
-+      DEBUG_OUT("HWDS_CACHE_MISS_STAGE, cycle[ %lld ] seqnum[ %d ] proc[ %d ] %s\n", m_pseq->getLocalCycle(), seq_num, m_proc, buf);
-+    #endif
-+    static_cast<hwpq_inst_t *> (this)->Complete();
-+    break;
-+
-   case CACHE_NOTREADY_STAGE:
-       #ifdef DEBUG_REG
-              DEBUG_OUT("CACHE_NOTREADY_STAGE, cycle[ %lld ] seqnum[ %d ] proc[ %d ] %s\n", m_pseq->getLocalCycle(), seq_num, m_proc, buf);
-@@ -794,11 +811,15 @@ dynamic_inst_t::Schedule() { 
+@@ -794,11 +804,15 @@ dynamic_inst_t::Schedule() { 
      SIM_HALT;
  
    default:
@@ -1082,37 +1068,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.C gems-2.1.1-hwpq-head2/op
       DEBUG_OUT("dynamic_inst_t:Schedule END proc[%d] seqnum[%d]\n",m_proc,seq_num);
    #endif
    // DEBUG_OUT("instruction: %s stage: %d\n", print(), m_stage);
-@@ -1490,6 +1511,8 @@ const char *dynamic_inst_t::printStage( 
-     return ("EARLY_ATOMIC_STAGE");
-   case CACHE_MISS_STAGE:
-     return ("CACHE_MISS_STAGE");
-+  case HWDS_CACHE_MISS_STAGE:
-+    return ("HWDS_CACHE_MISS_STAGE");
-   case CACHE_NOTREADY_STAGE:
-     return ("CACHE_NOTREADY_STAGE");
-   case CACHE_MISS_RETIREMENT_STAGE:
-@@ -1529,6 +1552,7 @@ const char *dynamic_inst_t::printStageAb
-   case EARLY_STORE_STAGE:
-   case EARLY_ATOMIC_STAGE:
-   case CACHE_MISS_STAGE:
-+  case HWDS_CACHE_MISS_STAGE:
-   case CACHE_NOTREADY_STAGE:
-   case CACHE_MISS_RETIREMENT_STAGE:
-   case CACHE_NOTREADY_RETIREMENT_STAGE:
-diff -X dontdiff -uprN gems-2.1.1/opal/system/dynamic.h gems-2.1.1-hwpq-head2/opal/system/dynamic.h
---- gems-2.1.1/opal/system/dynamic.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/dynamic.h	2012-03-01 11:48:30.000000000 -0500
-@@ -175,6 +175,7 @@ public:
-     EARLY_STORE_STAGE,
-     EARLY_ATOMIC_STAGE,
-     CACHE_MISS_STAGE,
-+    HWDS_CACHE_MISS_STAGE,
-     CACHE_NOTREADY_STAGE,
-     CACHE_MISS_RETIREMENT_STAGE,
-     CACHE_NOTREADY_RETIREMENT_STAGE,
 diff -X dontdiff -uprN gems-2.1.1/opal/system/hfa.C gems-2.1.1-hwpq-head2/opal/system/hfa.C
 --- gems-2.1.1/opal/system/hfa.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/hfa.C	2012-03-12 14:48:24.000000000 -0400
++++ gems-2.1.1-hwpq-head2/opal/system/hfa.C	2012-03-13 13:27:58.000000000 -0400
 @@ -201,6 +201,9 @@ void hfa_allocate( void )
                                   sizeof(atomic_inst_t), 100 );
    prefetch_inst_t::m_myalloc.init( "prefetch_inst_t",
@@ -1123,24 +1081,18 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hfa.C gems-2.1.1-hwpq-head2/opal/s
    /// memory allocator for branch, etc. instructions (controlop.C)
    control_inst_t::m_myalloc.init( "control_inst_t",
                                    sizeof(control_inst_t), 100 );
-@@ -337,6 +340,16 @@ static void hfa_install_snoop( void )
+@@ -337,6 +340,10 @@ static void hfa_install_snoop( void )
    }
  }
  
 +static void hfa_hwpq_set_size( int s )
 +{
-+  hwpq_t *pq_arr = system_t::inst->m_seq[0]->m_hwpq;
-+  int pq_count = system_t::inst->m_seq[0]->m_hwpq_count;
-+  int i;
-+  for ( i = 0; i < pq_count; i++ ) {
-+    pq_arr[i].set_max_size(s);
-+  }
 +}
 +
  // ADD_SIMCOMMAND
  #if 0
  //**************************************************************************
-@@ -772,6 +785,12 @@ set_error_t hfa_dispatch_set( void *id, 
+@@ -772,6 +779,12 @@ set_error_t hfa_dispatch_set( void *id, 
  
    } else if (!strcmp(attr_fn, "mlp-trace")) {
      return system_t::inst->commandSetDispatch( val );
@@ -1155,8 +1107,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hfa.C gems-2.1.1-hwpq-head2/opal/s
                 attr_fn );
 diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/system/hwpq.C
 --- gems-2.1.1/opal/system/hwpq.C	1969-12-31 19:00:00.000000000 -0500
-+++ gems-2.1.1-hwpq-head2/opal/system/hwpq.C	2012-03-13 12:36:38.000000000 -0400
-@@ -0,0 +1,328 @@
++++ gems-2.1.1-hwpq-head2/opal/system/hwpq.C	2012-03-13 13:30:35.000000000 -0400
+@@ -0,0 +1,152 @@
 +/*
 + * FileName:  hwpq.C
 + * Synopsis:  Implements a hardware priority queue
@@ -1175,166 +1127,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +#include <stdio.h>
 +#include <vector>
 +
-+#define M_PSTATE \
-+  system_t::inst->m_state[insn->m_pseq->getID()/CONFIG_LOGICAL_PER_PHY_PROC]
-+
 +/// memory allocator for hwpq.C
 +listalloc_t hwpq_inst_t::m_myalloc;
-+
-+void hwpq_t::fill(hwpq_node_t* node) {
-+  // insert node to hwpq
-+  insert(node);
-+
-+  // update count
-+  --m_spill_count;
-+
-+  // fix valid bits (should be done while inserting, but this is easy)
-+  typename vector<hwpq_node_t *>::iterator i;
-+  for ( i = m_pq.begin(); i != m_pq.end(); i++ ) {
-+    if ( (*i) == node )
-+      break;
-+    (*i)->valid = true;
-+  }
-+  node->valid = true;
-+
-+  // handle special case for when fill last element from SW spill area.
-+  if (!m_spill_count) {
-+    while (i != m_pq.end()) {
-+      (*i)->valid = true;
-+      i++;
-+    }
-+  }
-+
-+}
-+
-+uint64 hwpq_t::spill( ) {
-+  hwpq_node_t* last;
-+  uint64 payload;
-+
-+  // remove last element from hwpq
-+  payload = extract_last();
-+
-+  // update count
-+  if ( payload )
-+    ++m_spill_count;
-+
-+  // update valid
-+  if (!m_pq.empty()) {
-+    hwpq_node_t* node = m_pq.back();
-+    node->valid = false;
-+  }
-+
-+  return payload;
-+}
-+
-+void hwpq_t::print_queue() {
-+  vector<hwpq_node_t *>::iterator i;
-+  for (i = m_pq.begin(); i != m_pq.end(); i++ )
-+    (*i)->print_node();
-+}
-+
-+hwpq_node_t* hwpq_t::first() {
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("pq_first:\n");
-+  print_queue();
-+#endif
-+  // return NULL if the queue is empty
-+  if (m_pq.empty()) {
-+    return NULL;
-+  }
-+  if ( m_pq.front()->valid == false ) {
-+    DEBUG_OUT("Invalid first node (%d spilled, %d current)\n",
-+        m_spill_count, get_current_size());
-+  }
-+
-+  return m_pq.front();
-+}
-+
-+hwpq_node_t* hwpq_t::last() {
-+  hwpq_node_t* node = NULL;
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("pq_last:\n");
-+  print_queue();
-+#endif
-+
-+  if (!m_pq.empty())
-+    node = m_pq.back();
-+
-+  return node;
-+}
-+
-+// returns the last nodes payload
-+uint64 hwpq_t::extract_last( )
-+{
-+  hwpq_node_t* node = NULL;
-+  uint64 payload = 0;
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("extract_last:\n");
-+  print_queue();
-+#endif
-+
-+  // now pop the least priority element
-+  if (!m_pq.empty()) {
-+    node = m_pq.back();
-+    payload = node->payload;
-+    m_pq.pop_back();
-+  }
-+
-+  return payload;
-+}
-+
-+hwpq_node_t* hwpq_t::extract(uint64 data)
-+{
-+  vector< hwpq_node_t * >::iterator i;
-+  hwpq_node_t *node = NULL;
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("pq_extract:\n");
-+  print_queue();
-+#endif
-+
-+  /* search for data in pq */
-+  for ( i = m_pq.begin(); i != m_pq.end(); i++ ) {
-+    if ((*i)->payload == data) break;
-+  }
-+
-+  if (i != m_pq.end()) { /* found data */
-+    node = *i;
-+    m_pq.erase( i );
-+  }
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("pq_extract:\n");
-+  print_queue();
-+#endif
-+  return node;
-+}
-+
-+void hwpq_t::insert(hwpq_node_t *node) 
-+{
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("pq_insert:\n");
-+  print_queue();
-+#endif
-+  // use stable sort so that the hwpq-decoder and opal construct same hwpq
-+  typename vector<hwpq_node_t *>::iterator i;
-+  for ( i = m_pq.begin(); i != m_pq.end(); i++ ) {
-+    if ( (*i)->valid == false ) {
-+      if (m_spill_count > 0)
-+        node->valid = false;
-+      else
-+        (*i)->valid = true;
-+    }
-+    if ( (*i)->priority > node->priority )
-+      break;
-+  }
-+  if ( (i == m_pq.end()) && (m_spill_count > 0) )
-+    node->valid = false;
-+
-+  m_pq.insert(i, node);
-+#ifdef GAB_DEBUG
-+  DEBUG_OUT("pq_insert\n");
-+  print_queue();
-+#endif
-+}
 +
 +hwpq_inst_t::hwpq_inst_t( static_inst_t *s_inst,
 +      int32 window_index,
@@ -1344,9 +1138,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +      trap_type_t trapgroup,
 +      uint32 proc) 
 +  : dynamic_inst_t( s_inst, window_index, pseq, at, physicalPC, trapgroup, proc) {
-+// default dynamic_inst_t constructor
-+    m_in_order = false;
-+    m_fetch_at = *at;
++  // default dynamic_inst_t constructor
++  m_type = HWDS_INST_UNUSED;
++  m_queue_idx = 0;
 +}
 +
 +hwpq_inst_t::~hwpq_inst_t() {
@@ -1397,13 +1191,11 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +  m_pseq->out_info("  %-50.50s %10u\n", buf, latency );
 +
 +  ASSERT( !getEvent( EVENT_FINALIZED ) );
++  
 +  ASSERT( s->getFlag( SI_FETCH_BARRIER ) );
-+
-+  //doExecute();
++  m_pseq->unstallFetch(m_proc);   
 +  
 +  STAT_INC( m_pseq->m_stat_hwds_retired[m_proc][m_type] );
-+
-+  m_pseq->unstallFetch(m_proc);   
 +
 +  retireRegisters();
 +  SetStage(RETIRE_STAGE);
@@ -1428,9 +1220,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +
 +void hwpq_inst_t::Execute() {
 +
-+  hwpq_t *queue = NULL;
-+  hwpq_node_t *node;
-+  hwpq_node_t *new_node = NULL;
 +  uint32 queue_idx = 0;
 +  int operation = 0;
 +  int value = 0;
@@ -1462,7 +1251,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +    goto out;
 +  }
 +
-+  m_hwpq = &m_pseq->getHardwarePriorityQueue()[queue_idx];
 +  m_queue_idx = queue_idx;
 +  m_type = (enum hwds_inst_type_t)operation;
 +
@@ -1473,22 +1261,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +  SetStage(COMPLETE_STAGE);
 +}
 +
-+void hwpq_inst_t::Complete() {
-+
-+  switch (m_type) {
-+    default:
-+      DEBUG_OUT("Invalid instruction type at Complete: %d\n", m_type);
-+      break;
-+  }
-+  WRITE_DEST(0);
-+  SetStage(COMPLETE_STAGE);
-+}
-+
-+
 diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-head2/opal/system/hwpq.h
 --- gems-2.1.1/opal/system/hwpq.h	1969-12-31 19:00:00.000000000 -0500
-+++ gems-2.1.1-hwpq-head2/opal/system/hwpq.h	2012-03-13 11:37:19.000000000 -0400
-@@ -0,0 +1,333 @@
++++ gems-2.1.1-hwpq-head2/opal/system/hwpq.h	2012-03-13 13:27:34.000000000 -0400
+@@ -0,0 +1,127 @@
 +/*
 + * hwpq.h
 + *
@@ -1522,8 +1298,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-head2/opal/
 +/* Class declaration(s)                                                   */
 +/*------------------------------------------------------------------------*/
 +
-+class hwpq_t;
-+
 +// types of hwpq instructions
 +enum hwds_inst_type_t {
 +  HWDS_INST_UNUSED = 0,
@@ -1554,7 +1328,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-head2/opal/
 + */
 +//**************************************************************************
 +class hwpq_inst_t : public dynamic_inst_t {
-+  friend class hwpq_t;
 +public:
 +  /** @name Constructor(s) / Destructor */
 +  //@{
@@ -1571,9 +1344,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-head2/opal/
 +  /** Destructor: uses default destructor. */
 +  ~hwpq_inst_t();
 +  //@}
-+
-+  /** complete a hwds operation that has missed in the cache */
-+  void Complete( void );
 +
 +  /** Allocates object throuh allocator interface */
 +  void *operator new( size_t size ) {
@@ -1597,221 +1367,21 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-head2/opal/
 +   */
 +  void Retire( abstract_pc_t *a );
 +
-+  /** does the in-order execution part */
-+//  void doExecute();
 +  /** do the generic execution stuff for hwds operations */
 +  void Execute();
-+
-+  bool isInOrder() { return m_in_order; }
-+  void setInOrder() { m_in_order = true; }
 +
 +  /** @name memory allocation:: */
 +  //@{
 +  static listalloc_t m_myalloc;
 +  //@}
 +
-+ //TODO: private? // for fill/spill insns, the addr of the slot
-+  la_t m_addr;
 +private:
-+  // flag set true when the hwpq instruction is in order (at least 
-+  // wrt other hwpq instructions and branches). This is used to control
-+  // when the hwpq fires.
-+  bool m_in_order;
-+
 +  // the hwpq for this instruction
-+  hwpq_t *m_hwpq;
 +  int m_queue_idx;
 +
 +  // the type of this instruction
 +  hwds_inst_type_t m_type;
-+
-+  /** next program counter: used for replay traps to correct fetch */
-+  abstract_pc_t m_fetch_at;
 +};
-+ 
-+/**
-+ *  A simulated hardware priority queue
-+ *
-+ * @see     hwpq_inst_t
-+ * @author  gedare
-+ * @version $Id$
-+ */
-+//**************************************************************************
-+
-+class hwpq_node_t {
-+  public:
-+    hwpq_node_t(int priority, uint64 payload) {
-+      this->priority = priority;
-+      this->payload = payload;
-+      valid = true;
-+    }
-+
-+    /** Print a node */
-+    void print_node() { printf("%d\t%llu\t%d\n",priority,payload,valid); }
-+
-+    /**
-+     * @name Accessor(s) / mutator(s)
-+     */
-+    void set_priority(int p) { priority = p; }
-+    int get_priority() { return priority; }
-+
-+    void set_payload(uint64 p) { payload = p; }
-+    uint64 get_payload() { return payload; }
-+
-+    // should be private, but makes comparisons harder.
-+    int priority;
-+    uint64 payload;
-+    bool valid;
-+
-+};
-+
-+/**
-+* A priority queue implemented in hardware. It is a heap built with the 
-+* vector STL.
-+*
-+* @see    
-+* @author  gedare
-+* @version $Id$
-+*/
-+class hwpq_t {
-+public:
-+  /**
-+   * @name Constructor(s) / destructor
-+   */
-+  //@{
-+
-+  /** Constructor */
-+  hwpq_t() {
-+    m_pq_is_ascending = true;
-+    m_spill_count = 0;
-+  }
-+
-+  /**
-+   * Constructor: creates object
-+   * @param is_ascending true if low priority value means high priority level
-+   */
-+  hwpq_t(bool is_ascending) {
-+    m_pq_is_ascending = is_ascending;    
-+  }
-+
-+  /**
-+   * Destructor: frees object.
-+   */
-+  ~hwpq_t() { ; };
-+  //@}
-+
-+  /**
-+   * @name Methods
-+   */
-+  //@{
-+
-+  /**
-+   * Spill/fill related functions and fields would probably be inherited.
-+   */
-+  
-+  /** Spill the tail of queue to backing store */
-+  uint64 spill();
-+
-+  /** Fill the queue from backing store */
-+  void fill(hwpq_node_t*);
-+
-+  /** Retrieve first (highest priority) element */
-+  hwpq_node_t* first();
-+
-+  /** Retrieve last (lowest priority) element */
-+  hwpq_node_t* last();
-+  
-+  /** Remove the last (lowest priority) element */
-+  uint64 extract_last( );
-+
-+  /** Extract an element with given payload */
-+  hwpq_node_t* extract(uint64 payload);
-+
-+  /** Insert an element with given priority and payload */
-+  void insert(hwpq_node_t* node);
-+
-+  /** Print the queue */
-+  void print_queue();
-+
-+  /** Compare two elements on the queue (used to create a max heap with STL) */
-+  class hwpq_node_heap_max_compare {
-+    public:
-+      bool operator() ( const hwpq_node_t *a, const hwpq_node_t *b ) const {
-+        return a->priority < b->priority;
-+      }
-+  };
-+
-+  /** Compare two elements on the queue (used to create a min heap with STL) */
-+  class hwpq_node_heap_min_compare {
-+    public:
-+      bool operator() ( const hwpq_node_t *a, const hwpq_node_t *b ) const {
-+        return a->priority > b->priority;
-+      }
-+  };
-+
-+  bool is_ascending() {
-+    return m_pq_is_ascending;
-+  }
-+
-+  /**
-+   * need_spill and need_fill should be consistent with hwpq-decoder 
-+   */
-+  bool need_spill() {
-+    return get_current_size() == get_max_size();
-+  }
-+
-+  bool need_fill() {
-+    if ( get_current_size() == 0 )
-+      return (m_spill_count > 0);
-+
-+    if ( m_pq.front()->valid == false ) {
-+      return (m_spill_count > 0);
-+    }
-+
-+    return (m_spill_count > 0 && get_current_size() < get_max_size()/4);
-+  }
-+
-+  //@}
-+
-+  /**
-+   * @name Accessor(s) / mutator(s)
-+   */
-+  //@{
-+
-+  void dec_spill_count() {--m_spill_count;}
-+  int get_spill_count() { return m_spill_count; }
-+
-+  /** the current size of the hwpq */
-+  int get_current_size() { return m_pq.size(); }
-+
-+  /** the maximum size of the hwpq */
-+  int get_max_size() { return max_size; }
-+  void set_max_size(int s) { max_size = s; }
-+
-+  int get_current_queue() { return current_queue; }
-+  void set_current_queue(int q) { current_queue = q; }
-+
-+private:
-+  // priority queue as a heap
-+  vector<hwpq_node_t *> m_pq;
-+
-+  // max size of hwpq
-+  int max_size;
-+
-+  // true if low priority value means higher priority level
-+  bool m_pq_is_ascending;
-+
-+  // number of spilled nodes
-+  int m_spill_count;
-+
-+  /** pointer to the owning sequencer */
-+  pseq_t       *m_pseq;
-+
-+  int current_queue;
-+};
-+ 
-+
-+
 +
 +/*------------------------------------------------------------------------*/
 +/* Global variables                                                       */
@@ -1822,36 +1392,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.h gems-2.1.1-hwpq-head2/opal/
 +/*------------------------------------------------------------------------*/
 +
 +#endif /* _HWPQ_H_ */
-diff -X dontdiff -uprN gems-2.1.1/opal/system/iwindow.C gems-2.1.1-hwpq-head2/opal/system/iwindow.C
---- gems-2.1.1/opal/system/iwindow.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/iwindow.C	2012-03-12 22:22:54.000000000 -0400
-@@ -232,6 +232,26 @@ dynamic_inst_t *iwindow_t::retireInstruc
-   }
-   */
- 
-+  // GAB: Hack to ensure in-order execution (and forward progress) for hwpq instructions
-+#if 0 
-+  if (dinst && dinst->getStaticInst()->getType() == DYN_HWPQ) {
-+    // if not already in order, then set in order (and schedule).
-+    // if in order is already set, then instruction has already 
-+    // been scheduled / executed, so fall through
-+    if (!(static_cast<hwpq_inst_t *> (dinst))->isInOrder()) {
-+      (static_cast<hwpq_inst_t *> (dinst))->setInOrder();
-+      if (!dinst->Waiting()) {
-+        if ( dinst->getStage() == dinst->FETCH_STAGE ) {
-+          // FIXME
-+          dinst->Decode( system_t::inst->m_seq[0]->getLocalCycle() );
-+        } else {
-+          dinst->Schedule();
-+        }
-+      }
-+    }
-+  }
-+#endif
-+
-   if (dinst && dinst->isRetireReady()) {
-     m_last_retired = nextslot;
-     m_window[m_last_retired] = NULL;
 diff -X dontdiff -uprN gems-2.1.1/opal/system/ix.i gems-2.1.1-hwpq-head2/opal/system/ix.i
 --- gems-2.1.1/opal/system/ix.i	2010-09-01 14:06:13.000000000 -0400
 +++ gems-2.1.1-hwpq-head2/opal/system/ix.i	2012-03-01 11:48:30.000000000 -0500
@@ -1940,7 +1480,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/mshr.h gems-2.1.1-hwpq-head2/opal/
    //@}
 diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/system/pseq.C
 --- gems-2.1.1/opal/system/pseq.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/pseq.C	2012-03-13 12:16:30.000000000 -0400
++++ gems-2.1.1-hwpq-head2/opal/system/pseq.C	2012-03-13 13:40:26.000000000 -0400
 @@ -101,6 +101,8 @@
  #include "ptrace.h"
  #include "Vector.h"    
@@ -1950,7 +1490,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
  #include "pseq.h"
  
  /*------------------------------------------------------------------------*/
-@@ -196,7 +198,13 @@ pseq_t::pseq_t( int32 id )
+@@ -196,7 +198,11 @@ pseq_t::pseq_t( int32 id )
    l1_inst_cache         = NULL;
    l1_data_cache         = NULL;
    m_ruby_cache          = NULL;
@@ -1959,13 +1499,11 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
 +  // GAB: HWPQ
 +  hl1_mshr              = NULL;
 +  l1_hwds_cache         = NULL;
-+  m_hwpq                = NULL;
-+  m_hwpq_count          = 0;
 + 
   /* WATTCH power */
    m_power_stats = NULL;
    if(WATTCH_POWER){
-@@ -424,6 +432,10 @@ pseq_t::pseq_t( int32 id )
+@@ -424,6 +430,10 @@ pseq_t::pseq_t( int32 id )
                            DL1_BLOCK_BITS, L2_LATENCY, L1_FILL_BUS_CYCLES,
                            DL1_MSHR_ENTRIES, DL1_STREAM_BUFFERS);
      
@@ -1976,7 +1514,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
      /* first level instruction caches */  
      l1_inst_cache = new generic_cache_template<generic_cache_block_t>(
                        "L1.inst", il1_mshr, m_scheduler, IL1_SET_BITS,
-@@ -433,6 +445,11 @@ pseq_t::pseq_t( int32 id )
+@@ -433,6 +443,11 @@ pseq_t::pseq_t( int32 id )
      l1_data_cache = new generic_cache_template<generic_cache_block_t>(
                        "L1.data", dl1_mshr, m_scheduler, DL1_SET_BITS,
                        DL1_ASSOC, DL1_BLOCK_BITS, (DL1_IDEAL != 0) );
@@ -1988,17 +1526,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    } else {
      /* CONFIG_WITH_RUBY  */
      m_ruby_cache = new rubycache_t( m_id, L2_BLOCK_BITS, m_scheduler );
-@@ -440,6 +457,9 @@ pseq_t::pseq_t( int32 id )
-     m_write_buffer = new writebuffer_t( m_id, L2_BLOCK_BITS, m_scheduler );
-   }
- 
-+  m_hwpq_count = CONFIG_NUM_HWPQS;
-+  m_hwpq = new hwpq_t[CONFIG_NUM_HWPQS];
-+
-   // set MMU related fields
-   m_primary_ctx = new context_id_t[CONFIG_LOGICAL_PER_PHY_PROC];
-   m_itlb_physical_address = new pa_t[CONFIG_LOGICAL_PER_PHY_PROC];
-@@ -614,6 +634,7 @@ pseq_t::pseq_t( int32 id )
+@@ -614,6 +629,7 @@ pseq_t::pseq_t( int32 id )
    ASSERT( m_arch_bpred->ras_state.TOS      == 0 );
    ASSERT( m_arch_bpred->ras_state.next_free == 1 );
  
@@ -2006,7 +1534,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    #ifdef DEBUG_PSEQ
    DEBUG_OUT("pseq_t:constructor END\n");
    #endif
-@@ -777,7 +798,17 @@ pseq_t::~pseq_t() {
+@@ -777,7 +793,14 @@ pseq_t::~pseq_t() {
      delete dl1_mshr;
    if (l2_mshr)
      delete l2_mshr;
@@ -2019,13 +1547,10 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
 +  if (hl1_mshr)
 +    delete hl1_mshr;
 +
-+  if (m_hwpq)
-+    delete [] m_hwpq;
-+
    for(uint k=0; k <  CONFIG_LOGICAL_PER_PHY_PROC; ++k){
      if(m_imap[k])
        delete m_imap[k];
-@@ -984,6 +1015,8 @@ pseq_t::~pseq_t() {
+@@ -984,6 +1007,8 @@ pseq_t::~pseq_t() {
  
    if(m_stat_trace_insn)
      delete [] m_stat_trace_insn;
@@ -2034,7 +1559,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    if(m_stat_committed)
      delete [] m_stat_committed;
    if(m_stat_total_squash)
-@@ -1040,6 +1073,40 @@ pseq_t::~pseq_t() {
+@@ -1040,6 +1065,40 @@ pseq_t::~pseq_t() {
    if(m_stat_control_exec)
      delete [] m_stat_control_exec;
  
@@ -2075,7 +1600,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    if(m_stat_loads_found)
      delete [] m_stat_loads_found;
    if(m_stat_loads_notfound)
-@@ -1288,7 +1355,9 @@ void pseq_t::advanceCycle( void )
+@@ -1288,7 +1347,9 @@ void pseq_t::advanceCycle( void )
    }
  #endif
  
@@ -2086,7 +1611,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    fetchInstruction();
  
    // II. Decode instructions in the pipe
-@@ -1333,7 +1402,20 @@ void pseq_t::advanceCycle( void )
+@@ -1333,7 +1394,20 @@ void pseq_t::advanceCycle( void )
      // then tick L1
      il1_mshr->Tick();
      dl1_mshr->Tick();
@@ -2107,7 +1632,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
  
    // advance local time one cycle (do this only after all threads have finished going through pipeline)
    localCycleIncrement();               
-@@ -1371,7 +1453,7 @@ void pseq_t::fetchInstruction( )
+@@ -1371,7 +1445,7 @@ void pseq_t::fetchInstruction( )
  //**************************************************************************
  void pseq_t::fetchInstrSimple( )
  {
@@ -2116,7 +1641,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
            DEBUG_OUT("pseq_t:fetchInstrSimple BEGIN cycle[ %d ]\n",getLocalCycle());
    #endif
  
-@@ -1394,7 +1476,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1394,7 +1468,7 @@ void pseq_t::fetchInstrSimple( )
      for(uint proc=0; (proc <  CONFIG_LOGICAL_PER_PHY_PROC); ++proc){
        timeout++;
  
@@ -2125,7 +1650,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
            DEBUG_OUT("pseq_t:fetchInstrSimple BEGIN proc[%d] cycle %d\n",proc, getLocalCycle());
            printPC(m_fetch_at[proc]);
           #endif
-@@ -1428,7 +1510,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1428,7 +1502,7 @@ void pseq_t::fetchInstrSimple( )
           if (DEBUG_SIMPLE_FE) DEBUG_OUT("fetch is not ready: %s\n", fetch_menomic(m_fetch_status[proc]));
           ASSERT( m_fetch_status[proc] < PSEQ_FETCH_MAX_STATUS );
  
@@ -2134,7 +1659,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
              DEBUG_OUT("\tfetch not ready, status = %s cycle[ %lld ]\n", fetch_menomic(m_fetch_status[proc]), m_local_cycles);
           #endif
           //set this logical proc's done flag to true:
-@@ -1470,7 +1552,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1470,7 +1544,7 @@ void pseq_t::fetchInstrSimple( )
                     m_fetch_status[proc] = PSEQ_FETCH_ITLBMISS;
                     done[proc] = true;
             } else {        
@@ -2143,7 +1668,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
                   //DEBUG_OUT("\tITLB hit, now access cache...\n");
                #endif
      
-@@ -1527,11 +1609,11 @@ void pseq_t::fetchInstrSimple( )
+@@ -1527,11 +1601,11 @@ void pseq_t::fetchInstrSimple( )
               *  This include the case where pc1 == pc2, when last fetch was
               *  a miss and it is then fetched again after woken up.
               */
@@ -2157,7 +1682,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
                       DEBUG_OUT("\tUpdating our line buffer...\n");
                     #endif
                       // Modified to take in the logical proc's waiter object:
-@@ -1542,7 +1624,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1542,7 +1616,7 @@ void pseq_t::fetchInstrSimple( )
                   getPowerStats()->incrementICacheAccess();
                 }
  
@@ -2166,7 +1691,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
                       DEBUG_OUT("\tAfter reading L1Icache, hit[%d]..\n",hit);
                     #endif
                 m_last_fetch_physical_address[proc] = fetchPhysicalPC;             //update our line buffer for the new instr addr being read out
-@@ -1572,7 +1654,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1572,7 +1646,7 @@ void pseq_t::fetchInstrSimple( )
          } // ! ruby cache
       } // !tlbmiss
  
@@ -2175,7 +1700,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
          DEBUG_OUT("\tAbout to assign old_pc...\n");
        #endif
  
-@@ -1602,13 +1684,13 @@ void pseq_t::fetchInstrSimple( )
+@@ -1602,13 +1676,13 @@ void pseq_t::fetchInstrSimple( )
          getPowerStats()->incrementWindowAccess();
        }
  
@@ -2191,7 +1716,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
               //DEBUG_OUT("\tInstruction fetched is a BARRIER...stall fetch!!\n");
              #endif
  
-@@ -1651,7 +1733,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1651,7 +1725,7 @@ void pseq_t::fetchInstrSimple( )
          *  these instructions become ready in FETCH_STAGES cycles
          */
         
@@ -2200,7 +1725,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
           DEBUG_OUT("\tinserting %d instrs to be decoded at cycle[%d] proc[%d] fetch_status[ %s ]\n",num_fetched[proc],
                           getLocalCycle()+FETCH_STAGES,proc, fetch_menomic(m_fetch_status[proc]));
  #endif
-@@ -1671,7 +1753,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1671,7 +1745,7 @@ void pseq_t::fetchInstrSimple( )
         }
        m_icount[proc] = m_iwin[proc].getNumSlotsTaken();                    //set m_icount for this thread
         
@@ -2209,7 +1734,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
       printPC(m_fetch_at[proc]);
       DEBUG_OUT("pseq_t:fetchinstrSimple END m_id[%d] proc[%d] cycle[%d]\n",m_id, proc,getLocalCycle());
     #endif
-@@ -1701,7 +1783,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1701,7 +1775,7 @@ void pseq_t::fetchInstrSimple( )
  
    } //end for all logical procs
         
@@ -2218,7 +1743,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    //out_info("num fetched PC 0x%0llx NPC 0x%0llx %d\n",
    //       m_fetch_at[proc]->pc, m_fetch_at[proc]->npc, num_fetched);
  #endif
-@@ -1710,7 +1792,7 @@ void pseq_t::fetchInstrSimple( )
+@@ -1710,7 +1784,7 @@ void pseq_t::fetchInstrSimple( )
   // record the SMT fetch histogram 
   m_hist_smt_fetch_per_cycle[num_threads_fetched]++;
  
@@ -2227,7 +1752,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
       DEBUG_OUT("pseq_t:fetchinstrSimple END m_id[%d] cycle[ %d ]\n",m_id, getLocalCycle());
     #endif
  
-@@ -2060,6 +2142,16 @@ dynamic_inst_t* pseq_t::createInstructio
+@@ -2060,6 +2134,16 @@ dynamic_inst_t* pseq_t::createInstructio
         #endif
        break;
  
@@ -2244,7 +1769,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
      default:
        ERROR_OUT("error: unimplemented instruction type %d\n", 
                  (int) s_instr->getType());
-@@ -2103,7 +2195,7 @@ dynamic_inst_t* pseq_t::createInstructio
+@@ -2103,7 +2187,7 @@ dynamic_inst_t* pseq_t::createInstructio
  //**************************************************************************
  void pseq_t::decodeInstruction( )
  {
@@ -2253,7 +1778,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
       DEBUG_OUT("pseq_t:decodeInstruction BEGIN m_id[%d] cycle[ %d ]\n",m_id,getLocalCycle());
       //printPC(&m_ooo.at[proc]);
    #endif
-@@ -2127,14 +2219,14 @@ void pseq_t::decodeInstruction( )
+@@ -2127,14 +2211,14 @@ void pseq_t::decodeInstruction( )
  
        timeout++;
  
@@ -2270,7 +1795,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
     DEBUG_OUT( "\tDecoding...%d instructions available proc[%d]\n", decode_remaining[proc],proc);
  #endif
     uint32 decoded_this_cycle = 0;
-@@ -2161,7 +2253,7 @@ void pseq_t::decodeInstruction( )
+@@ -2161,7 +2245,7 @@ void pseq_t::decodeInstruction( )
       STAT_INC(m_stat_not_enough_registers[proc]);
     }
     
@@ -2279,7 +1804,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
      DEBUG_OUT("\tTotal decoded = %d\n",total_decoded);
      DEBUG_OUT("\tDecode remaining[%d] = %d\n",proc, decode_remaining[proc]);
     #endif
-@@ -2174,7 +2266,7 @@ void pseq_t::decodeInstruction( )
+@@ -2174,7 +2258,7 @@ void pseq_t::decodeInstruction( )
    for(uint proc=0; proc <  CONFIG_LOGICAL_PER_PHY_PROC; ++proc){
      ASSERT(num_decoded[proc] + decode_remaining[proc] == decode_avail[proc]);
      if (num_decoded[proc] < decode_avail[proc]) {
@@ -2288,7 +1813,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
             DEBUG_OUT("\tthere are leftover instrs avail[%d] decoded[%d] leftover[%d] proc[%d] cycle %d\n", 
            decode_avail[proc], num_decoded[proc], decode_avail[proc]-num_decoded[proc], proc,getLocalCycle());
           #endif
-@@ -2187,7 +2279,7 @@ void pseq_t::decodeInstruction( )
+@@ -2187,7 +2271,7 @@ void pseq_t::decodeInstruction( )
            * add leftover number up to that
            */
          uint32 numfetched = m_fetch_per_cycle[proc].peekItem( getLocalCycle(), 1 );
@@ -2297,7 +1822,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
              DEBUG_OUT("\tinserting leftovers leftovers[%d] proc[%d] in cycle[%d]\n",
                             numfetched+leftover, proc,getLocalCycle()+1);
           #endif
-@@ -2208,14 +2300,14 @@ void pseq_t::decodeInstruction( )
+@@ -2208,14 +2292,14 @@ void pseq_t::decodeInstruction( )
      m_hist_decode_per_thread[proc][num_decoded[proc]]++;
  
      // insert the number of instructions not decoded this cycle to next cycle
@@ -2314,7 +1839,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
     DEBUG_OUT("num decoded %d\n", num_decoded[proc]);
  #endif
  
-@@ -2224,7 +2316,7 @@ void pseq_t::decodeInstruction( )
+@@ -2224,7 +2308,7 @@ void pseq_t::decodeInstruction( )
    //update per-core decode histogram:
    m_hist_decode_per_cycle[total_decoded]++;
  
@@ -2323,7 +1848,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    //printPC(&m_ooo.at[proc]);
    DEBUG_OUT("pseq_t:decodeInstruction END m_id[%d] cycle[ %d ]\n",m_id,getLocalCycle());
   #endif
-@@ -2243,7 +2335,7 @@ void pseq_t::decodeInstruction( )
+@@ -2243,7 +2327,7 @@ void pseq_t::decodeInstruction( )
  //**************************************************************************
  void pseq_t::scheduleInstruction( )
  {
@@ -2332,7 +1857,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
      DEBUG_OUT("pseq_t:scheduleInstruction BEGIN m_id[%d] cycle[ %lld ]\n",m_id,m_local_cycles);
      //printPC(&m_ooo.at[proc]);
     #endif
-@@ -2268,13 +2360,13 @@ void pseq_t::scheduleInstruction( )
+@@ -2268,13 +2352,13 @@ void pseq_t::scheduleInstruction( )
  
        timeout++;
  
@@ -2348,7 +1873,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
       DEBUG_OUT("scheduling ...%d  instructions available\n", schedule_avail[proc]);
  #endif
  
-@@ -2338,7 +2430,7 @@ void pseq_t::scheduleInstruction( )
+@@ -2338,7 +2422,7 @@ void pseq_t::scheduleInstruction( )
     ASSERT( num_scheduled[proc] <= MAX_DISPATCH );
     //ASSERT( total_scheduled <= MAX_DISPATCH*CONFIG_LOGICAL_PER_PHY_PROC);
    
@@ -2357,7 +1882,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
      DEBUG_OUT("num scheduled %d\n", num_scheduled[proc]);
  #endif
  
-@@ -2349,7 +2441,7 @@ void pseq_t::scheduleInstruction( )
+@@ -2349,7 +2433,7 @@ void pseq_t::scheduleInstruction( )
   //record per-core schedule histogram:
   m_hist_schedule_per_cycle[total_scheduled]++;
  
@@ -2366,7 +1891,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
         //printPC(&m_ooo.at[proc]);
          DEBUG_OUT("pseq_t:scheduleInstruction END m_id[%d] cycle[ %lld ]\n",m_id, m_local_cycles);
    #endif
-@@ -2507,9 +2599,9 @@ void pseq_t::retireInstruction( )
+@@ -2507,9 +2591,9 @@ void pseq_t::retireInstruction( )
          //print out memory instructions
          DEBUG_OUT("%s seqnum[ %d ] VPC[ 0x%llx ] PC[ 0x%llx ] virtual_addr[ 0x%llx ] physical_addr[ 0x%llx ] lineaddr[ 0x%llx ] iscacheable[ %d ]", buf,d->getSequenceNumber(), d->getVPC(), d->getPC(), (static_cast<memory_inst_t *>(d)->getAddress()), static_cast<memory_inst_t *>(d)->getPhysicalAddress(), ((static_cast<memory_inst_t *> (d)->getPhysicalAddress()) & ~( (1 << 6) - 1) ), static_cast<memory_inst_t *>(d)->isCacheable() );
          //print out ASI, if this instruction is not NAV
@@ -2379,7 +1904,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
          //print out data
          int access_size_8bytes = ( (static_cast<memory_inst_t *>(d)->getAccessSize()) + 7)/8;
          DEBUG_OUT(" Data (%d bytes) [ ", static_cast<memory_inst_t *>(d)->getAccessSize());
-@@ -2538,16 +2630,16 @@ void pseq_t::retireInstruction( )
+@@ -2538,16 +2622,16 @@ void pseq_t::retireInstruction( )
        DEBUG_OUT(" SOURCES: ");
        for(int i=0; i < SI_MAX_SOURCE; ++i){
          reg_id_t & source = d->getSourceReg(i);
@@ -2402,7 +1927,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
        }
        DEBUG_OUT("\n");
        //print out TL, CWP, GSET, PSTATE
-@@ -6622,110 +6714,457 @@ void pseq_t::printDebug(){
+@@ -6622,112 +6706,459 @@ void pseq_t::printDebug(){
  }
  
  //***************************************************************************
@@ -2682,6 +2207,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
 +  }
  
 -      // get the mode string
+-      switch (j) {
+-      case 0:
 +  m_stat_va_out_of_range = 0;
 +
 +  for(int i=0; i < MAX_NUM_ASI; ++i){
@@ -2939,10 +2466,12 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
 +    for (uint32 j = 0; j < TOTAL_INSTR_MODE; j++) {
 +
 +      // get the mode string
-       switch (j) {
-       case 0:
++      switch (j) {
++      case 0:
          user_mode = 'U';
-@@ -7121,6 +7560,7 @@ void pseq_t::printStats( void )
+         break;
+       case 1:
+@@ -7121,6 +7552,7 @@ void pseq_t::printStats( void )
    
    /* register baseline stats */
    out_info("  %-50.50s %10llu\n", "number of instructions read from trace:", m_stat_trace_insn[k]);
@@ -2950,12 +2479,12 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    out_info("  %-50.50s %10llu\n", "total number of instructions committed:", m_stat_committed[k]);
    out_info("  %-50.50s %10llu\n", "total number of times squash is called:", m_stat_total_squash[k]);
    out_info("  %-50.50s %10llu\n", "total number of times we overwrote next instr:", m_stat_modified_instructions[k]);
-@@ -7140,6 +7580,34 @@ void pseq_t::printStats( void )
+@@ -7140,6 +7572,34 @@ void pseq_t::printStats( void )
    out_info("  %-50.50s %10llu\n", "total number of prefetches executed:", m_stat_prefetches_exec[k]);
    out_info("  %-50.50s %10llu\n", "total number of control insts executed:", m_stat_control_exec[k]);
  
 +  // GAB: HWDS stats
-+  out_info("  %-50.50s %10llu\n", "total number of hwds instrs committed:",
++  out_info("  %-50.50s %10llu\n", "hwds instrs committed:",
 +      m_stat_hwds_retired[k][0]);
 +  for (uint i = 1; i < HWDS_NUM_INST_TYPES; ++i) {
 +    char buf[101];
@@ -2964,28 +2493,28 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
 +        " insts committed:");
 +    out_info("  %-50.50s %10llu\n", buf, m_stat_hwds_retired[k][i]);
 +  }
-+  out_info("  %-50.50s %10llu\n", "total number of hwds instrs squashed:",
++  out_info("  %-50.50s %10llu\n", "hwds instrs squashed:",
 +      m_stat_hwds_squashed[k][0]);
 +  for (uint i = 1; i < HWDS_NUM_INST_TYPES; ++i) {
 +    char buf[101];
-+    sprintf(buf, "%s%s%s","total number of hwds ",
++    sprintf(buf, "%s%s%s","hwds ",
 +        stat_hwds_mnemonic(static_cast<enum hwds_inst_type_t>(i)),
-+        " insts squashed:");
++        " instrs squashed:");
 +    out_info("  %-50.50s %10llu\n", buf, m_stat_hwds_squashed[k][i]);
 +  }
-+  out_info("  %-50.50s %10llu\n", "total number of hwds insts executed:",
++  out_info("  %-50.50s %10llu\n", "hwds instrs executed:",
 +      m_stat_hwds_executed[k][0]);
 +  for (uint i = 1; i < HWDS_NUM_INST_TYPES; ++i) {
 +    char buf[101];
-+    sprintf(buf, "%s%s%s","total number of hwds ",
++    sprintf(buf, "%s%s%s","hwds ",
 +        stat_hwds_mnemonic(static_cast<enum hwds_inst_type_t>(i)),
-+        " insts executed:");
++        " instrs executed:");
 +    out_info("  %-50.50s %10llu\n", buf, m_stat_hwds_executed[k][i]);
 +  }
    out_info("  %-50.50s %10llu\n", "total number of loads retired:",
             m_stat_loads_retired[k]);
    out_info("  %-50.50s %10llu\n", "total number of stores retired:",
-@@ -7157,7 +7625,7 @@ void pseq_t::printStats( void )
+@@ -7157,7 +7617,7 @@ void pseq_t::printStats( void )
    out_info("  %-50.50s %10llu\n", "total number of prefetches retired:",
             m_stat_prefetches_retired[k]);
    out_info("  %-50.50s %10llu\n", "total number of control instrs committed:", m_stat_control_retired[k]);
@@ -2994,7 +2523,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    out_info("  %-50.50s %10llu\n", "loads with valid data at execute:", m_stat_loads_found[k]);
    out_info("  %-50.50s %10llu\n", "loads with invalid data at execute:", m_stat_loads_notfound[k]);
    out_info("  %-50.50s %10llu\n", "total number of spill traps:", m_stat_spill[k]);
-@@ -7335,6 +7803,9 @@ void pseq_t::printStats( void )
+@@ -7335,6 +7795,9 @@ void pseq_t::printStats( void )
      dl1_mshr->printStats( this );
      l1_inst_cache->printStats( this );
      il1_mshr->printStats( this );
@@ -3004,7 +2533,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    }
  
    //print out SMT icount stats
-@@ -7400,10 +7871,10 @@ void pseq_t::printStats( void )
+@@ -7400,10 +7863,10 @@ void pseq_t::printStats( void )
    out_info("  %-50.50s %10llu\n", "Total number of instructions",
             m_stat_committed[k] );
    out_info("  %-50.50s %10llu\n", "Total number of cycles",
@@ -3017,7 +2546,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
   } //end for loop over all logical procs
  
    out_info("  %-50.50s %lu sec %lu usec\n", "Total Elapsed Time:",
-@@ -7417,7 +7888,7 @@ void pseq_t::printStats( void )
+@@ -7417,7 +7880,7 @@ void pseq_t::printStats( void )
    
    double dsec = (double) sec_expired + ((double) usec_expired / (double) 1000000);
  
@@ -3026,7 +2555,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
             (double) getLocalCycle() / dsec);
  
   for(uint k=0; k <  CONFIG_LOGICAL_PER_PHY_PROC; ++k){  
-@@ -7580,24 +8051,6 @@ pseq_t::initializeStats(void) {
+@@ -7580,24 +8043,6 @@ pseq_t::initializeStats(void) {
    DEBUG_OUT("pseq_t:initializeStats BEGIN\n");
    #endif
  
@@ -3051,7 +2580,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    m_overall_timer = new stopwatch_t *[CONFIG_LOGICAL_PER_PHY_PROC];
    m_thread_timer = new stopwatch_t *[CONFIG_LOGICAL_PER_PHY_PROC];
    m_thread_histogram = new histogram_t *[CONFIG_LOGICAL_PER_PHY_PROC];
-@@ -7635,45 +8088,10 @@ pseq_t::initializeStats(void) {
+@@ -7635,45 +8080,10 @@ pseq_t::initializeStats(void) {
      m_simtrapstat[proc] = new uint64[TRAP_NUM_TRAP_TYPES];
      m_software_trapstat[proc] = new uint64[MAX_SOFTWARE_TRAPS];
      m_completed_trapstat[proc] = new uint64[TRAP_NUM_TRAP_TYPES];
@@ -3098,7 +2627,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    //per-thread histogram
    m_hist_fetch_per_thread = new uint64*[CONFIG_LOGICAL_PER_PHY_PROC];
    m_hist_decode_per_thread = new uint64*[CONFIG_LOGICAL_PER_PHY_PROC];
-@@ -7685,107 +8103,38 @@ pseq_t::initializeStats(void) {
+@@ -7685,107 +8095,38 @@ pseq_t::initializeStats(void) {
      m_hist_decode_per_thread[j] = new uint64[MAX_DECODE+1];
      m_hist_schedule_per_thread[j] = new uint64[MAX_DISPATCH+1];
      m_hist_retire_per_thread[j] = new uint64[MAX_RETIRE+1];
@@ -3206,7 +2735,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    m_stat_memread_exception =  new uint64[CONFIG_LOGICAL_PER_PHY_PROC]; 
    m_last_simexception = new trap_type_t[CONFIG_LOGICAL_PER_PHY_PROC];
    m_last_traptype = new trap_type_t*[CONFIG_LOGICAL_PER_PHY_PROC];
-@@ -7802,17 +8151,6 @@ pseq_t::initializeStats(void) {
+@@ -7802,17 +8143,6 @@ pseq_t::initializeStats(void) {
      }
    }
  
@@ -3224,7 +2753,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    //Used to track start and end of WB stall cycles
    m_wb_stall_start_cycle = 0;
    m_wb_stall_end_cycle = 0;
-@@ -7823,6 +8161,7 @@ pseq_t::initializeStats(void) {
+@@ -7823,6 +8153,7 @@ pseq_t::initializeStats(void) {
    m_stat_count_retiresquash = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    
    m_stat_trace_insn = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
@@ -3232,7 +2761,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    m_stat_committed = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_stat_commit_squash = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_stat_count_asistoresquash = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
-@@ -7850,6 +8189,28 @@ pseq_t::initializeStats(void) {
+@@ -7850,6 +8181,28 @@ pseq_t::initializeStats(void) {
    m_stat_atomics_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_stat_prefetches_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_stat_control_exec = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
@@ -3261,7 +2790,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    m_stat_loads_found = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_stat_loads_notfound = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_stat_total_squash = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
-@@ -7918,114 +8279,9 @@ pseq_t::initializeStats(void) {
+@@ -7918,114 +8271,9 @@ pseq_t::initializeStats(void) {
      m_overall_timer[k] = new stopwatch_t(m_id+k);         
      m_thread_timer[k] = new stopwatch_t(m_id+k);          
      m_thread_histogram[k] = new histogram_t( "ThreadPC", 2048 );
@@ -3376,7 +2905,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
   
  
    /* write buffer stats */
-@@ -8042,20 +8298,6 @@ pseq_t::initializeStats(void) {
+@@ -8042,20 +8290,6 @@ pseq_t::initializeStats(void) {
    m_stat_count_io_access = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
    m_num_cache_not_ready = new uint64[CONFIG_LOGICAL_PER_PHY_PROC];
  
@@ -3397,7 +2926,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    m_stat_hist_misses = new histogram_t( "Misses", 1024 );
    m_stat_hist_interarrival = new histogram_t( "Bursts", 4096 );
  
-@@ -8064,6 +8306,10 @@ pseq_t::initializeStats(void) {
+@@ -8064,6 +8298,10 @@ pseq_t::initializeStats(void) {
    m_stat_hist_inter_cluster  = new histogram_t( "IClust", 4096 );
    m_stat_hist_dep_ops        = new histogram_t( "DepOps", 4096 );
  
@@ -3410,8 +2939,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
    #endif
 diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/system/pseq.h
 --- gems-2.1.1/opal/system/pseq.h	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/pseq.h	2012-03-13 11:53:09.000000000 -0400
-@@ -420,12 +420,20 @@ public:
++++ gems-2.1.1-hwpq-head2/opal/system/pseq.h	2012-03-13 13:29:06.000000000 -0400
+@@ -420,6 +420,10 @@ public:
    cache_t *getInstructionCache( void ) {
      return (l1_inst_cache);
    }
@@ -3422,17 +2951,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
    /** get the ruby cache interface */
    // for SMT, all logical procs should see same Ruby interface
    rubycache_t *getRubyCache( void ) {
-     return (m_ruby_cache);
-   }
- 
-+  hwpq_t *getHardwarePriorityQueue( void ) {
-+    return (m_hwpq);
-+  }
-+
-   /* returns the current fetch PC */
-   abstract_pc_t * getFetchPC(int proc) {
-     return m_fetch_at[proc];
-@@ -471,6 +479,7 @@ public:
+@@ -471,6 +475,7 @@ public:
    /** increment the local cycle counter */
    void         localCycleIncrement() {
      m_local_cycles++;
@@ -3440,7 +2959,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
    }
  
    /** statistics object holding per dynamic instruction stats */
-@@ -677,6 +686,10 @@ public:
+@@ -677,6 +682,10 @@ public:
    void    print( void );
    /** print the in flight instructions */
    void    printInflight( void );
@@ -3451,7 +2970,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
    /** print statistics */
    void    printStats( void );
    /** prints debug info */
-@@ -831,7 +844,7 @@ public:
+@@ -831,7 +840,7 @@ public:
    void setTransactionLevel( mf_ruby_api_t * ruby_api );
  
    //**************************************************************************
@@ -3460,7 +2979,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
  private:
  
    /**
-@@ -1214,24 +1227,7 @@ private:
+@@ -1214,24 +1223,7 @@ private:
    /** The pointer to the Write Buffer */
    writebuffer_t * m_write_buffer;
  
@@ -3469,12 +2988,12 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
 -  /// L1 miss status holding register structure
 -  mshr_t      *il1_mshr;
 -  mshr_t      *dl1_mshr;
--
+ 
 -  /// L1 instruction cache
 -  generic_cache_template<generic_cache_block_t> *l1_inst_cache;
 -  /// L1 data cache
 -  generic_cache_template<generic_cache_block_t> *l1_data_cache;
- 
+-
 -  /// L2 miss status holding register structure
 -  mshr_t      *l2_mshr;
 -  /// L2 (unified) cache
@@ -3485,7 +3004,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
  
    /** @name MMU support: I/D-TLB, contexts */
    //@{
-@@ -1512,9 +1508,42 @@ private:
+@@ -1512,9 +1504,37 @@ private:
    /// Pointer to the WATTCH power stats
    power_t * m_power_stats;
  
@@ -3517,11 +3036,6 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
 +  /// L1 hwds cache
 +  generic_cache_template<generic_cache_block_t> *l1_hwds_cache;
 +
-+  /// an array of hardware priority queues
-+  hwpq_t      *m_hwpq;
-+  /// number of hardware priority queues
-+  int          m_hwpq_count;
-+
 +  //@}
  
  
@@ -3529,7 +3043,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
    /// per cpu stopwatch counting simulated time
    stopwatch_t      ** m_overall_timer;
    /// per cpu stopwatch for current thread's simulated time
-@@ -1790,6 +1819,8 @@ public:
+@@ -1790,6 +1810,8 @@ public:
  
    /// number of instructions read from trace
    uint64   * m_stat_trace_insn;
@@ -3538,7 +3052,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
    /// total number of instructions committed
    uint64  *  m_stat_committed;
    /// total number of times squash is called (includes branch mispredicts)
-@@ -1846,6 +1877,24 @@ public:
+@@ -1846,6 +1868,24 @@ public:
    /// total number of control insts executed
    uint64   * m_stat_control_exec;
  
@@ -3563,7 +3077,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.h gems-2.1.1-hwpq-head2/opal/
    /// loads which are found in the trace
    uint64   * m_stat_loads_found;
    /// loads which are not found in the trace
-@@ -1950,6 +1999,7 @@ public:
+@@ -1950,6 +1990,7 @@ public:
    /// The number of times the ideal processor was not able to reach the end of the window
    uint64  *  m_inorder_partial_success;
    //@}
@@ -3586,7 +3100,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pstate.C gems-2.1.1-hwpq-head2/opa
      break;
 diff -X dontdiff -uprN gems-2.1.1/opal/system/statici.C gems-2.1.1-hwpq-head2/opal/system/statici.C
 --- gems-2.1.1/opal/system/statici.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/statici.C	2012-03-12 22:14:50.000000000 -0400
++++ gems-2.1.1-hwpq-head2/opal/system/statici.C	2012-03-13 13:22:14.000000000 -0400
 @@ -501,6 +501,7 @@ void   static_inst_t::setNextPC( void )
    case DYN_STORE:
    case DYN_PREFETCH:
