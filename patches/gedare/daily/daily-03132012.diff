@@ -1480,7 +1480,7 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/mshr.h gems-2.1.1-hwpq-head2/opal/
    //@}
 diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/system/pseq.C
 --- gems-2.1.1/opal/system/pseq.C	2010-09-01 14:06:13.000000000 -0400
-+++ gems-2.1.1-hwpq-head2/opal/system/pseq.C	2012-03-13 13:40:26.000000000 -0400
++++ gems-2.1.1-hwpq-head2/opal/system/pseq.C	2012-03-13 13:42:21.000000000 -0400
 @@ -101,6 +101,8 @@
  #include "ptrace.h"
  #include "Vector.h"    
@@ -2488,9 +2488,9 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/pseq.C gems-2.1.1-hwpq-head2/opal/
 +      m_stat_hwds_retired[k][0]);
 +  for (uint i = 1; i < HWDS_NUM_INST_TYPES; ++i) {
 +    char buf[101];
-+    sprintf(buf, "%s%s%s","total number of hwds ",
++    sprintf(buf, "%s%s%s","hwds ",
 +        stat_hwds_mnemonic(static_cast<enum hwds_inst_type_t>(i)),
-+        " insts committed:");
++        " instrs committed:");
 +    out_info("  %-50.50s %10llu\n", buf, m_stat_hwds_retired[k][i]);
 +  }
 +  out_info("  %-50.50s %10llu\n", "hwds instrs squashed:",
