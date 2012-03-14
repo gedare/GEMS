@@ -1107,8 +1107,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hfa.C gems-2.1.1-hwpq-head2/opal/s
                 attr_fn );
 diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/system/hwpq.C
 --- gems-2.1.1/opal/system/hwpq.C	1969-12-31 19:00:00.000000000 -0500
-+++ gems-2.1.1-hwpq-head2/opal/system/hwpq.C	2012-03-13 13:30:35.000000000 -0400
-@@ -0,0 +1,152 @@
++++ gems-2.1.1-hwpq-head2/opal/system/hwpq.C	2012-03-14 14:21:19.000000000 -0400
+@@ -0,0 +1,153 @@
 +/*
 + * FileName:  hwpq.C
 + * Synopsis:  Implements a hardware priority queue
@@ -1186,7 +1186,8 @@ diff -X dontdiff -uprN gems-2.1.1/opal/system/hwpq.C gems-2.1.1-hwpq-head2/opal/
 +  latency = m_event_times[EVENT_TIME_RETIRE];
 +  //m_pseq->m_stat_hwds_cycles[m_proc][m_type] += latency;
 +  
-+  sprintf(buf, "hwds %s instruction latency: ",
++  sprintf(buf, "hwds %d %s instruction latency: ",
++      m_queue_idx,
 +      m_pseq->stat_hwds_mnemonic(m_type));
 +  m_pseq->out_info("  %-50.50s %10u\n", buf, latency );
 +
