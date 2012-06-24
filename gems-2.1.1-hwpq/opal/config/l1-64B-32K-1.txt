@@ -1,0 +1,14 @@
+
+// L1 inst cache
+IL1_ASSOC: 1              // direct mapped
+IL1_SET_BITS: 9           // 512 sets
+IL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+IL1_MSHR_ENTRIES: 256
+IL1_STREAM_BUFFERS: 0
+
+// L1 data cache
+DL1_ASSOC: 1              // direct mapped
+DL1_SET_BITS: 9           // 512 sets
+DL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+DL1_MSHR_ENTRIES: 256
+DL1_STREAM_BUFFERS: 0

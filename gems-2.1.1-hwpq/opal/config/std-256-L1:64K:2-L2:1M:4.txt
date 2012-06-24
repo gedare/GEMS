@@ -1,0 +1,13 @@
+
+#include ./config/width-standard.txt
+#include ./config/register-256.txt
+#include ./config/alu-standard.txt
+#include ./config/l1-64B-64K-2.txt
+#include ./config/l2-64B-1M-4.txt
+#include ./config/memconf-standard.txt
+#include ./config/yags-standard.txt
+#include ./config/ras-standard.txt
+#include ./config/indirect-standard.txt
+
+IWINDOW_WIN_SIZE: 256
+PSEQ_SLIDING_WINSIZE: 64

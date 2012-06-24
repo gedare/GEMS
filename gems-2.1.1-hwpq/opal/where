@@ -1,0 +1,4 @@
+#!/bin/csh
+set HOMEDIR = /p/multifacet/projects/opal/multifacet/opal
+echo "#############################################################################"
+grep "$1" $HOMEDIR/common/*.[Ch] $HOMEDIR/system/*.[cChi] $HOMEDIR/module/*.[cCh] $HOMEDIR/sparc/*.[cChs] $HOMEDIR/tester/*.[Ch] $HOMEDIR/trace/*.[Ch]

@@ -1,0 +1,18 @@
+
+CONFIG_NUM_ALUS: (
+  127, // inst does not use a functional unit
+    8, // integer ALU (fused multiply/add)
+    2, // integer divisor
+    4, // integer branch
+    8, // FP ALU
+    4, // FP multiply
+    2, // FP divisor / square-root
+    4, // load unit (memory read)
+    4, // store unit (memory write)
+    0,
+    0,
+    0,
+    0
+)
+
+CONFIG_NUM_CONTROL_SETS: 64

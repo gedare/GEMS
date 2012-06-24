@@ -1,0 +1,334 @@
+sim-simics-api: V 0.5: initializing simics API simulator
+simdist12: warning: unimplemented simics API system/simdist12.C:344
+simdist12: warning: unimplemented simics API system/simdist12.C:350
+simdist12: warning: unimplemented simics API system/simdist12.C:350
+simdist12: warning: unimplemented simics API system/simdist12.C:350
+simdist12: warning: unimplemented simics API system/simdist12.C:350
+simdist12: warning: unimplemented simics API system/simdist12.C:403
+simdist12: warning: unimplemented simics API system/simdist12.C:336
+error: unable to register queue interface
+hfa_init_local done:
+read configuration: ./config/std-64-L1:64K:2-L2:4M:4.txt
+simdist12: warning: unimplemented simics API system/simdist12.C:252
+Ln constructor: block size: 64B, 4x assoc, 16384 sets.  4194304B total
+Ln constructor: block size: 64B, 2x assoc, 512 sets.  65536B total
+Ln constructor: block size: 64B, 2x assoc, 512 sets.  65536B total
+system_t(): readInstructionMap found context imap-gzip-trace.map 0
+Reading TLB translation information...
+tracefile_t: successfully opened for reading
+Initial primary context: 0x85a
+PC 0x12a94 NPC 0x12a98
+patch  PC: 0xffffffffffffffff 0x12a94
+patch  NPC: 0xffffffffffffffff 0x12a98
+[0]	PC 0x12a94	NPC 0x12a98	ctx 0x85a
+simulate: completed 100003 instructions, cycle: 74398
+*** Opcode stats:
+###: decode              seen        success function     fail
+Unmatched     0
+000: add               24,526         24,526        0        0
+009: ba                   952            952        0        0
+024: bpcc              12,262         12,262        0        0
+025: bpcs              12,262         12,262        0        0
+302: sub                  952            952        0        0
+359: lduh              12,262         12,262        0        0
+376: sth               12,263         12,263        0        0
+404: cmp               24,524         24,524        0        0
+TOTALI    :        100,003        100,003        0        0
+NON_COMP  :              0
+Percent functional: 0.000000
+Percent correct      : 100.000000
+
+*** Latency and Squashes
+
+000: opcode    # squashed # non-comp mem latency  min max avg exec
+000: add                0          0      0    0.0    1   1    1.0
+009: ba                 0          0      0    0.0    1   1    1.0
+024: bpcc           1,116          0      0    0.0    1   1    1.0
+025: bpcs               8          0      0    0.0    1   1    1.0
+302: sub                0          0      0    0.0    1   1    1.0
+359: lduh               0          0      0    0.0    1  99   18.8
+376: sth                0          0      0    0.0    1 108   17.6
+404: cmp                0          0      0    0.0    1   1    1.0
+SQUASHED  :          1,124
+*** Trap   stats:
+  [Trap#]  Times-Taken  Simics-Taken    Name
+*** Internal exception stats:
+###: seen    name
+  [  1]           1169  EXCEPT_MISPREDICT
+*** ASI    stats:
+  ASI     Reads   Writes  Atomics
+*** Branch   stats: (user, kernel, total)
+  Type           Preds      Retired        Right       Wrong    %Right
+   NONE              0            0            0            0  U:  0.00%
+   NONE              0            0            0            0  K:  0.00%
+   NONE              0            0            0            0  T:  0.00%
+   UNCOND            0          952          952            0  U:100.00%
+   UNCOND            0            0            0            0  K:  0.00%
+   UNCOND            0          952          952            0  T:100.00%
+   COND              0            0            0            0  U:  0.00%
+   COND              0            0            0            0  K:  0.00%
+   COND              0            0            0            0  T:  0.00%
+   PCOND        41,012       24,524       23,404        1,120  U: 95.43%
+   PCOND             0            0            0            0  K:  0.00%
+   PCOND        41,012       24,524       23,404        1,120  T: 95.43%
+   CALL              0            0            0            0  U:  0.00%
+   CALL              0            0            0            0  K:  0.00%
+   CALL              0            0            0            0  T:  0.00%
+   RETURN            0            0            0            0  U:  0.00%
+   RETURN            0            0            0            0  K:  0.00%
+   RETURN            0            0            0            0  T:  0.00%
+   INDIRE            0            0            0            0  U:  0.00%
+   INDIRE            0            0            0            0  K:  0.00%
+   INDIRE            0            0            0            0  T:  0.00%
+   CWP               0            0            0            0  U:  0.00%
+   CWP               0            0            0            0  K:  0.00%
+   CWP               0            0            0            0  T:  0.00%
+   TRAP_R            0            0            0            0  U:  0.00%
+   TRAP_R            0            0            0            0  K:  0.00%
+   TRAP_R            0            0            0            0  T:  0.00%
+   TRAP              0            0            0            0  U:  0.00%
+   TRAP              0            0            0            0  K:  0.00%
+   TRAP              0            0            0            0  T:  0.00%
+   PRIV              0            0            0            0  U:  0.00%
+   PRIV              0            0            0            0  K:  0.00%
+   PRIV              0            0            0            0  T:  0.00%
+   TOTALB       41,012       25,476       24,356        1,120   95.60%
+*** Histogram   stats:
+Fetch  [0]:                   31,144  41.86%
+Fetch  [1]:                      775   1.04%
+Fetch  [2]:                      333   0.45%
+Fetch  [3]:                        1   0.00%
+Fetch  [4]:                   42,145  56.65%
+
+Decode [0]:                   33,201  44.63%
+Decode [1]:                      683   0.92%
+Decode [2]:                      333   0.45%
+Decode [3]:                        1   0.00%
+Decode [4]:                   40,180  54.01%
+
+Schedule [0]:                   38,986  52.40%
+Schedule [1]:                      834   1.12%
+Schedule [2]:                      106   0.14%
+Schedule [3]:                      227   0.31%
+Schedule [4]:                   34,245  46.03%
+
+Retire [0]:                   45,391  61.01%
+Retire [1]:                    4,330   5.82%
+Retire [2]:                    1,238   1.66%
+Retire [3]:                      559   0.75%
+Retire [4]:                   22,880  30.75%
+
+Reasons for fetch stalls:
+Fetch ready         :                        0   0.00%
+Fetch i-cache miss  :                      276   0.89%
+Fetch squash        :                        0   0.00%
+Fetch I-TLB miss    :                        0   0.00%
+Window Full         :                   30,868  99.11%
+Fetch Barrier       :                        0   0.00%
+
+Other fetch statistics:
+Fetch stalled at line boundary    :                    0   0.00%
+Fetch stalled at taken branch     :                    0   0.00%
+
+Reasons for retire limits:
+Retire ready        :                        0   0.00%
+Retire Updating...  :                        0   0.00%
+Retire Squash       :                        0   0.00%
+Retire Limit        :                   73,839 100.00%
+
+Execution unit statistics:
+TYPE (id)         : (# units) [Average in use per cycle]:
+FU_NONE             : (map:0) (units:127)   0.00 8
+FU_INTALU           : (map:1) (units:4)   0.84 62387
+FU_INTMULT          : (map:1) (units:4)   0.84 62387
+FU_INTDIV           : (map:2) (units:2)   0.00 0
+FU_BRANCH           : (map:3) (units:4)   0.39 28694
+FU_FLOATADD         : (map:4) (units:4)   0.00 0
+FU_FLOATCMP         : (map:4) (units:4)   0.00 0
+FU_FLOATCVT         : (map:4) (units:4)   0.00 0
+FU_FLOATMULT        : (map:5) (units:2)   0.00 0
+FU_FLOATDIV         : (map:6) (units:2)   0.00 0
+FU_FLOATSQRT        : (map:6) (units:2)   0.00 0
+FU_RDPORT           : (map:7) (units:4)   0.20 14862
+FU_WRPORT           : (map:8) (units:4)   0.21 15806
+
+Execution unit retirement:
+TYPE (id)         : (retired # of instructions)
+FU_INTALU           :  50.00	50002
+FU_BRANCH           :  25.48	25476
+FU_RDPORT           :  12.26	12262
+FU_WRPORT           :  12.26	12263
+
+
+*** Fastforward statistics:
+
+*** Static predictation stats:
+  When      NotPred       Pred      Taken        Not
+  Decode          0          0          0          0
+  Retire          0     24,524     12,262     12,262
+  Regs                       0          0          0
+  RegRet                     0          0          0
+   STATIC           952      96.12%
+
+*** # of outstanding misses
+Hash Table entries: 0
+*** Interarrival times
+Hash Table entries: 0
+*** Dependent ops instrs
+Hash Table entries: 0
+*** Effective
+Hash Table entries: 0
+*** Not Effective
+Hash Table entries: 0
+*** inter cluster
+Hash Table entries: 0
+*** Pipeline statistics:
+  cycle of decode stalls:                                     0
+  insts of decode of stall:                                   0
+  cycle of schedule stalls:                               45044
+  insts of schedule of stall:                           2536796
+  count early store bypasses:                                 0
+  total number of asi store squashes:                         0
+  count failed retirements:                                   0
+  count functional retirements:                               0
+  count of I/O loads/stores:                                  0
+  count done/retry squashes:                                  0
+  number of instructions read from trace:                     0
+  total number of instructions committed:                100003
+  total number of times squash is called:                  1124
+  total number of instructions squashing at commit:           0
+  total number of instructions committing successful     100003
+  total number of instructions committing unsuccessf          0
+  total number of unimplemented instructions committ          0
+  total number of instructions fetched:                  170024
+  total number of mini-itlb misses:                           0
+  total number of instructions decoded:                  162072
+  total number of instructions executed:                 121757
+  total number of loads executed:                         14221
+  total number of stores executed:                        15181
+  total number of atomics executed:                           0
+  total number of prefetches executed:                        0
+  total number of control insts executed:                 27718
+  total number of loads retired:                          12262
+  total number of stores retired:                         12263
+  total number of atomics retired:                            0
+  total number of prefetches retired:                         0
+  total number of control instrs committed:               25476
+  loads with valid data at executed:                      14133
+  loads with invalid data at execute:                         0
+  total number of spill traps:                                0
+  total number of fill traps:                                 0
+  number fetches executed which miss in icache               12
+  number misses fetches that hit in mshr                      0
+  number loads executed which miss in dcache               6209
+  retiring data cache misses                               2418
+  retiring L2 misses                                          0
+  retiring MSHR hits                                          0
+  number of times ruby is not ready                           0
+  number of loads satisfied by store queue:                   0
+  number of stores scheduled before value:                  561
+  number of loads waiting for early store resolution          0
+  number of atomics scheduled before value:                   0
+  number of stale data speculations                           0
+  number of successful stale predictions:                     0
+  stale prediction size =                               1          0
+  stale prediction size =                               2          0
+  stale prediction size =                               4          0
+  stale prediction size =                               8          0
+  stale prediction size =                              16          0
+  stale prediction size =                              32          0
+  stale prediction size =                              64          0
+
+  L2.unified total number of reads:                            :       58
+  L2.unified total number of read hits:                        :        0
+  L2.unified total number of read misses:                      :       58
+  L2.unified total number of writes:                           :      330
+  L2.unified total number of write hits:                       :        0
+  L2.unified total number of write misses:                     :      330
+  L2.unified number of write prefetches:                       :        0
+  L2.unified total number of replacements:                     :        0
+  L2.unified total number of writebacks:                       :        0
+  L2.unified demand miss per 1000 retired instructions:        :     3.88
+
+  L2.mshr histogram of misses outanding
+    Name     [out]  number    pct
+    L2.mshr  [  0]    39247 52.75%
+    L2.mshr  [  1]    34985 47.02%
+    L2.mshr  [  2]      166  0.22%
+    L2.mshr [tot]    74398
+  L2.mshr Average parallel misses                           :  1.00472
+  L2.mshr total number of primary misses                    :      388
+  L2.mshr total number of secondary misses                  :        0
+  L2.mshr number of prefetches that hit in prefetch buffer  :        0
+  L2.mshr number of stream buffer prefetches launched       :        0
+  L2.mshr number of inflight prefetched upgraded to demands :        0
+  L2.mshr number of misses serviced from prefetch buffer    :        0
+  L2.mshr number of misses serviced from victim buffer      :        0
+
+  L1.data total number of reads:                            :    14213
+  L1.data total number of read hits:                        :    11068
+  L1.data total number of read misses:                      :     3145
+  L1.data total number of writes:                           :    15073
+  L1.data total number of write hits:                       :    12009
+  L1.data total number of write misses:                     :     3064
+  L1.data number of write prefetches:                       :       71
+  L1.data total number of replacements:                     :        0
+  L1.data total number of writebacks:                       :        0
+  L1.data demand miss per 1000 retired instructions:        :    62.09
+
+  DL1.mshr histogram of misses outanding
+    Name     [out]  number    pct
+    DL1.mshr [  0]    36757 49.41%
+    DL1.mshr [  1]    37641 50.59%
+    DL1.mshr [tot]    74398
+  DL1.mshr Average parallel misses                           :  1.00000
+  DL1.mshr total number of primary misses                    :      384
+  DL1.mshr total number of secondary misses                  :     5896
+  DL1.mshr number of prefetches that hit in prefetch buffer  :        0
+  DL1.mshr number of stream buffer prefetches launched       :        0
+  DL1.mshr number of inflight prefetched upgraded to demands :        0
+  DL1.mshr number of misses serviced from prefetch buffer    :        0
+  DL1.mshr number of misses serviced from victim buffer      :        0
+
+  L1.inst total number of reads:                            :     3898
+  L1.inst total number of read hits:                        :     3886
+  L1.inst total number of read misses:                      :       12
+  L1.inst total number of writes:                           :        0
+  L1.inst total number of write hits:                       :        0
+  L1.inst total number of write misses:                     :        0
+  L1.inst number of write prefetches:                       :        0
+  L1.inst total number of replacements:                     :        0
+  L1.inst total number of writebacks:                       :        0
+  L1.inst demand miss per 1000 retired instructions:        :     0.12
+
+  IL1.mshr histogram of misses outanding
+    Name     [out]  number    pct
+    IL1.mshr [  0]    74090 99.59%
+    IL1.mshr [  1]      224  0.30%
+    IL1.mshr [  2]       84  0.11%
+    IL1.mshr [tot]    74398
+  IL1.mshr Average parallel misses                           :  1.27273
+  IL1.mshr total number of primary misses                    :        4
+  IL1.mshr total number of secondary misses                  :        8
+  IL1.mshr number of prefetches that hit in prefetch buffer  :        0
+  IL1.mshr number of stream buffer prefetches launched       :        0
+  IL1.mshr number of inflight prefetched upgraded to demands :        0
+  IL1.mshr number of misses serviced from prefetch buffer    :        0
+  IL1.mshr number of misses serviced from victim buffer      :        0
+Instruction Page Map Statistics:
+   Total number of pages     : 0
+   Total number of collisions: 0
+*** Runtime statistics:
+  Total number of instructions                           100003
+  Total number of cycles                                  74398
+  number of continue calls                                    0
+  Instruction per cycle:                             1.34416
+  Total Elapsed Time:                                3 sec 0 usec
+  Total Retirement Time:                             0 sec 0 usec
+  Approximate cycle per sec:                         24171.1
+  Approximate instructions per sec:                  32489.8
+  This processor's Simics overhead (retire/elapsed):   0.00%
+removing memory hierarchy
+closing file /p/multifacet/projects/regress/opal_traces/gzip/gzip-trace
+closing memop trace file /p/multifacet/projects/regress/opal_traces/gzip/mem-gzip-trace
+high fidelity architecture code uninstalled.

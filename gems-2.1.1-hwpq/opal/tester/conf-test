@@ -1,0 +1,6 @@
+	valid: (0, 0, 0, 0, 0, 8)
+	range_addr: 0x1ccf8280000
+	conf_file: "conf.bearclaw.1proc-le"
+	files: (("/p/multifacet/projects/nobackup1/d/bearclaw/bearclaw.prom6_image"))
+	file2: (("/p/multifacet/projects/nobackup1/d/bearclaw/bearclaw.prom6_image", 1, 0, 0x200000))
+	global_registers: ((0, 20, 0x1041e208, 0, 0, 0, 0, 0x2a100003d60), (0, 7, 0x1003d4e8, 10, 10, 0, 0x10006fb4, 0x4400001600), (0, 0x104c49d0, 0xc0002, 0x850000000cb5e7b6, 0xfa95088, 0x850000000cb5e7b6, 0x40000000, 0x3000093a000), (0, 0x1000, 12, 0x1041e578, 0x1041e208, 96, 0x1041e978, 0))

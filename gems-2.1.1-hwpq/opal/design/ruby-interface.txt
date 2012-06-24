@@ -1,0 +1,115 @@
+
+Overview:
+
+The interface between ruby and opal consists of the memory and stepping
+interfaces. The memory interface defines how memory transactions are
+requested, and how notification is completed. The stepping interface
+defines how the simulated event times are kept in sync.
+
+I. Memory interface
+
+Summary:
+
+  Ruby                             Opal
+  ------                           ------
+
+  makeRequest(...)             <-- call to start request
+  notify request completed -->     completedRequest(...)
+
+  tryCacheAccess(...)          <-- instantaneously checks for data in cache
+                                   returns true or false
+
+  At retirement, opal must call tryCacheAccess to verify the cache line
+  is still in the cache with the correct permissions. This is a simple
+  means of guarenteeing SC and TSO consistancy models. For each memory
+  request, tryCacheAcess is called at least twice (once initially,
+  once at retirement). 
+  
+  If the tryCacheAccess() fails at retire time, the request must be
+  re-issued by calling makeRequest(). When this second request
+  completes, the requesting instruction (which is at the head of the
+  window) can be retired, without calling tryCacheAccess().
+
+  For now, Opal is entirely responsible for enforcing the memory
+  consistency model (Probably SC).  If we want to move Opal to TSO, we
+  can re-address this issue (maybe making use of Ruby's store buffer).
+
+Details:
+
+typedef enum OpalMemop {
+	Opal_LOAD,
+	Opal_STORE,
+	Opal_IFETCH,
+	Opal_ATOMIC
+} OpalMemop_t;
+const int Opal_CacheLineSize = 64;
+
+  void  makeRequest(
+
+     // The requestor's CPU number
+     int  cpuNumber,
+
+     // The physical address of the request
+     pa_t physicalAddr,
+
+     // The size of the request in bytes
+     int  requestSize,
+
+     // The type of request (defined by enum)
+     OpalMemop_t typeOfRequest,
+
+     // The virtual PC of reqeusting instr
+     la_t virtualPC,
+
+  );
+
+  makeRequest performs the coherence transactions necessary to get the
+  physical address in the cache with the correct permissions. More than
+  one request can be outstanding to ruby, but only one per block address.
+  The size of the cache line is defined to Intf_CacheLineSize.
+  When a request is finished (e.g. the cache contains physical address),
+  ruby calls completedRequest(). No request can be bigger than
+  Opal_CacheLineSize. It is illegal to request non-aligned memory
+  locations. A request of size 2 must be at an even byte, a size 4 must
+  be at a byte address half-word aligned, etc. Requests also can't cross a
+  cache-line boundaries.
+
+  int   completedRequest( int cpuNumber,
+                          pa_t physicalAddr );
+  
+  completedRequest is called when a data is available for the processor
+  from a previous makeRequest() call. Opal will maintain the invariant
+  that only one request per cache line is issued to ruby. The cpu number,
+  and the physical block address will completely specify the request.
+
+  bool tryCacheAccess(
+
+     // The requestor's CPU number
+     int  cpuNumber,
+
+     // The physical address of the request
+     pa_t physicalAddr,
+
+     // The size of the request in bytes
+     int  requestSize,
+
+     // The type of request (defined by enum)
+     OpalMemop_t typeOfRequest,
+
+     // The virtual PC of requesting instr
+     la_t virtualPC,
+
+  );
+
+  tryCacheAccess checks for the presence of a cache line in a processor's
+  cache with the correct permissions (corresponding to the type of request).
+  The function return "true" if the cache line is present, false if it is
+  not. This function does not initiate any transactions in the memory
+  hierarchy, and no later callbacks will occur regardless.
+  
+II. Stepping interface
+
+  void    advanceToTime( simtime_t newTime );
+
+  advanceToTime runs ruby up to the time "newTime". This allows opal	
+  and ruby's simulated times to stay in sync.

@@ -1,0 +1,11 @@
+// GAB: HWDS
+// L1 hwds cache
+HL1_IDEAL: 0              // 1 -> ideal H cache
+HL1_ASSOC: 2              // direct mapped
+HL1_SET_BITS: 8           // 256 sets
+HL1_BLOCK_BITS: 6         // 64  byte L1 cache line
+HL1_MSHR_ENTRIES: 256
+HL1_STREAM_BUFFERS: 0
+CONFIG_NUM_HWPQS: 10
+
+

@@ -1,0 +1,11 @@
+Opal's Handling of Memory Consistency
+================================
+o Opal does not, in its current form, enforce sequential consistency.  Instead, due to its design Opal's memory consistency model is an Alpha-like model.
+o The reason for not enforcing SC is because Opal was designed to be a very aggressive optimistic OOO processor, and thus only LD/ST dependencies are checked through the LSQ.
+o Since Opal checks each instruction at retirement time with Simics, and since Simics only allows SC memory orderings, violations of SC will be accounted for in the Total Percentage Correct stat in the .opal output file.
+o There are 2 aspects that make Opal not SC:
+   1) The MSHR merges outstanding STs to the same cache line.  When this happens Ruby only sees one oustanding request to that cache line, and not multiple STs to the same cache line.  The MSHR, in general, merges all LDs and STs to the same cache line into a single MSHR entry.
+   2) Stores are executed out of program order.  Stores are not treated as a special type of instruction, and thus will execute when its operands are ready (both address and data to be stored).  Note this is not the same as a cache line write permission prefetch, which do occur for stores which have its address computed but the data to be stored is not ready yet.
+o Note that the MSHR is not modeled as a finite resource (ie the front-end doesn't stall if there are no free MSHR entries).  Requests that go over the user specified buffer limit (MEMORY_OUTSTANDING_REQUESTS) are put in the delayed_pool instead of the request_pool (see rubycache.C)
+o If you are thinking about modifying how Opal handles LDs and STs, keep in mind that all instructions are derived of the waiter_t class, which means that each instruction is capable of being put on a wait_list.  Note that an instruction must always be in only one wait list at a time!
+o Currently all STs that have addresses computed but the store data is not yet ready issue a prefetch() through the Ruby cache object.  This is used to obtain write permissions to the cache line.  Note that Ruby does not callback Opal on completion of prefetches.

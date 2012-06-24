@@ -1,0 +1,13 @@
+
+#include ./config/width-eight.txt
+#include ./config/register-standard.txt
+#include ./config/alu-eight.txt
+#include ./config/l1-64B-64K-4.txt
+#include ./config/l2-64B-4M-4.txt
+#include ./config/memconf-standard.txt
+#include ./config/yags-12:10.txt
+#include ./config/ras-standard.txt
+#include ./config/indirect-8:8.txt
+
+IWINDOW_WIN_SIZE: 64
+IWINDOW_ROB_SIZE: 64
