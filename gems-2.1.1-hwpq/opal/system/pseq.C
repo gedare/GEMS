@@ -6725,6 +6725,12 @@ const char* pseq_t::stat_hwds_mnemonic( enum hwds_inst_type_t instruction ) {
     return "invalidate";
   case HWDS_INST_SEARCH:
     return "search";
+  case HWDS_INST_SET_PAYLOAD:
+    return "set_payload";
+  case HWDS_INST_GET_TRAP_PAYLOAD:
+    return "get_trap_payload";  
+  case HWDS_INST_SET_TRAP_PAYLOAD:
+    return "set_trap_payload";
   default:
     break;
   }
