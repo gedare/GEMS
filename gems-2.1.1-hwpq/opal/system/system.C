@@ -378,7 +378,7 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
     if ( parameter == 8UL) {
       pseq_t *p = system_t::inst->m_seq[0];
       p->out_info("ctxtswitch number of cycles %lld\n", p->m_stat_cycles[0]);
-      p->resetStats();
+      //p->resetStats();
       return;
     }
   }
