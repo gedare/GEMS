@@ -364,23 +364,56 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
     //cout << "system_breakpoint called" << endl;
     // MAGIC breakpoints get intercepted here.  Opal currently does not do anything special here
     /* GAB: reset statistics on MAGIC(1) */
+    pseq_t *p = system_t::inst->m_seq[0];
     if ( parameter == 1UL) {
-      pseq_t *p = system_t::inst->m_seq[0];
       p->out_info("reset number of cycles %lld\n", p->m_stat_cycles[0]);
       p->resetStats(); // don't reset the hwds stats though
       return;
     }
     if ( parameter == 2UL) {
-
+      p->out_info("first ");
+      return;
+    }
+    if ( parameter == 3UL) {
+      p->out_info("insert ");
+      return;
+    }
+    if ( parameter == 4UL) {
+      p->out_info("pop ");
+      return;
+    }
+    if ( parameter == 5UL) {
+      p->out_info("hold ");
+      return;
+    }
+    if ( parameter == 6UL) {
+      p->out_info("search ");
+      return;
+    }
+    if ( parameter == 7UL) {
+      p->out_info("extract ");
+      return;
+    }
+    if ( parameter == 8UL) {
+      p->out_info("context_switch %lld ", p->m_stat_cycles[0]);
+      return;
+    }
+    if ( parameter == 9UL) {
+      p->out_info("spill ");
+      return;
+    }
+    if ( parameter == 10UL) {
+      p->out_info("fill ");
       return;
     }
 
-    if ( parameter == 8UL) {
+    if ( parameter == 16UL) {
       pseq_t *p = system_t::inst->m_seq[0];
-      p->out_info("ctxtswitch number of cycles %lld\n", p->m_stat_cycles[0]);
+      //p->out_info("ctxtswitch number of cycles %lld\n", p->m_stat_cycles[0]);
       //p->resetStats();
       return;
     }
+
   }
 
   //currently IGNORE the system_breakpoint (parameter = 0x4000)...

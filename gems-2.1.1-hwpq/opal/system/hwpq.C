@@ -134,8 +134,7 @@ void hwpq_inst_t::Execute() {
     goto out;
   }
   if (queue_idx > CONFIG_NUM_HWPQS) {
-    DEBUG_OUT("Invalid queue_idx: %d\n", queue_idx);
-    DEBUG_OUT("Instruction: 0x%0x\n", getStaticInst()->getInst());
+//    DEBUG_OUT("Invalid queue_idx (operation): %d (%d)\n", queue_idx, operation);
     goto out;
   }
   if (operation > HWDS_NUM_INST_TYPES) {
@@ -147,6 +146,8 @@ void hwpq_inst_t::Execute() {
   m_type = (enum hwds_inst_type_t)operation;
 
   STAT_INC( m_pseq->m_stat_hwds_executed[m_proc][m_type] );
+  
+  // m_pseq->out_info("%s %d\n", m_pseq->stat_hwds_mnemonic(m_type), m_event_times[EVENT_TIME_EXECUTE_DONE]);
 
 out:
   WRITE_DEST(0);
