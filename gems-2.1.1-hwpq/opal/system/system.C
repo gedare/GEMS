@@ -399,11 +399,11 @@ system_breakpoint( void *data, conf_object_t *cpu, integer_t parameter )
       return;
     }
     if ( parameter == 9UL) {
-      p->out_info("spill ");
+      p->out_info("spill %lld ", p->m_stat_cycles[0]);
       return;
     }
     if ( parameter == 10UL) {
-      p->out_info("fill ");
+      p->out_info("fill %lld ", p->m_stat_cycles[0]);
       return;
     }
 
