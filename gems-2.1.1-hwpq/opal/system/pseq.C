@@ -6731,6 +6731,8 @@ const char* pseq_t::stat_hwds_mnemonic( enum hwds_inst_type_t instruction ) {
     return "get_trap_payload";  
   case HWDS_INST_SET_TRAP_PAYLOAD:
     return "set_trap_payload";
+  case HWDS_INST_GET_SPILL_COUNT:
+    return "get_spill_count";
   default:
     break;
   }
