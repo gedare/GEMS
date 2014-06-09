@@ -17,8 +17,8 @@ If you redistribute derivatives of this software, notify the above email address
 and either
 1. ask people to register at the above website, or
 2. collect registration information and periodically send it the email address
-on the above website. 
-====
+on the above website.
+
 This repository is for modifications made to the Multifacet GEMS 
 software for our research lab.  For project-specific modifications, we
 copy the gems-2.1.1 folder or extract a vanilla gems distribution 
